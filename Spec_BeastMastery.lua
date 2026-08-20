@@ -15,7 +15,10 @@ PRIO.specs = PRIO.specs or {}
 local FOCUS = (Enum and Enum.PowerType and Enum.PowerType.Focus) or 2
 
 -- Readable buff IDs (verify with /prio tracked).
-local ID_FRENZY      = 272790    -- Frenzy (pet, from Barbed Shot)
+-- NOTE: Frenzy lives on the PET, so the Cooldown Viewer (player buffs only) can
+-- never track it -- the buffDown(Frenzy) gate below always fails open (permissive).
+-- That's fine: Barbed Shot on cooldown/charges keeps Frenzy up on its own.
+local ID_FRENZY      = 272790    -- Frenzy (pet, from Barbed Shot) -- untrackable
 local ID_BEASTCLEAVE = 268877    -- Beast Cleave (from Wild Thrash)
 
 local function AND(...) return { op = "and", clauses = { ... } } end
