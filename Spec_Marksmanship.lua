@@ -91,6 +91,20 @@ local spec = {
 
     OnCast = function(P, key, now) end,
 
+    --------------------------------------------------------------------------------
+    -- Debug metadata (see Debug.lua). Rows shown live; economy is informational.
+    --------------------------------------------------------------------------------
+    debug = {
+        { label = "Aimed Shot charges", kind = "charges", key = "AimedShot" },
+        { label = "Precise Shots",      kind = "buff", spell = ID_PRECISE },
+        { label = "Trick Shots",        kind = "buff", spell = ID_TRICK },
+        { label = "Trueshot",           kind = "cd",   spell = 288613 },
+    },
+    economy = {
+        gen   = { "Steady Shot", "Auto-shot" },
+        spend = { "Aimed Shot", "Arcane Shot", "Multi-Shot", "Kill Shot" },
+    },
+
     priority = {
         -- Single target (Sentinel + Dark Ranger merged). Steady Shot is strictly the
         -- resource-starved filler and sits last.

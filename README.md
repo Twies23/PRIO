@@ -11,8 +11,11 @@ Built to work within 12.1's "secret value" API restrictions — health/power/aur
 | Shaman  | Elemental      | 262     | Primary / most-tested |
 | Hunter  | Marksmanship   | 254     | New — needs testing |
 | Hunter  | Beast Mastery  | 253     | New — needs testing |
+| Warrior | Arms           | 71      | New — needs testing |
 
-Hunter spell/buff IDs are best-guess for 12.1 and may need correcting — see **Testing** below.
+Each spec ships **one all-inclusive priority list per mode** (ST / Cleave / AoE) that covers every hero-talent and choice-node variation: abilities you haven't talented are filtered out automatically (`IsKnown`), and buff-gated lines go inert when that buff never appears. So the same list adapts to your build without per-talent configuration.
+
+Hunter and Warrior spell/buff IDs are best-guess for 12.1 and may need correcting — see **Testing** below.
 
 ## Install
 

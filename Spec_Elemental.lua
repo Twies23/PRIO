@@ -167,6 +167,22 @@ local spec = {
         end
     end,
 
+    --------------------------------------------------------------------------------
+    -- Debug metadata (see Debug.lua). Rows shown live; economy is informational.
+    --------------------------------------------------------------------------------
+    debug = {
+        { label = "Master of the Elements", kind = "mote" },
+        { label = "Stormkeeper stacks",     kind = "skStacks" },
+        { label = "Lava Burst charges",     kind = "charges", key = "LavaBurst" },
+        { label = "Flame Shock (target)",   kind = "buff", spell = ID_FLAMESHOCK },
+        { label = "Lava Surge",             kind = "buff", spell = ID_LAVASURGE },
+        { label = "Purging Flames",         kind = "buff", spell = ID_PURGING },
+    },
+    economy = {
+        gen   = { "Lightning Bolt", "Chain Lightning", "Lava Burst", "Tempest" },
+        spend = { "Earth Shock", "Elemental Blast", "Earthquake" },
+    },
+
     -- Priority lists as DATA. Each entry: { spell = <key>, cond = <declarative or
     -- nil>, ignoreCD = <bool> }. Conditions are self-referential where relevant
     -- (buffMissing/buffActive read the entry's OWN spell aura). The engine already

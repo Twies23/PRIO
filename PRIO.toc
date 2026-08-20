@@ -12,6 +12,7 @@ Engine.lua
 Spec_Elemental.lua
 Spec_Marksmanship.lua
 Spec_BeastMastery.lua
+Spec_Arms.lua
 UI.lua
 Display.lua
 Options.lua

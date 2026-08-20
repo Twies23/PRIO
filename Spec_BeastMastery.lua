@@ -83,6 +83,21 @@ local spec = {
 
     OnCast = function(P, key, now) end,
 
+    --------------------------------------------------------------------------------
+    -- Debug metadata (see Debug.lua). Rows shown live; economy is informational.
+    --------------------------------------------------------------------------------
+    debug = {
+        { label = "Barbed Shot charges",  kind = "charges", key = "BarbedShot" },
+        { label = "Kill Command charges", kind = "charges", key = "KillCommand" },
+        { label = "Frenzy (pet)",         kind = "buff", spell = ID_FRENZY },
+        { label = "Beast Cleave",         kind = "buff", spell = ID_BEASTCLEAVE },
+        { label = "Bestial Wrath",        kind = "cd",   spell = 19574 },
+    },
+    economy = {
+        gen   = { "Auto-shot", "Cobra Shot" },
+        spend = { "Kill Command", "Barbed Shot", "Wild Thrash" },
+    },
+
     priority = {
         -- Single target (Pack Leader + Dark Ranger merged). Wild Thrash is AoE-only,
         -- so it never appears here.

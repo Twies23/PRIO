@@ -1,63 +1,122 @@
 -- Debug.lua --------------------------------------------------------------------
--- A live engine-state window: what PRIO reads vs. what it predicts, updated on a
--- throttle while open. Useful for telling whether a wrong recommendation is a bad
--- read (mode/enemies/maelstrom) or a drifted prediction (mote/sk/fs).
+-- A live, spec-aware engine-state window: what PRIO reads vs. what it predicts.
+-- The row layout is rebuilt from the active spec's `debug` / `economy` metadata,
+-- so each spec shows its own charges, stacking buffs, and Focus/Rage/Maelstrom
+-- economy instead of a hardcoded Elemental readout.
 --------------------------------------------------------------------------------
 
 local ADDON, PRIO = ...
 local API = PRIO.API
 local UI  = PRIO.UI
 local C   = UI.C
+
 local Debug = {}
 PRIO.Debug = Debug
 
-local MAELSTROM = (Enum and Enum.PowerType and Enum.PowerType.Maelstrom) or 11
+local win, body, elapsed = nil, nil, 0
+local rows = {}          -- dynamic value fontstrings keyed by an id
+local pool = {}          -- reusable row/heading frames
+local builtSpecID = nil  -- which spec the current layout was built for
+local layoutH = 0
 
-local win, rows, elapsed = nil, {}, 0
+local function yesno(v) return v and "|cff0cd29fyes|r" or "|cff5a6a76no|r" end
 
-local function AddRow(parent, y, label, kind)
-    local r = CreateFrame("Frame", nil, parent)
-    r:SetSize(258, 22); r:SetPoint("TOPLEFT", 20, -y)
-    local l = UI.Font(r, 12, C.muted); l:SetPoint("LEFT", 0, 0); l:SetText(label)
-    local v = UI.Font(r, 12.5, kind == "read" and C.accent or C.head)
-    v:SetPoint("RIGHT", 0, 0); v:SetJustifyH("RIGHT")
-    v:SetWidth(180)
-    return v
+--------------------------------------------------------------------------------
+-- Layout (rebuilt on spec change)
+--------------------------------------------------------------------------------
+local function acquire(kind, parent)
+    for _, f in ipairs(pool) do
+        if not f._used and f._kind == kind then f._used = true; f:Show(); return f end
+    end
+    local f
+    if kind == "head" then
+        f = CreateFrame("Frame", nil, parent)
+        f:SetSize(258, 18)
+        f.text = UI.Font(f, 10.5, C.faint)
+        f.text:SetPoint("TOPLEFT", 0, 0)
+        f.line = UI.Solid(f, "ARTWORK", { 1, 1, 1 }, 0.06)
+        f.line:SetPoint("LEFT", f.text, "RIGHT", 8, 0)
+        f.line:SetPoint("RIGHT", f, "RIGHT", 0, 0)
+        f.line:SetPoint("TOP", f.text, "CENTER", 0, 0); f.line:SetHeight(1)
+    else -- "row"
+        f = CreateFrame("Frame", nil, parent)
+        f:SetSize(258, 22)
+        f.label = UI.Font(f, 12, C.muted); f.label:SetPoint("LEFT", 0, 0)
+        f.value = UI.Font(f, 12.5, C.head)
+        f.value:SetPoint("RIGHT", 0, 0); f.value:SetJustifyH("RIGHT"); f.value:SetWidth(180)
+    end
+    f._kind = kind
+    f._used = true
+    pool[#pool + 1] = f
+    return f
 end
 
-function Debug:Build()
-    if win then return end
-    win = UI.Window("PRIODebug", 300, 526, "PRIO  Debug", "Live engine state")
-    win:SetFrameStrata("DIALOG")
+local function releaseAll()
+    for _, f in ipairs(pool) do f._used = false; f:Hide() end
+    wipe(rows)
+end
 
+function Debug:Rebuild(spec)
+    releaseAll()
     local y = 74
+
     local function head(text)
-        local h = UI.Font(win, 10.5, C.faint); h:SetPoint("TOPLEFT", 20, -y); h:SetText(text:upper())
-        local line = UI.Solid(win, "ARTWORK", { 1, 1, 1 }, 0.06)
-        line:SetPoint("LEFT", h, "RIGHT", 8, 0); line:SetPoint("RIGHT", win, "RIGHT", -20, 0)
-        line:SetPoint("TOP", h, "CENTER", 0, 0); line:SetHeight(1)
+        local h = acquire("head", body)
+        h:ClearAllPoints(); h:SetPoint("TOPLEFT", 20, -y)
+        h.text:SetText(text:upper())
         y = y + 22
     end
-    local function row(label, kind) local v = AddRow(win, y, label, kind); y = y + 24; return v end
+    local function row(id, label, kind)
+        local r = acquire("row", body)
+        r:ClearAllPoints(); r:SetPoint("TOPLEFT", 20, -y)
+        r.label:SetText(label)
+        local col = (kind == "read") and C.accent or C.head
+        r.value:SetTextColor(col[1], col[2], col[3], col[4] or 1)
+        rows[id] = r.value
+        y = y + 24
+    end
 
     head("Context")
-    rows.spec    = row("Spec", "read")
-    rows.combat  = row("In combat", "read")
-    rows.tracked = row("Tracked spells", "read")
+    row("spec", "Spec", "read")
+    row("combat", "In combat", "read")
+    row("tracked", "Tracked spells", "read")
+
     head("Read live")
-    rows.mode      = row("Mode", "read")
-    rows.enemies   = row("Enemies", "read")
-    rows.maelstrom = row("Maelstrom", "read")
-    rows.eb        = row("Elemental Blast", "read")
-    rows.eq        = row("Earthquake", "read")
-    rows.fsRead    = row("Flame Shock (target)", "read")
-    head("Predicted")
-    rows.mote    = row("Master of the Elements")
-    rows.sk      = row("Stormkeeper stacks")
-    rows.lbCharges = row("Lava Burst charges")
+    row("mode", "Mode", "read")
+    row("enemies", "Enemies", "read")
+    row("resource", (spec and spec.resourceLabel) or "Resource", "read")
+
+    if spec and spec.debug and #spec.debug > 0 then
+        head("Predicted / tracked")
+        for i, d in ipairs(spec.debug) do
+            row("d" .. i, d.label or "?", d.kind == "buff" and "read" or "pred")
+        end
+    end
+
+    if spec and spec.economy then
+        head("Economy")
+        row("gen", "Generators", "read")
+        row("spend", "Spenders", "read")
+    end
+
     head("Output")
-    rows.primary = row("Now", "read")
-    rows.queue   = row("Next")
+    row("primary", "Now", "read")
+    row("queue", "Next")
+
+    layoutH = y + 20
+    builtSpecID = spec and spec.specID or "none"
+    if win then win:SetHeight(layoutH) end
+end
+
+--------------------------------------------------------------------------------
+-- Build the frame once; body holds the rebuildable rows.
+--------------------------------------------------------------------------------
+function Debug:Build()
+    if win then return end
+    win = UI.Window("PRIODebug", 300, 560, "PRIO  Debug", "Live engine state")
+    win:SetFrameStrata("DIALOG")
+    body = CreateFrame("Frame", nil, win)
+    body:SetPoint("TOPLEFT", 0, 0); body:SetPoint("BOTTOMRIGHT", 0, 0)
 
     win:SetScript("OnUpdate", function(_, dt)
         elapsed = elapsed + dt
@@ -65,78 +124,102 @@ function Debug:Build()
     end)
 end
 
-local function yesno(v) return v and "|cff0cd29fyes|r" or "|cff5a6a76no|r" end
+--------------------------------------------------------------------------------
+-- Live update
+--------------------------------------------------------------------------------
+local function auraText(spell)
+    local a = API.IsAuraActive(spell)
+    if a == true then return "|cff0cd29factive|r"
+    elseif a == false then return "|cffe0685agone|r"
+    else return "|cffe0a03auntracked|r" end
+end
+
+local function cdText(spell)
+    local r = API.IsReady(spell)
+    if r == true then return "|cff0cd29fready|r"
+    elseif r == false then return "|cffe0685aon CD|r"
+    else return "|cffe0a03a?|r" end
+end
 
 function Debug:Update()
     if not (win and win:IsShown()) then return end
     local specID = API.GetSpecID()
     local spec = specID and PRIO.specs and PRIO.specs[specID]
 
-    rows.spec:SetText(spec and spec.label or ("|cffe0685aunsupported|r (" .. tostring(specID) .. ")"))
-    rows.combat:SetText(yesno(InCombatLockdown()))
+    -- Rebuild layout if the spec changed since the rows were laid out.
+    if (spec and spec.specID or "none") ~= builtSpecID then
+        self:Rebuild(spec)
+    end
 
-    -- Tracked-spell count (sanity check the Cooldown Viewer hookup)
+    local function set(id, text) if rows[id] then rows[id]:SetText(text) end end
+
+    set("spec", spec and (spec.label .. " " .. (spec.className or ""))
+        or ("|cffe0685aunsupported|r (" .. tostring(specID) .. ")"))
+    set("combat", yesno(InCombatLockdown()))
+
     local tcount = 0
     if API.IsTracked and spec then
         for _, id in pairs(spec.spells) do if API.IsTracked(id) then tcount = tcount + 1 end end
     end
-    rows.tracked:SetText(tostring(tcount))
+    set("tracked", tostring(tcount))
 
     local method = (PRIO.db and PRIO.db.enemyDetect) or "engaged"
-    rows.enemies:SetText(("%d  |cff5a6a76(%s)|r"):format(API.EnemyCount(), method))
+    set("enemies", ("%d  |cff5a6a76(%s)|r"):format(API.EnemyCount(), method))
 
     -- Resource: real value when readable, else the prediction the gate uses.
-    local realMs = API.Power(spec and spec.resource or MAELSTROM)
+    local realMs = spec and spec.resource and API.Power(spec.resource) or nil
     local pred = PRIO.Engine and PRIO.Engine.P and PRIO.Engine.P.maelstrom
-    local effMs = realMs or pred
     if realMs ~= nil then
-        rows.maelstrom:SetText(("%d  |cff5a6a76(read)|r"):format(realMs))
+        set("resource", ("%d  |cff5a6a76(read)|r"):format(realMs))
     elseif pred ~= nil then
-        rows.maelstrom:SetText(("|cffe0a03a~%d|r  |cff5a6a76(predicted, secret)|r"):format(math.floor(pred)))
+        set("resource", ("|cffe0a03a~%d|r  |cff5a6a76(predicted, secret)|r"):format(math.floor(pred)))
     else
-        rows.maelstrom:SetText("|cffe0a03asecret/nil|r")
+        set("resource", "|cffe0a03asecret/nil|r")
     end
 
-    -- Spender readout: cost vs the effective Maelstrom the gate uses.
-    local function spenderText(id)
-        if not id then return "-" end
-        local cost = API.PowerCostAmount(id)
-        local costStr = cost and ("|cff5a6a76cost " .. cost .. "|r") or ""
-        local afford
-        if effMs ~= nil and cost then afford = effMs >= cost end
-        local state = (afford == true and "|cff0cd29fafford|r")
-            or (afford == false and "|cffe0685alow|r")
-            or "|cffe0a03a?|r"
-        return state .. "  " .. costStr
-    end
-    rows.eb:SetText(spenderText(spec and spec.spells.ElementalBlast))
-    rows.eq:SetText(spenderText(spec and spec.spells.Earthquake))
-
-    -- Real Flame Shock read from the Cooldown Viewer
-    local fsID = spec and spec.spells.FlameShock
-    local fsA = fsID and API.IsAuraActive(fsID)
-    rows.fsRead:SetText(fsA == true and "|cff0cd29factive|r"
-        or fsA == false and "|cffe0685agone|r"
-        or "|cffe0a03auntracked|r")
-
-    -- Predicted state straight from the engine model
+    -- Spec-defined predicted / tracked rows.
     local P = PRIO.Engine and PRIO.Engine.P or {}
-    rows.mote:SetText(yesno(P.mote))
-    rows.sk:SetText(tostring(P.skStacks or 0))
-    local lb = P.charges and P.charges.LavaBurst
-    rows.lbCharges:SetText(lb and (tostring(lb.cur) .. " / 3") or "-")
+    if spec and spec.debug then
+        for i, d in ipairs(spec.debug) do
+            local id = "d" .. i
+            if d.kind == "buff" then
+                set(id, auraText(d.spell))
+            elseif d.kind == "cd" then
+                set(id, cdText(d.spell))
+            elseif d.kind == "charges" then
+                local cc = P.charges and P.charges[d.key]
+                local maxC = spec.chargeTrack and spec.chargeTrack[d.key] and spec.chargeTrack[d.key].max
+                set(id, cc and (tostring(cc.cur) .. " / " .. (maxC or "?")) or "-")
+            elseif d.kind == "mote" then
+                if PRIO.Engine and PRIO.Engine.hasMote == false then
+                    set(id, "|cff5a6a76n/a (no talent)|r")
+                else
+                    set(id, yesno(P.mote))
+                end
+            elseif d.kind == "skStacks" then
+                set(id, tostring(P.skStacks or 0))
+            else
+                set(id, "-")
+            end
+        end
+    end
+
+    if spec and spec.economy then
+        set("gen", "|cff9fb0be" .. table.concat(spec.economy.gen or {}, ", ") .. "|r")
+        set("spend", "|cff9fb0be" .. table.concat(spec.economy.spend or {}, ", ") .. "|r")
+    end
 
     local result = PRIO.Engine and PRIO.Engine:Evaluate()
     if result then
-        rows.mode:SetText(result.debug.mode)
-        rows.primary:SetText("|cffffffff" .. (result.primary and result.primary.name or "-") .. "|r")
+        set("mode", result.debug.mode)
+        set("primary", "|cffffffff" .. (result.primary and result.primary.name or "-") .. "|r")
         local q = {}
         for _, e in ipairs(result.queue or {}) do q[#q + 1] = e.name end
-        rows.queue:SetText(#q > 0 and table.concat(q, ", ") or "-")
+        set("queue", #q > 0 and table.concat(q, ", ") or "-")
     else
-        rows.mode:SetText(PRIO.db and PRIO.db.mode or "-")
-        rows.primary:SetText("-")
-        rows.queue:SetText("-")
+        set("mode", PRIO.db and PRIO.db.mode or "-")
+        set("primary", "-")
+        set("queue", "-")
     end
 end
 
