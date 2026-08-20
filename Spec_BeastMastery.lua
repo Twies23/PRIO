@@ -1,8 +1,12 @@
 -- Spec_BeastMastery.lua --------------------------------------------------------
--- Beast Mastery Hunter (spec 253), patch 12.1. All-inclusive lists covering both
--- Pack Leader and Dark Ranger -- untalented abilities (Black Arrow / Bloodshed /
--- Call of the Wild) are filtered by IsKnown, and buff-gated lines go inert when
--- the buff never appears. Spell IDs are best-guess; verify with /prio spells.
+-- Beast Mastery Hunter (spec 253), patch 12.1 (Midnight). All-inclusive lists
+-- covering both Pack Leader and Dark Ranger -- untalented abilities (Black Arrow /
+-- Bloodshed / Call of the Wild) are filtered by IsKnown, and buff-gated lines go
+-- inert when the buff never appears. Spell IDs are best-guess; verify /prio spells.
+--
+-- Midnight notes: Multi-Shot and Dire Beast are gone from BM. Wild Thrash (8s CD)
+-- is the AoE spender and is what activates Beast Cleave now. Dire Beast is a
+-- passive proc, not a button.
 --------------------------------------------------------------------------------
 
 local ADDON, PRIO = ...
@@ -11,9 +15,8 @@ PRIO.specs = PRIO.specs or {}
 local FOCUS = (Enum and Enum.PowerType and Enum.PowerType.Focus) or 2
 
 -- Readable buff IDs (verify with /prio tracked).
-local ID_FRENZY    = 272790   -- Frenzy (pet, from Barbed Shot)
-local ID_BEASTCLEAVE = 268877 -- Beast Cleave (from Multi-Shot)
-local ID_HOWL      = 471877   -- Howl of the Pack Leader (Pack Leader)
+local ID_FRENZY      = 272790    -- Frenzy (pet, from Barbed Shot)
+local ID_BEASTCLEAVE = 268877    -- Beast Cleave (from Wild Thrash)
 
 local function AND(...) return { op = "and", clauses = { ... } } end
 local function OR(...)  return { op = "or",  clauses = { ... } } end
@@ -23,10 +26,11 @@ local function buffDown(id) return { type = "buffMissing", spell = id } end
 local spec = {
     key      = "HUNTER_BEASTMASTERY",
     label    = "Beast Mastery",
+    className = "Hunter",
     specID   = 253,
     resource = FOCUS,
     resourceLabel = "Focus",
-    cleaveAt = 2,   -- Beast Cleave (Multi-Shot) starts at 2 targets
+    cleaveAt = 2,   -- Wild Thrash / Beast Cleave starts at 2 targets
     aoeAt    = 3,
 
     spells = {
@@ -34,13 +38,12 @@ local spec = {
         BarbedShot   = 217200,
         BestialWrath = 19574,
         CobraShot    = 193455,
-        MultiShot    = 2643,
         KillShot     = 53351,
-        Bloodshed    = 321530,   -- Pack Leader / talent
-        BlackArrow   = 466930,   -- Dark Ranger
+        WildThrash   = 1264359,   -- AoE spender, grants Beast Cleave
+        Bloodshed    = 321530,    -- Pack Leader / talent
+        BlackArrow   = 466930,    -- Dark Ranger
         CallOfTheWild = 359844,
         ExplosiveShot = 212431,
-        DireBeast    = 120679,
     },
 
     openerReady = { "BestialWrath" },
@@ -50,9 +53,8 @@ local spec = {
     precombat = {},
 
     pickable = {
-        "BarbedShot", "KillCommand", "BestialWrath", "CobraShot", "MultiShot",
+        "BarbedShot", "KillCommand", "BestialWrath", "CobraShot", "WildThrash",
         "KillShot", "Bloodshed", "BlackArrow", "CallOfTheWild", "ExplosiveShot",
-        "DireBeast",
     },
 
     -- Barbed Shot and Kill Command both run on 2 charges.
@@ -67,51 +69,51 @@ local spec = {
         KillShot = { type = "cdReady", spell = 53351 },
     },
 
-    -- Beast Cleave from Multi-Shot; consumed passively by pet melee. Track it so
+    -- Beast Cleave is now granted by Wild Thrash (8s CD, 10s buff). Track it so
     -- AoE lines can keep it up.
     spellEffects = {
-        MultiShot = { grant = { ID_BEASTCLEAVE } },
+        WildThrash = { grant = { ID_BEASTCLEAVE } },
     },
 
     maelstromMax = 100,   -- Focus cap (generic "resource" fields)
     maelstromGen = {
-        BarbedShot = 5,
+        BarbedShot = 20,
         CobraShot  = 0,   -- Cobra Shot spends Focus
     },
 
     OnCast = function(P, key, now) end,
 
     priority = {
-        -- Single target (Pack Leader + Dark Ranger merged).
+        -- Single target (Pack Leader + Dark Ranger merged). Wild Thrash is AoE-only,
+        -- so it never appears here.
         st = {
-            { spell = "BestialWrath" },
+            { spell = "BestialWrath" },                            -- big CD, on cooldown
             { spell = "CallOfTheWild" },
-            { spell = "Bloodshed" },                              -- PL / talent
-            { spell = "BarbedShot", cond = buffDown(ID_FRENZY) }, -- keep Frenzy up
-            { spell = "BlackArrow" },                             -- DR: on CD (also Kill Shot exec)
+            { spell = "Bloodshed" },                               -- PL / talent, on CD
+            { spell = "BarbedShot", cond = buffDown(ID_FRENZY) },  -- keep Frenzy up
+            { spell = "KillCommand" },                             -- primary spender (charges)
+            { spell = "BlackArrow" },                              -- DR: on CD / execute
             { spell = "KillShot" },
-            { spell = "KillCommand" },
             { spell = "ExplosiveShot" },
-            { spell = "BarbedShot" },                             -- dump charges
-            { spell = "DireBeast" },
-            { spell = "CobraShot" },                              -- Focus dump / filler
+            { spell = "BarbedShot" },                              -- dump charges
+            { spell = "CobraShot" },                               -- Focus dump / filler
         },
 
-        -- Cleave / AoE (Beast Cleave). Multi-Shot keeps Beast Cleave up so pet
-        -- melee and Kill Command splash.
+        -- Cleave / AoE. Wild Thrash keeps Beast Cleave up so Kill Command and pet
+        -- melee splash.
         cleave = {
-            { spell = "MultiShot",  cond = buffDown(ID_BEASTCLEAVE) },  -- put Beast Cleave up
+            { spell = "WildThrash", cond = buffDown(ID_BEASTCLEAVE) }, -- put Beast Cleave up
             { spell = "BestialWrath" },
             { spell = "CallOfTheWild" },
+            { spell = "WildThrash" },                                  -- on cooldown
             { spell = "BarbedShot", cond = buffDown(ID_FRENZY) },
             { spell = "Bloodshed" },
-            { spell = "BlackArrow" },
             { spell = "KillCommand" },
+            { spell = "BlackArrow" },
             { spell = "ExplosiveShot" },
             { spell = "KillShot" },
             { spell = "BarbedShot" },
-            { spell = "DireBeast" },
-            { spell = "CobraShot" },
+            { spell = "CobraShot" },                                   -- filler
         },
     },
 }

@@ -22,6 +22,7 @@ local function buffDown(id) return { type = "buffMissing", spell = id } end
 local spec = {
     key      = "HUNTER_MARKSMANSHIP",
     label    = "Marksmanship",
+    className = "Hunter",
     specID   = 254,
     resource = FOCUS,
     resourceLabel = "Focus",
@@ -91,36 +92,34 @@ local spec = {
     OnCast = function(P, key, now) end,
 
     priority = {
-        -- Single target (Sentinel + Dark Ranger merged).
+        -- Single target (Sentinel + Dark Ranger merged). Steady Shot is strictly the
+        -- resource-starved filler and sits last.
         st = {
-            { spell = "BlackArrow",  cond = buffUp(ID_PRECISE) },   -- DR: spend Precise Shots
             { spell = "ExplosiveShot" },                            -- on CD (2 casts via Unstable Trigger)
-            { spell = "Volley" },
-            { spell = "Trueshot" },
-            { spell = "KillShot",   cond = buffUp(ID_PRECISE) },    -- spend Precise Shots
+            { spell = "Volley" },                                   -- on CD
+            { spell = "Trueshot" },                                 -- on CD
+            { spell = "KillShot",   cond = buffUp(ID_PRECISE) },    -- spend Precise Shots (execute)
+            { spell = "BlackArrow" },                               -- DR: on CD
             { spell = "ArcaneShot", cond = buffUp(ID_PRECISE) },    -- spend Precise Shots
-            { spell = "RapidFire" },
-            { spell = "WailingArrow" },                             -- DR: on CD
-            { spell = "AimedShot" },                                -- on CD (charges)
-            { spell = "MoonlightChakram" },                         -- Sentinel
-            { spell = "BlackArrow" },                               -- DR: filler
-            { spell = "SteadyShot" },                               -- filler
+            { spell = "RapidFire" },                                -- on CD, builds Precise
+            { spell = "AimedShot" },                                -- on CD (2 charges), builds Precise
+            { spell = "MoonlightChakram" },                         -- Sentinel: on CD
+            { spell = "SteadyShot" },                               -- filler (resource-starved only)
         },
 
-        -- Cleave / AoE (Trick Shots). Multi-Shot replaces Arcane as the Precise
-        -- Shots spender and keeps Trick Shots up for Aimed / Rapid Fire.
+        -- Cleave / AoE (Trick Shots). Multi-Shot puts Trick Shots up and is the
+        -- Precise Shots spender; Aimed / Rapid Fire cleave while Trick Shots is up.
         cleave = {
             { spell = "ExplosiveShot" },
             { spell = "Volley" },
-            { spell = "BlackArrow", cond = buffUp(ID_PRECISE) },
             { spell = "Trueshot" },
             { spell = "MultiShot",  cond = buffDown(ID_TRICK) },    -- put Trick Shots up
             { spell = "MultiShot",  cond = buffUp(ID_PRECISE) },    -- spend Precise Shots
             { spell = "RapidFire",  cond = buffUp(ID_TRICK) },
             { spell = "AimedShot",  cond = buffUp(ID_TRICK) },
-            { spell = "WailingArrow" },
-            { spell = "MoonlightChakram" },
-            { spell = "SteadyShot" },
+            { spell = "BlackArrow" },                               -- DR: on CD
+            { spell = "MoonlightChakram" },                         -- Sentinel: on CD
+            { spell = "SteadyShot" },                               -- filler
         },
     },
 }

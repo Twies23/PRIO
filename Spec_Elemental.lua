@@ -32,6 +32,7 @@ local moteDown = { type = "moteDown" }
 local spec = {
     key      = "SHAMAN_ELEMENTAL",
     label    = "Elemental",
+    className = "Shaman",
     specID   = 262,
     resource = MAELSTROM,
     moteTalent = "Master of the Elements",   -- gates moteUp/moteDown (not readable)

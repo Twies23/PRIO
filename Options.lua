@@ -226,7 +226,7 @@ function Pages.rotation()
         sw:SetSize(16, 16); sw:SetPoint("LEFT", 7, 0)
         local fs = UI.Font(box, 13, C.head)
         fs:SetPoint("LEFT", sw, "RIGHT", 8, 0)
-        fs:SetText(spec and (spec.label .. " Shaman") or "Unsupported spec")
+        fs:SetText(spec and (spec.label .. " " .. (spec.className or "")) or "Unsupported spec")
     end)
     SettingRow("Mode", 30, function(r)
         local seg = UI.Segmented(r, {
@@ -242,7 +242,7 @@ function Pages.rotation()
         Section("Priority")
         local none = Track(UI.Font(content, 13, C.faint))
         none:SetPoint("TOPLEFT", 0, -cursorY)
-        none:SetText("Log in on Elemental Shaman to edit the priority list.")
+        none:SetText("Log in on a supported spec to edit the priority list.")
         cursorY = cursorY + 30
         return
     end
