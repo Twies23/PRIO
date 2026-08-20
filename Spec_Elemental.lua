@@ -32,6 +32,7 @@ local moteDown = { type = "moteDown" }
 local spec = {
     key      = "SHAMAN_ELEMENTAL",
     label    = "Elemental",
+    className = "Shaman",
     specID   = 262,
     resource = MAELSTROM,
     moteTalent = "Master of the Elements",   -- gates moteUp/moteDown (not readable)
@@ -165,6 +166,22 @@ local spec = {
             P.fsExpire = now + 18                 -- assumed Flame Shock duration
         end
     end,
+
+    --------------------------------------------------------------------------------
+    -- Debug metadata (see Debug.lua). Rows shown live; economy is informational.
+    --------------------------------------------------------------------------------
+    debug = {
+        { label = "Master of the Elements", kind = "mote" },
+        { label = "Stormkeeper stacks",     kind = "skStacks" },
+        { label = "Lava Burst charges",     kind = "charges", key = "LavaBurst" },
+        { label = "Flame Shock (target)",   kind = "buff", spell = ID_FLAMESHOCK },
+        { label = "Lava Surge",             kind = "buff", spell = ID_LAVASURGE },
+        { label = "Purging Flames",         kind = "buff", spell = ID_PURGING },
+    },
+    economy = {
+        gen   = { "Lightning Bolt", "Chain Lightning", "Lava Burst", "Tempest" },
+        spend = { "Earth Shock", "Elemental Blast", "Earthquake" },
+    },
 
     -- Priority lists as DATA. Each entry: { spell = <key>, cond = <declarative or
     -- nil>, ignoreCD = <bool> }. Conditions are self-referential where relevant
