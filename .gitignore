@@ -1,0 +1,9 @@
+# WoW / editor cruft
+*.bak
+*.tmp
+*.swp
+.DS_Store
+Thumbs.db
+
+# SavedVariables live in WTF, never in the addon folder, but just in case
+*.lua.bak
