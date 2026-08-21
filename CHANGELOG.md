@@ -1,5 +1,14 @@
 # PRIO Changelog
 
+## 0.2.0
+First stable release. Configurable rotation priority & queue helper for WoW 12.1, working within the secret-value API.
+- Specs: **Elemental Shaman**, **Marksmanship Hunter**, **Beast Mastery Hunter**, **Arms Warrior**.
+- Priority editor with live pass/fail dots, condition builder, and text export.
+- DoT **pandemic-window** refresh (Elemental Flame Shock, Arms Rend) via the Cooldown Manager.
+- Per-spec first-time **Setup** checklist, **Profiles**, class-colored UI, and a text-export tool.
+- Predicts secret values (Maelstrom/Focus/Rage, charges, procs) and advances the primary while casting.
+
+
 ## 0.1.25
 - Fixed the Profiles page buttons rendering as solid blocks with no visible text.
 - **Arms:** removed the redundant Warbreaker line — the Colossus Smash button smart-swaps to Warbreaker when talented.
