@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.1.6
+- Added `/prio power` — a diagnostic that shows which of your class resources read cleanly in combat, used to validate spec support.
+
 ## 0.1.5
 - Added the groundwork for **pandemic / refresh windows** — PRIO can now read Blizzard's Cooldown Manager pandemic state for DoTs like Flame Shock.
 - Debug window shows live pandemic and aura-timing info to validate what's readable in combat.
