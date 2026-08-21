@@ -217,7 +217,7 @@ local spec = {
             { spell = "Ascendance", cond = OR(cdReady(ID_STORMKEEPER), buffUp(ID_STORMKEEPER)) },
             -- Flame Shock upkeep (applier varies by build)
             { spell = "FlameShock",  ignoreCD = true, cond = OR(buffDown(ID_FLAMESHOCK), AND(moteDown, refreshable(ID_FLAMESHOCK))) },
-            { spell = "VoltaicBlaze", cond = buffDown(ID_FLAMESHOCK) },
+            { spell = "VoltaicBlaze", cond = OR(buffDown(ID_FLAMESHOCK), AND(moteDown, refreshable(ID_FLAMESHOCK))) },
             -- MotE window: spend with Elemental Blast, build with Lava Burst, consume
             -- with a Stormkeeper Lightning Bolt (all inert on non-MotE builds).
             { spell = "ElementalBlast", cond = moteUp },
@@ -237,14 +237,13 @@ local spec = {
             { spell = "Stormkeeper" },
             { spell = "AncestralSwiftness" },
             { spell = "FlameShock",  ignoreCD = true, cond = OR(buffDown(ID_FLAMESHOCK), AND(moteDown, refreshable(ID_FLAMESHOCK))) },
-            { spell = "VoltaicBlaze", cond = buffDown(ID_FLAMESHOCK) },
+            { spell = "VoltaicBlaze" },                            -- 3+: on cooldown (also keeps Flame Shock up)
             { spell = "Ascendance",  cond = OR(cdReady(ID_STORMKEEPER), buffUp(ID_STORMKEEPER)) },
             { spell = "LavaBurst",   cond = AND(buffUp(ID_PURGING), buffUp(ID_LAVASURGE)) },
             { spell = "Tempest",     cond = moteUp },
             { spell = "ElementalBlast" },                           -- spender at 3 targets
             { spell = "LavaBurst",   cond = buffUp(ID_PURGING) },
             { spell = "Tempest" },
-            { spell = "VoltaicBlaze" },
             { spell = "ChainLightning", cond = buffUp(ID_STORMKEEPER) },
             { spell = "ChainLightning" },
         },
@@ -260,7 +259,7 @@ local spec = {
             { spell = "AncestralSwiftness" },
             -- Flame Shock upkeep when not in a MotE window (FS applier varies by build)
             { spell = "FlameShock",  ignoreCD = true, cond = OR(buffDown(ID_FLAMESHOCK), AND(moteDown, refreshable(ID_FLAMESHOCK))) },
-            { spell = "VoltaicBlaze", cond = AND(moteDown, buffDown(ID_FLAMESHOCK)) },
+            { spell = "VoltaicBlaze" },                            -- 3+: on cooldown (also keeps Flame Shock up)
             { spell = "Ascendance",  cond = OR(cdReady(ID_STORMKEEPER), buffUp(ID_STORMKEEPER)) },
             -- Instant Lava Burst cleave off a proc
             { spell = "LavaBurst",   cond = AND(buffUp(ID_PURGING), buffUp(ID_LAVASURGE)) },
@@ -271,9 +270,7 @@ local spec = {
             { spell = "ElementalBlast" },
             -- Consume Purging Flames
             { spell = "LavaBurst",   cond = buffUp(ID_PURGING) },
-            -- Tempest proc, then Voltaic Blaze on CD to rebuild Purging Flames
             { spell = "Tempest" },
-            { spell = "VoltaicBlaze" },
             -- Stormkeeper-empowered Chain Lightning, then plain filler
             { spell = "ChainLightning", cond = buffUp(ID_STORMKEEPER) },
             { spell = "ChainLightning" },
