@@ -13,6 +13,8 @@ Built to work within 12.1's "secret value" API restrictions — health/power/aur
 | Hunter  | Marksmanship   | 254     | New — needs testing |
 | Hunter  | Beast Mastery  | 253     | New — needs testing |
 | Warrior | Arms           | 71      | New — needs testing |
+| Monk    | Windwalker     | 269     | New — needs testing |
+| Demon Hunter | Devourer  | 582?    | New — spec ID + spell IDs need verifying |
 
 Each spec ships **one all-inclusive priority list per mode** (ST / Cleave / AoE) that covers every hero-talent and choice-node variation: abilities you haven't talented are filtered out automatically (`IsKnown`), and buff-gated lines go inert when that buff never appears. So the same list adapts to your build without per-talent configuration.
 

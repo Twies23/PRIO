@@ -1,5 +1,10 @@
 # PRIO Changelog
 
+## 0.2.1 (alpha)
+- **New spec: Windwalker Monk.** Chi is readable so spenders gate on real Chi; Combo Strikes (never repeat an ability) is modeled from your cast history. Covers Shado-Pan + Conduit of the Celestials.
+- **New spec: Devourer Demon Hunter (scaffold).** Structure is in place, but as a brand-new spec its spec ID and most spell IDs need in-game verification (see below) before it works fully.
+
+
 ## 0.2.0
 First stable release. Configurable rotation priority & queue helper for WoW 12.1, working within the secret-value API.
 - Specs: **Elemental Shaman**, **Marksmanship Hunter**, **Beast Mastery Hunter**, **Arms Warrior**.
