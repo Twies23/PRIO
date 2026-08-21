@@ -303,6 +303,7 @@ function API.EnemyCount()
     local ok, plates = pcall(C_NamePlate.GetNamePlates)
     if not ok or type(plates) ~= "table" then return 1 end
     local engagedOnly = not (PRIO.db and PRIO.db.enemyDetect == "nameplates")
+    local playerInCbt = SafeCall(UnitAffectingCombat, "player")
     local n = 0
     for _, plate in ipairs(plates) do
         local unit = plate.namePlateUnitToken or (plate.UnitFrame and plate.UnitFrame.unit)
@@ -315,13 +316,19 @@ function API.EnemyCount()
                     n = n + 1
                 else
                     -- "Engaged with me": on their threat table, flagged in combat, or
-                    -- my current target. Correct in real content; note training
-                    -- dummies don't flag combat or hold threat, so use "nameplates"
-                    -- detection to test AoE on them.
+                    -- my current target. Correct in real content. Training dummies
+                    -- don't flag combat or hold threat, so ALSO count attackable
+                    -- "Dummy" nameplates while I'm in combat -- dummies never appear
+                    -- in real content, so this can't over-count a live pull.
                     local threat = SafeCall(UnitThreatSituation, "player", unit)
                     local inCbt  = SafeCall(UnitAffectingCombat, unit)
                     local isTgt  = SafeCall(UnitIsUnit, unit, "target")
-                    if threat ~= nil or inCbt or isTgt then
+                    local isDummy = false
+                    if playerInCbt then
+                        local nm = SafeCall(UnitName, unit)
+                        isDummy = nm and nm:find("Dummy") ~= nil
+                    end
+                    if threat ~= nil or inCbt or isTgt or isDummy then
                         n = n + 1
                     end
                 end
