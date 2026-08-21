@@ -547,14 +547,27 @@ end
 -- The spec spell the player is currently hard-casting or channeling (nil if instant
 -- / not casting / not a rotational spell). Instants never appear here, so this only
 -- fires for casts that actually occupy time -- exactly when we want the primary to
--- advance past the spell already in flight.
-local function InFlightCast()
-    local spellID = select(9, UnitCastingInfo("player"))
+-- advance past the spell already in flight. Resolves the cast to a spec KEY by ID
+-- first, then by base/override ID, then by name (Farseer/Echo variants can report a
+-- spellID that isn't the spec's canonical one).
+function Engine:InFlightCast()
+    local name, _, _, _, _, _, _, _, spellID = UnitCastingInfo("player")
     if type(spellID) ~= "number" then
-        spellID = select(8, UnitChannelInfo("player"))
+        name, _, _, _, _, _, _, spellID = UnitChannelInfo("player")
     end
-    if type(spellID) ~= "number" then return nil end
-    return idToKey[spellID], spellID
+    if type(spellID) ~= "number" then return nil, nil, nil end
+
+    local key = idToKey[spellID]
+    if not key and C_Spell and C_Spell.GetBaseSpell then
+        local ok, base = pcall(C_Spell.GetBaseSpell, spellID)
+        if ok and base then key = idToKey[base] end
+    end
+    if not key and spec then                      -- last resort: match by name
+        for k, sid in pairs(spec.spells) do
+            if API.SpellName(sid) == name then key = k; break end
+        end
+    end
+    return key, spellID, name
 end
 
 function Engine:Evaluate()
@@ -614,7 +627,7 @@ function Engine:Evaluate()
     -- effects into the sim (so MotE/aura assumptions carry) and exclude it, so the
     -- PRIMARY advances to the next GCD instead of repeating the spell in flight.
     if PRIO.db.advanceWhileCasting ~= false then
-        local castKey, castSid = InFlightCast()
+        local castKey, castSid = self:InFlightCast()
         if castKey and castSid then
             ApplyEffects(sim, castKey)
             sim.lastCastKey, sim.lastCastID = castKey, castSid

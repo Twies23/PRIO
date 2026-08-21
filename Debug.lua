@@ -85,6 +85,7 @@ function Debug:Rebuild(spec)
     row("mode", "Mode", "read")
     row("enemies", "Enemies", "read")
     row("resource", (spec and spec.resourceLabel) or "Resource", "read")
+    row("casting", "Casting", "read")
 
     if spec and spec.debug and #spec.debug > 0 then
         head("Predicted / tracked")
@@ -175,6 +176,17 @@ function Debug:Update()
         set("resource", ("|cffe0a03a~%d|r  |cff5a6a76(predicted, secret)|r"):format(math.floor(pred)))
     else
         set("resource", "|cffe0a03asecret/nil|r")
+    end
+
+    -- Live cast detection (drives the advance-while-casting behavior).
+    local ck, csid, cname = nil, nil, nil
+    if PRIO.Engine and PRIO.Engine.InFlightCast then ck, csid, cname = PRIO.Engine:InFlightCast() end
+    if csid then
+        set("casting", (cname or "?") .. (ck
+            and (" |cff0cd29f\226\134\146 " .. ck .. "|r")
+            or  " |cffe0685a(unmapped)|r"))
+    else
+        set("casting", "|cff5a6a76none|r")
     end
 
     -- Spec-defined predicted / tracked rows.
