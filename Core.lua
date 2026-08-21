@@ -137,6 +137,33 @@ function PRIO:Tick()
 end
 
 --------------------------------------------------------------------------------
+-- One-time tip: how to enable pandemic-window tracking via the Cooldown Manager.
+-- Only shown for specs that actually use a pandemic (refreshable) condition.
+--------------------------------------------------------------------------------
+StaticPopupDialogs["PRIO_PANDEMIC_TIP"] = {
+    text = "|cff0cd29fPRIO|r can track DoT |cffffffffpandemic windows|r (e.g. Flame Shock) so it "
+        .. "tells you to refresh at the right time, without clipping duration.\n\n"
+        .. "To enable it: open |cffffffffEdit Mode \226\134\146 Cooldown Manager|r and turn on the "
+        .. "|cffffffffPandemic Time|r alert for that DoT.\n\n"
+        .. "This is optional \226\128\148 without it, PRIO still refreshes DoTs when they drop off.",
+    button1 = "Got it",
+    button2 = "Remind me later",
+    OnAccept = function() if PRIO.db then PRIO.db.pandemicTipSeen = true end end,
+    OnCancel = function() end,   -- remind me later: leave the flag unset
+    timeout = 0, whileDead = true, hideOnEscape = true, preferredIndex = 3,
+}
+
+function PRIO:MaybeShowPandemicTip()
+    if self._pandemicTipTried then return end            -- at most once per session
+    if not (self.db and not self.db.pandemicTipSeen) then return end
+    local id   = self.API and self.API.GetSpecID and self.API.GetSpecID()
+    local spec = id and self.specs and self.specs[id]
+    if not (spec and spec.usesPandemic) then return end  -- only pandemic-using specs
+    self._pandemicTipTried = true
+    StaticPopup_Show("PRIO_PANDEMIC_TIP")
+end
+
+--------------------------------------------------------------------------------
 -- Lifecycle wiring
 --------------------------------------------------------------------------------
 PRIO:On("PLAYER_ENTERING_WORLD", function()
@@ -144,6 +171,7 @@ PRIO:On("PLAYER_ENTERING_WORLD", function()
     if PRIO.Engine  then PRIO.Engine:OnSpecChanged() end
     PRIO:StartTicker()
     PRIO:Tick()
+    C_Timer.After(4, function() PRIO:MaybeShowPandemicTip() end)   -- after spec data loads
 end)
 
 PRIO:On("PLAYER_REGEN_DISABLED", function() PRIO:StartTicker() end)   -- entered combat
@@ -217,6 +245,8 @@ SlashCmdList.PRIO = function(msg)
                 end
             end
         end
+    elseif msg == "pandemic" then
+        StaticPopup_Show("PRIO_PANDEMIC_TIP")
     elseif msg == "power" then
         -- Validate which class resources read clean vs. secret. Run IN COMBAT on the
         -- class you care about -- everything is readable out of combat.

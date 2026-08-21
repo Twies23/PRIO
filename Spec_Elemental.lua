@@ -38,6 +38,7 @@ local spec = {
     resource = MAELSTROM,
     moteTalent   = "Master of the Elements", -- gates moteUp/moteDown (not readable)
     moteTalentID = 16166,                    -- stable ID match (preferred over the name)
+    usesPandemic = true,                     -- shows the one-time Cooldown Manager tip
 
     spells = {
         LightningBolt      = 188196,
