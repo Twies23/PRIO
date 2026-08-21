@@ -1,0 +1,40 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="PRIO">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#131A21"/>
+      <stop offset="1" stop-color="#0A0E12"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#0A8F6C"/>
+      <stop offset="0.55" stop-color="#0CD29D"/>
+      <stop offset="1" stop-color="#5BF3CC"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="10" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- tile -->
+  <rect x="16" y="16" width="480" height="480" rx="104" fill="url(#tile)"/>
+  <rect x="16.5" y="16.5" width="479" height="479" rx="103.5" fill="none"
+        stroke="#0CD29D" stroke-opacity="0.30" stroke-width="3"/>
+  <!-- top-edge accent highlight -->
+  <rect x="60" y="24" width="392" height="6" rx="3" fill="#0CD29D" opacity="0.35"/>
+
+  <!-- ascending priority chevrons -->
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)">
+    <polyline points="150,338 256,300 362,338" stroke="#0A6E54" stroke-width="30"/>
+    <polyline points="150,270 256,232 362,270" stroke="url(#accentGrad)" stroke-width="34" stroke-opacity="0.85"/>
+    <polyline points="150,202 256,158 362,202" stroke="#7DF6D5" stroke-width="38"/>
+  </g>
+
+  <!-- wordmark -->
+  <text x="256" y="430" text-anchor="middle"
+        font-family="'Trebuchet MS','Segoe UI',Arial,sans-serif"
+        font-size="86" font-weight="800" letter-spacing="10"
+        fill="#EDF4F8">PRIO</text>
+</svg>

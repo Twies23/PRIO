@@ -1,0 +1,40 @@
+<svg width="1200" height="360" viewBox="0 0 1200 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="PRIO — Rotation Priority Helper">
+  <defs>
+    <linearGradient id="tile2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#131A21"/>
+      <stop offset="1" stop-color="#0A0E12"/>
+    </linearGradient>
+    <linearGradient id="accentGrad2" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#0A8F6C"/>
+      <stop offset="0.55" stop-color="#0CD29D"/>
+      <stop offset="1" stop-color="#5BF3CC"/>
+    </linearGradient>
+    <filter id="glow2" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="7" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- transparent background; emblem tile on the left -->
+  <g transform="translate(40,60)">
+    <rect x="0" y="0" width="240" height="240" rx="52" fill="url(#tile2)"/>
+    <rect x="0.5" y="0.5" width="239" height="239" rx="51.5" fill="none"
+          stroke="#0CD29D" stroke-opacity="0.30" stroke-width="2"/>
+    <g fill="none" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow2)"
+       transform="translate(0,4)">
+      <polyline points="66,168 120,148 174,168" stroke="#0A6E54" stroke-width="16"/>
+      <polyline points="66,132 120,112 174,132" stroke="url(#accentGrad2)" stroke-width="18" stroke-opacity="0.9"/>
+      <polyline points="66,96 120,72 174,96" stroke="#7DF6D5" stroke-width="20"/>
+    </g>
+  </g>
+
+  <!-- wordmark -->
+  <text x="320" y="212"
+        font-family="'Trebuchet MS','Segoe UI',Arial,sans-serif"
+        font-size="150" font-weight="800" letter-spacing="6"
+        fill="#EDF4F8">PRIO</text>
+  <text x="326" y="268"
+        font-family="'Segoe UI',Arial,sans-serif"
+        font-size="34" font-weight="600" letter-spacing="8"
+        fill="#0CD29D">ROTATION&#160;&#160;PRIORITY&#160;&#160;HELPER</text>
+</svg>
