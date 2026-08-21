@@ -572,6 +572,51 @@ PRIO:On("PLAYER_ENTERING_WORLD", function() API.EnsureNameplates() end)
 PRIO:On("PLAYER_REGEN_ENABLED", function() API.EnsureNameplates() end)
 
 --------------------------------------------------------------------------------
+-- Aura probes: try to read a player aura's stack count / remaining time. In 12.1
+-- these fields are often SECRET in combat (return userdata, not a number) -- these
+-- return the value ONLY when it's a clean number, else nil. Use to test whether
+-- Maelstrom Weapon stacks / Flame Shock pandemic windows are actually readable.
+--------------------------------------------------------------------------------
+local function findAura(spellID)
+    -- Player buffs/debuffs (Maelstrom Weapon, Hot Hand, ...).
+    if C_UnitAuras and C_UnitAuras.GetPlayerAuraBySpellID then
+        local ok, d = pcall(C_UnitAuras.GetPlayerAuraBySpellID, spellID)
+        if ok and type(d) == "table" then return d end
+    end
+    -- Target harmful auras (our DoTs, e.g. Flame Shock).
+    if C_UnitAuras and C_UnitAuras.GetAuraDataByIndex and SafeCall(UnitExists, "target") then
+        for i = 1, 40 do
+            local ok, d = pcall(C_UnitAuras.GetAuraDataByIndex, "target", i, "HARMFUL")
+            if not ok or type(d) ~= "table" then break end
+            if d.spellId == spellID then return d end
+        end
+    end
+    return nil
+end
+local playerAura = findAura
+
+-- Stack count if readable (a real number), else nil.
+function API.AuraStacks(spellID)
+    local d = playerAura(spellID)
+    if not d then return nil end
+    local a = d.applications
+    if type(a) == "number" then return a end
+    return nil
+end
+
+-- Seconds remaining if readable (expirationTime is a clean number), else nil.
+function API.AuraRemaining(spellID)
+    local d = playerAura(spellID)
+    if not d then return nil end
+    local e = d.expirationTime
+    if type(e) == "number" and e > 0 then
+        local rem = e - GetTime()
+        return rem > 0 and rem or 0
+    end
+    return nil
+end
+
+--------------------------------------------------------------------------------
 -- Keep the tracked-frame map fresh.
 --------------------------------------------------------------------------------
 local function refreshAll() API.RefreshTracked(); API.RefreshTalents() end

@@ -99,7 +99,7 @@ local spec = {
     OnCast = function(P, key, now) end,
 
     debug = {
-        { label = "Maelstrom Weapon", kind = "buff", spell = ID_MAELWEAPON },
+        { label = "Maelstrom Weapon", kind = "stacks", spell = ID_MAELWEAPON },
         { label = "Hot Hand",         kind = "buff", spell = ID_HOTHAND },
         { label = "Doom Winds",       kind = "buff", spell = ID_DOOMWINDS },
         { label = "Ascendance",       kind = "buff", spell = ID_ASCENDANCE },

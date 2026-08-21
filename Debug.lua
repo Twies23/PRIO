@@ -218,6 +218,24 @@ function Debug:Update()
                 else
                     set(id, yesno(P.mote))
                 end
+            elseif d.kind == "stacks" then
+                local s = API.AuraStacks and API.AuraStacks(d.spell)
+                if s then
+                    set(id, "|cff0cd29f" .. s .. " stacks|r  |cff5a6a76(read!)|r")
+                else
+                    local act = API.IsAuraActive(d.spell)
+                    set(id, act == true and "|cffe0a03aup (count secret)|r"
+                        or act == false and "|cff5a6a76none|r" or "|cffe0a03a?|r")
+                end
+            elseif d.kind == "remaining" then
+                local r = API.AuraRemaining and API.AuraRemaining(d.spell)
+                if r then
+                    set(id, ("|cff0cd29f%.1fs|r  |cff5a6a76(read!)|r"):format(r))
+                else
+                    local act = API.IsAuraActive(d.spell)
+                    set(id, act == true and "|cffe0a03aup (time secret)|r"
+                        or act == false and "|cff5a6a76gone|r" or "|cffe0a03a?|r")
+                end
             elseif d.kind == "hasMote" then
                 set(id, PRIO.Engine and PRIO.Engine.hasMote
                     and "|cff0cd29fdetected|r" or "|cffe0685anot detected|r")
