@@ -215,9 +215,9 @@ local spec = {
             { spell = "Stormkeeper" },
             { spell = "AncestralSwiftness" },
             { spell = "Ascendance", cond = OR(cdReady(ID_STORMKEEPER), buffUp(ID_STORMKEEPER)) },
-            -- Flame Shock upkeep (applier varies by build)
+            -- Flame Shock upkeep. The Flame Shock button smart-swaps to Voltaic Blaze
+            -- when that's talented, so no separate ST Voltaic Blaze line is needed.
             { spell = "FlameShock",  ignoreCD = true, cond = OR(buffDown(ID_FLAMESHOCK), refreshable(ID_FLAMESHOCK)) },
-            { spell = "VoltaicBlaze", cond = OR(buffDown(ID_FLAMESHOCK), refreshable(ID_FLAMESHOCK)) },
             -- MotE window: spend with Elemental Blast, build with Lava Burst, consume
             -- with a Stormkeeper Lightning Bolt (all inert on non-MotE builds).
             { spell = "ElementalBlast", cond = moteUp },
@@ -244,8 +244,7 @@ local spec = {
             { spell = "ElementalBlast" },                           -- spender at 3 targets
             { spell = "LavaBurst",   cond = buffUp(ID_PURGING) },
             { spell = "Tempest" },
-            { spell = "ChainLightning", cond = buffUp(ID_STORMKEEPER) },
-            { spell = "ChainLightning" },
+            { spell = "ChainLightning" },                          -- filler (Stormkeeper-empowered via flash)
         },
 
         -- AoE (4+): all-inclusive, mirroring SimC's actions.aoe. Talent branches are
@@ -265,15 +264,12 @@ local spec = {
             { spell = "LavaBurst",   cond = AND(buffUp(ID_PURGING), buffUp(ID_LAVASURGE)) },
             -- Spend the MotE window with Tempest
             { spell = "Tempest",     cond = moteUp },
-            -- Spenders
+            -- Spender (Earthquake at 4+; Elemental Blast isn't used in AoE)
             { spell = "Earthquake" },
-            { spell = "ElementalBlast" },
             -- Consume Purging Flames
             { spell = "LavaBurst",   cond = buffUp(ID_PURGING) },
             { spell = "Tempest" },
-            -- Stormkeeper-empowered Chain Lightning, then plain filler
-            { spell = "ChainLightning", cond = buffUp(ID_STORMKEEPER) },
-            { spell = "ChainLightning" },
+            { spell = "ChainLightning" },                          -- filler (Stormkeeper-empowered via flash)
         },
     },
 }

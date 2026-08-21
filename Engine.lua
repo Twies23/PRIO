@@ -70,7 +70,7 @@ function Cond.ClauseLabel(cl, selfSid)
     elseif t == "talentNo" then return "no " .. (cl.spell and SpellShort(cl.spell) or "talent") .. " talent"
     elseif t == "lastCast" then return "just cast " .. name
     elseif t == "lastCastNot" then return "not just " .. name
-    elseif t == "refreshable" then return name .. " refreshable"
+    elseif t == "refreshable" then return name .. " in pandemic"
     elseif t == "moteUp" then return "MotE up"
     elseif t == "moteDown" then return "MotE down"
     elseif t == "skStacks" then return "SK \226\137\165 " .. (cl.v or 1)
@@ -107,7 +107,7 @@ function Cond.Copy(c)
     if not c then return nil end
     if c.clauses then
         local cl = {}
-        for i, x in ipairs(c.clauses) do cl[i] = { type = x.type, spell = x.spell, v = x.v } end
+        for i, x in ipairs(c.clauses) do cl[i] = Cond.Copy(x) end   -- recurse (don't flatten groups to empty)
         return { op = c.op or "and", clauses = cl }
     end
     return { type = c.type, spell = c.spell, v = c.v }

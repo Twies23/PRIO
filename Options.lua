@@ -19,6 +19,7 @@ local currentPage = "display"
 
 local DOTCOL = {
     pass = { 0.047, 0.824, 0.616 }, fail = { 0.88, 0.41, 0.35 }, open = { 0.878, 0.627, 0.227 },
+    unknown = { 0.35, 0.40, 0.46 },   -- spell not known / not talented -> won't fire
 }
 
 local SIDEBAR_W = 192
@@ -172,7 +173,8 @@ local function BuildExportText(spec, mode)
         local sid  = PRIO.Engine:EntrySpellID(e)
         local name = (sid and API.SpellName(sid)) or tostring(e.spell)
         local known = sid and API.IsKnown(sid)
-        local status = S and PRIO.Cond.RowStatus(e.cond, S, sid) or "?"
+        local status = (not known) and "not known"
+            or (S and PRIO.Cond.RowStatus(e.cond, S, sid) or "?")
         L[#L+1] = ("%2d. %s (#%s)%s%s\n      when: %s"):format(
             i, name, tostring(sid or "?"),
             e.off and "  [DISABLED]" or "",
@@ -722,8 +724,12 @@ function Options:Build()
         local S = PRIO.Engine and PRIO.Engine:CurrentState()
         if not S then return end
         for _, sr in ipairs(statusRows) do
-            local st = PRIO.Cond.RowStatus(sr.cond, S, sr.sid)
-            local col = DOTCOL[st] or DOTCOL.open
+            local col
+            if sr.sid and not API.IsKnown(sr.sid) then
+                col = DOTCOL.unknown        -- not talented -> the row can't fire
+            else
+                col = DOTCOL[PRIO.Cond.RowStatus(sr.cond, S, sr.sid)] or DOTCOL.open
+            end
             sr.dot:SetColorTexture(col[1], col[2], col[3], 1)
         end
     end)
