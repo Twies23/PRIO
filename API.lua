@@ -436,7 +436,10 @@ function API.RefreshCarryover(spellID)
     for _, u in ipairs({ "player", "target" }) do
         local okB, base = pcall(C_UnitAuras.GetAuraBaseDuration, u, d.auraInstanceID, spellID)
         local okE, ext  = pcall(C_UnitAuras.GetRefreshExtendedDuration, u, d.auraInstanceID, spellID)
-        if okB and okE and type(base) == "number" and type(ext) == "number" then
+        -- type() reports "number" even for SECRET values, so guard with IsSecret
+        -- before the subtraction or it taints (throws) outside the pcall.
+        if okB and okE and type(base) == "number" and type(ext) == "number"
+            and not IsSecret(base) and not IsSecret(ext) then
             return ext - base
         end
     end
@@ -627,28 +630,31 @@ local function findAura(spellID)
         for i = 1, 40 do
             local ok, d = pcall(C_UnitAuras.GetAuraDataByIndex, "target", i, "HARMFUL")
             if not ok or type(d) ~= "table" then break end
-            if d.spellId == spellID then return d end
+            local sid = d.spellId
+            if type(sid) == "number" and not IsSecret(sid) and sid == spellID then return d end
         end
     end
     return nil
 end
 local playerAura = findAura
 
--- Stack count if readable (a real number), else nil.
+-- Stack count if readable (a real number, not secret), else nil. NOTE: type() can
+-- report "number" for a SECRET value, so IsSecret must be checked before any
+-- comparison / arithmetic or it taints (throws) outside a pcall.
 function API.AuraStacks(spellID)
     local d = playerAura(spellID)
     if not d then return nil end
     local a = d.applications
-    if type(a) == "number" then return a end
+    if type(a) == "number" and not IsSecret(a) then return a end
     return nil
 end
 
--- Seconds remaining if readable (expirationTime is a clean number), else nil.
+-- Seconds remaining if readable (expirationTime is a clean, non-secret number), else nil.
 function API.AuraRemaining(spellID)
     local d = playerAura(spellID)
     if not d then return nil end
     local e = d.expirationTime
-    if type(e) == "number" and e > 0 then
+    if type(e) == "number" and not IsSecret(e) and e > 0 then
         local rem = e - GetTime()
         return rem > 0 and rem or 0
     end

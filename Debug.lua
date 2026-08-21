@@ -204,6 +204,9 @@ function Debug:Update()
     if spec and spec.debug then
         for i, d in ipairs(spec.debug) do
             local id = "d" .. i
+            -- Guard each row so a probe that trips a secret value can't error out of
+            -- the whole Update (which would blank the rest and flood the error log).
+            local ok, err = pcall(function()
             if d.kind == "buff" then
                 set(id, auraText(d.spell))
             elseif d.kind == "cd" then
@@ -253,6 +256,8 @@ function Debug:Update()
             else
                 set(id, "-")
             end
+            end)   -- close pcall
+            if not ok then set(id, "|cffe0685aerr|r") end
         end
     end
 

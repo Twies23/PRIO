@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.1.7
+- **Fixed a flood of Lua errors** when the Debug window was open — the pandemic/aura probes were touching secret values. They're now fully guarded, and the Debug panel can't error out even if a probe fails.
+
 ## 0.1.6
 - Added `/prio power` — a diagnostic that shows which of your class resources read cleanly in combat, used to validate spec support.
 
