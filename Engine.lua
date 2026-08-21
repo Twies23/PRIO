@@ -90,6 +90,19 @@ function Cond.Summary(cond, selfSid)
     return #cl .. " conditions (" .. (cond.op == "or" and "ANY" or "ALL") .. ")"
 end
 
+-- Full readable description (for the text export). Expands every clause.
+function Cond.Describe(cond, selfSid)
+    if not cond then return "always" end
+    local cl = cond.clauses
+    if not cl then return Cond.ClauseLabel(cond, selfSid) end
+    if #cl == 0 then return "always" end
+    if #cl == 1 then return Cond.ClauseLabel(cl[1], selfSid) end
+    local parts = {}
+    for _, c in ipairs(cl) do parts[#parts + 1] = Cond.ClauseLabel(c, selfSid) end
+    local head = (cond.op == "or") and "ANY" or "ALL"
+    return head .. "( " .. table.concat(parts, (cond.op == "or") and " OR " or " AND ") .. " )"
+end
+
 function Cond.Copy(c)
     if not c then return nil end
     if c.clauses then

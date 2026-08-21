@@ -153,6 +153,7 @@ function PRIO:Tick()
     end
     local inCombat = InCombatLockdown()
     if not inCombat then
+        if self.API.PollTalentConfig then self.API.PollTalentConfig() end   -- catch loadout swaps
         -- Out of combat: pre-combat reminders take precedence, then optional rotation.
         local pre = self.Engine:PrecombatResult()
         if pre then self.Display:Render(pre); return end
@@ -280,6 +281,8 @@ SlashCmdList.PRIO = function(msg)
         end
     elseif msg == "setup" then
         if PRIO.Setup then PRIO.Setup:Toggle() end
+    elseif msg == "export" then
+        if PRIO.Options then PRIO.Options:ExportCurrent() end
     elseif msg == "pandemic" then
         StaticPopup_Show("PRIO_PANDEMIC_TIP")
     elseif msg == "power" then

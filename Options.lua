@@ -156,6 +156,43 @@ local function IsCustom(spec, mode)
     return (cp and cp[spec.key] and cp[spec.key][mode]) and true or false
 end
 
+-- Build a plain-text breakdown of a spec/mode priority list (for the copy box).
+local function BuildExportText(spec, mode)
+    if not spec then return "No supported spec is active." end
+    local L = { }
+    L[#L+1] = ("PRIO v%s  |  %s %s  |  %s  (%s)"):format(
+        PRIO.version or "?", spec.label or "", spec.className or "",
+        mode:upper(), IsCustom(spec, mode) and "customized" or "default")
+    L[#L+1] = ("enemies=%d  mode(auto->)=%s"):format(API.EnemyCount(),
+        PRIO.Engine and PRIO.Engine:ResolveMode(API.EnemyCount()) or "?")
+    L[#L+1] = string.rep("-", 60)
+    local list = PRIO.Engine:EffectiveList(spec.key, mode)
+    local S = PRIO.Engine and PRIO.Engine:CurrentState()
+    for i, e in ipairs(list) do
+        local sid  = PRIO.Engine:EntrySpellID(e)
+        local name = (sid and API.SpellName(sid)) or tostring(e.spell)
+        local known = sid and API.IsKnown(sid)
+        local status = S and PRIO.Cond.RowStatus(e.cond, S, sid) or "?"
+        L[#L+1] = ("%2d. %s (#%s)%s%s\n      when: %s"):format(
+            i, name, tostring(sid or "?"),
+            e.off and "  [DISABLED]" or "",
+            known and "" or "  [not known/talented]",
+            PRIO.Cond.Describe(e.cond, sid) .. "   -> " .. status)
+    end
+    L[#L+1] = string.rep("-", 60)
+    L[#L+1] = "Notes (add yours below):"
+    L[#L+1] = ""
+    return table.concat(L, "\n")
+end
+
+function Options:ExportCurrent()
+    local spec = CurrentSpec()
+    local mode = CurrentMode()
+    UI.CopyBox("PRIO  Export",
+        (spec and (spec.label .. " / " .. mode:upper()) or "") .. "   —   Ctrl+A, Ctrl+C to copy",
+        BuildExportText(spec, mode))
+end
+
 -- Copy-on-write: materialize an editable custom list for spec/mode from the default.
 local function EnsureCustom(spec, mode)
     local cp = PRIO.db.customPriorities
@@ -255,6 +292,12 @@ function Pages.rotation()
 
     -- Header row: list status + reset
     Section("Priority  ·  " .. mode:upper() .. (IsCustom(spec, mode) and "   (custom)" or "   (default)"))
+    SettingRow("Export this list as text", 26, function(r)
+        local b = UI.Card(r, C.control, 0.1); b:SetSize(110, 24); b:SetPoint("RIGHT", 0, 0)
+        local bb = CreateFrame("Button", nil, b); bb:SetAllPoints()
+        local fs = UI.Font(b, 12, C.accent); fs:SetPoint("CENTER"); fs:SetText("Export")
+        bb:SetScript("OnClick", function() Options:ExportCurrent() end)
+    end)
     if IsCustom(spec, mode) then
         SettingRow("This list is customized", 26, function(r)
             local b = UI.Card(r, C.control, 0.1); b:SetSize(130, 24); b:SetPoint("RIGHT", 0, 0)

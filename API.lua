@@ -537,12 +537,14 @@ end
 --------------------------------------------------------------------------------
 local talentSelected = {}   -- spellID -> true if the talent is currently chosen
 local talentList = {}       -- { {value=spellID, text=name, icon=}, ... } (all talents)
+local lastConfigID          -- the talent loadout we last read
 
 function API.RefreshTalents()
     wipe(talentSelected); wipe(talentList)
     if not (C_ClassTalents and C_ClassTalents.GetActiveConfigID and C_Traits) then return end
     local ok, configID = pcall(C_ClassTalents.GetActiveConfigID)
     if not ok or not configID then return end
+    lastConfigID = configID
     local cfgOk, cfg = pcall(C_Traits.GetConfigInfo, configID)
     if not cfgOk or type(cfg) ~= "table" or not cfg.treeIDs then return end
     local seen = {}
@@ -669,7 +671,22 @@ PRIO:On("PLAYER_ENTERING_WORLD", refreshAll)
 PRIO:On("PLAYER_SPECIALIZATION_CHANGED", refreshAll)
 PRIO:On("PLAYER_TALENT_UPDATE", refreshAll)
 PRIO:On("TRAIT_CONFIG_UPDATED", refreshAll)
+PRIO:On("TRAIT_CONFIG_LIST_UPDATED", refreshAll)
+PRIO:On("ACTIVE_COMBAT_CONFIG_CHANGED", refreshAll)
 PRIO:On("SPELLS_CHANGED", refreshAll)
 PRIO:On("COOLDOWN_VIEWER_DATA_LOADED", refreshAll)
 -- Rebuild shortly after login too, once the viewer/trait data exists.
 PRIO:On("PLAYER_LOGIN", function() C_Timer.After(2, refreshAll) end)
+
+-- Static out-of-combat safety net: talent loadout swaps don't always fire an event
+-- we catch, so poll the active config ID and refresh when it changes. Called from
+-- the engine tick; cheap, and only does work when the loadout actually changed.
+function API.PollTalentConfig()
+    if InCombatLockdown() then return end
+    if not (C_ClassTalents and C_ClassTalents.GetActiveConfigID) then return end
+    local ok, id = pcall(C_ClassTalents.GetActiveConfigID)
+    if ok and id and id ~= lastConfigID then
+        refreshAll()   -- RefreshTalents updates lastConfigID
+        if PRIO.Engine and PRIO.Engine.RefreshTalentFlags then PRIO.Engine:RefreshTalentFlags() end
+    end
+end

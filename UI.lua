@@ -256,6 +256,35 @@ function UI.Window(name, w, h, titleText, subText)
     return f
 end
 
+-- A copyable text window: shows `text` in a selectable multiline edit box,
+-- highlighted and focused so Ctrl+C copies it. Reused across calls.
+local exportWin
+function UI.CopyBox(title, subtitle, text)
+    if not exportWin then
+        local w = UI.Window("PRIOCopyBox", 580, 470, title or "Export", subtitle)
+        w:SetFrameStrata("FULLSCREEN_DIALOG")
+        local scroll = CreateFrame("ScrollFrame", "PRIOCopyScroll", w, "UIPanelScrollFrameTemplate")
+        scroll:SetPoint("TOPLEFT", 18, -66); scroll:SetPoint("BOTTOMRIGHT", -34, 18)
+        local box = UI.Solid(w, "BACKGROUND", C.sidebar); box:SetPoint("TOPLEFT", scroll, -6, 6)
+        box:SetPoint("BOTTOMRIGHT", scroll, 26, -6)
+        local eb = CreateFrame("EditBox", nil, scroll)
+        eb:SetMultiLine(true); eb:SetAutoFocus(false); eb:SetFontObject(ChatFontNormal)
+        eb:SetWidth(500); eb:SetTextInsets(4, 4, 4, 4)
+        eb:SetScript("OnEscapePressed", function() w:Hide() end)
+        eb:SetScript("OnEnterPressed", function() end)
+        scroll:SetScrollChild(eb)
+        w._eb = eb
+        exportWin = w
+    end
+    exportWin.title:SetText(title or "Export")
+    if exportWin.sub then exportWin.sub:SetText(subtitle or "Ctrl+A then Ctrl+C to copy") end
+    exportWin._eb:SetText(text or "")
+    exportWin:Show()
+    exportWin._eb:SetFocus()
+    exportWin._eb:HighlightText()
+    return exportWin
+end
+
 --------------------------------------------------------------------------------
 -- Shared popup menu (used by dropdowns). Closes on selection or click-outside.
 --------------------------------------------------------------------------------
