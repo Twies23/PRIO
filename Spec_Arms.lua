@@ -22,6 +22,7 @@ local ID_COLOSSUS_DBF = 208086   -- Colossus Smash debuff (on target)
 local ID_OPPORTUNIST = 217344    -- Opportunist (empowers Overpower)
 local ID_COLOSSALMIGHT = 440989  -- Colossal Might stacks (Colossus)
 local ID_SWEEPING    = 260708    -- Sweeping Strikes (self)
+local ID_REND        = 772       -- Rend debuff (on target)
 
 local function AND(...) return { op = "and", clauses = { ... } } end
 local function OR(...)  return { op = "or",  clauses = { ... } } end
@@ -97,7 +98,8 @@ local spec = {
     priority = {
         -- Single target (Colossus + Slayer merged).
         st = {
-            { spell = "Rend" },                                   -- keep Rend up (refreshes; IsKnown/short)
+            { spell = "MortalStrike" },                           -- primary generator / Colossal Might
+            { spell = "Rend", cond = buffDown(ID_REND) },         -- maintain Rend (only when missing)
             { spell = "Ravager" },                                -- just before Colossus Smash
             { spell = "Avatar" },                                 -- on CD
             { spell = "ThunderousRoar" },                         -- on CD
@@ -106,7 +108,6 @@ local spec = {
             { spell = "Warbreaker" },                             -- on CD (replaces Colossus Smash)
             { spell = "Demolish" },                               -- Colossus: during Colossus Smash
             { spell = "Execute", cond = buffUp(ID_SUDDENDEATH) }, -- Sudden Death proc
-            { spell = "MortalStrike" },                           -- primary generator / Colossal Might
             { spell = "Overpower" },                              -- charges; empowered by Opportunist
             { spell = "Skullsplitter" },                          -- Rage generator
             { spell = "Bladestorm" },                             -- Slayer: weave during Colossus Smash
@@ -138,6 +139,7 @@ local spec = {
     --------------------------------------------------------------------------------
     debug = {
         { label = "Overpower charges", kind = "charges", key = "Overpower" },
+        { label = "Rend (target)",     kind = "buff", spell = ID_REND },
         { label = "Sudden Death",      kind = "buff", spell = ID_SUDDENDEATH },
         { label = "Colossus Smash (t)",kind = "buff", spell = ID_COLOSSUS_DBF },
         { label = "Colossal Might",    kind = "buff", spell = ID_COLOSSALMIGHT },

@@ -358,6 +358,7 @@ function Options:OpenCondEditor(spec, mode, index)
     if not editor then
         editor = UI.Window("PRIOCondEditor", 372, 300, "Conditions", "\226\128\148")
         editor:SetFrameStrata("DIALOG")
+        editor:HookScript("OnHide", function() UI.CloseMenu() end)
         editor.rows = {}
         editor.statusFns = {}
         editor.matchLbl = UI.Font(editor, 12, C.muted)
@@ -615,6 +616,7 @@ function Options:Build()
     if win then return end
     win = UI.Window("PRIOOptions", 720, 524, "PRIO")
     win:HookScript("OnHide", function()
+        UI.CloseMenu()
         if picker then picker:Hide() end
         if editor then editor:Hide() end
     end)

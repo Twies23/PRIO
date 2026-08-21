@@ -229,11 +229,26 @@ function UI.OpenMenu(anchor, options, onPick, width)
         catcher:SetFrameStrata("FULLSCREEN_DIALOG")
         catcher:Hide()
         catcher:SetScript("OnClick", function() menu:Hide() end)
+        catcher:SetScript("OnKeyDown", function(self, key)
+            -- Swallow only Escape (to close the menu); let every other key pass
+            -- through so we never trap the keyboard while a dropdown is open.
+            if key == "ESCAPE" then
+                self:SetPropagateKeyboardInput(false)
+                menu:Hide()
+            else
+                self:SetPropagateKeyboardInput(true)
+            end
+        end)
         menu = UI.Card(UIParent, C.sidebar, 0.25)
         menu:SetFrameStrata("FULLSCREEN_DIALOG")
         menu:Hide()
         menu.buttons = {}
-        menu:SetScript("OnHide", function() if catcher then catcher:Hide() end end)
+        -- Hiding the menu always tears down the click/key catcher, so it can never
+        -- orphan and block the rest of the UI (the "stuck window, only Escape works"
+        -- bug). Escape is caught by the catcher first while a menu is open.
+        menu:SetScript("OnHide", function()
+            if catcher then catcher:Hide(); catcher:EnableKeyboard(false) end
+        end)
         menuScroll = CreateFrame("ScrollFrame", nil, menu)
         menuScroll:SetPoint("TOPLEFT", 4, -4)
         menuScroll:SetPoint("BOTTOMRIGHT", -4, 4)
@@ -277,8 +292,14 @@ function UI.OpenMenu(anchor, options, onPick, width)
     menu:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, -2)
     menu.owner = anchor
     catcher:Show()
+    catcher:EnableKeyboard(true)         -- so Escape closes the menu, not the window
     menu:Show()
     menu:Raise()
+end
+
+-- Force the shared dropdown menu shut (called when any owning window hides).
+function UI.CloseMenu()
+    if menu and menu:IsShown() then menu:Hide() end
 end
 
 --------------------------------------------------------------------------------
