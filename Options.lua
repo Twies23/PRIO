@@ -662,11 +662,12 @@ end
 
 local RED = { 0.88, 0.41, 0.35 }
 local function textButton(parent, w, label, color, onClick)
-    local b = UI.Card(parent, color, 0.13); b:SetSize(w, 24)
+    -- faint tinted fill (alpha via the color's 4th element) + accent border + text
+    local b = UI.Card(parent, { color[1], color[2], color[3], 0.14 }, 0.4); b:SetSize(w, 24)
     local bb = CreateFrame("Button", nil, b); bb:SetAllPoints()
     local fs = UI.Font(b, 12, color); fs:SetPoint("CENTER"); fs:SetText(label)
-    bb:SetScript("OnEnter", function() b:SetBackdropColor(color[1], color[2], color[3], 0.26) end)
-    bb:SetScript("OnLeave", function() b:SetBackdropColor(color[1], color[2], color[3], 0.13) end)
+    bb:SetScript("OnEnter", function() b:SetBackdropColor(color[1], color[2], color[3], 0.30) end)
+    bb:SetScript("OnLeave", function() b:SetBackdropColor(color[1], color[2], color[3], 0.14) end)
     bb:SetScript("OnClick", onClick)
     return b
 end

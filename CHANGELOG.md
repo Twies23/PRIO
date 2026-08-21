@@ -1,5 +1,10 @@
 # PRIO Changelog
 
+## 0.1.25
+- Fixed the Profiles page buttons rendering as solid blocks with no visible text.
+- **Arms:** removed the redundant Warbreaker line — the Colossus Smash button smart-swaps to Warbreaker when talented.
+- **Marksmanship:** Black Arrow moved to a low-priority Precise Shots spender, matching the guide.
+
 ## 0.1.24
 - **Profiles** (Options → Profiles): save your settings and priority lists as named profiles, then apply or delete them. The recommended preset lives here too.
 - When a future release changes the default priorities, PRIO now prompts you on login (only if you have customized lists) to reset to the new defaults.

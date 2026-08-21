@@ -125,11 +125,11 @@ local spec = {
             { spell = "Volley" },                                   -- on CD
             { spell = "Trueshot" },                                 -- on CD
             { spell = "KillShot",   cond = buffUp(ID_PRECISE) },    -- spend Precise Shots (execute)
-            { spell = "BlackArrow" },                               -- DR: on CD
             { spell = "ArcaneShot", cond = buffUp(ID_PRECISE) },    -- spend Precise Shots
             { spell = "RapidFire" },                                -- on CD, builds Precise
             { spell = "AimedShot" },                                -- on CD (2 charges), builds Precise
             { spell = "MoonlightChakram" },                         -- Sentinel: on CD
+            { spell = "BlackArrow", cond = buffUp(ID_PRECISE) },    -- DR: spend Precise Shots (low priority)
             { spell = "SteadyShot" },                               -- filler (resource-starved only)
         },
 
