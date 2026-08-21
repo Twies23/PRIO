@@ -316,21 +316,21 @@ function API.EnemyCount()
                     n = n + 1
                 else
                     -- "Engaged with me": on their threat table, flagged in combat, or
-                    -- my current target. Correct in real content. Training dummies
-                    -- don't flag combat or hold threat, so ALSO count attackable
-                    -- "Dummy" nameplates while I'm in combat -- dummies never appear
-                    -- in real content, so this can't over-count a live pull.
+                    -- my current target. In 12.1 the threat/combat state of an enemy
+                    -- nameplate can come back SECRET (nil), which would collapse the
+                    -- count to just the target (1) and freeze the mode in ST. So:
+                    --   * use the precise signals when they're readable, else
+                    --   * fall back to counting attackable nameplates while I'm in
+                    --     combat (in a real pull a visible enemy plate is our fight;
+                    --     training dummies -- named "Dummy" -- also land here).
                     local threat = SafeCall(UnitThreatSituation, "player", unit)
                     local inCbt  = SafeCall(UnitAffectingCombat, unit)
                     local isTgt  = SafeCall(UnitIsUnit, unit, "target")
-                    local isDummy = false
-                    if playerInCbt then
-                        local nm = SafeCall(UnitName, unit)
-                        isDummy = nm and nm:find("Dummy") ~= nil
+                    local counted = (threat ~= nil) or inCbt or isTgt
+                    if not counted and playerInCbt and threat == nil and inCbt == nil then
+                        counted = true                         -- signals secret -> assume in-fight
                     end
-                    if threat ~= nil or inCbt or isTgt or isDummy then
-                        n = n + 1
-                    end
+                    if counted then n = n + 1 end
                 end
             end
         end
