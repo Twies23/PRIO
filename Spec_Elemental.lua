@@ -26,6 +26,7 @@ local function buffUp(id)   return { type = "buffActive",  spell = id } end
 local function buffDown(id) return { type = "buffMissing", spell = id } end
 local function cdDown(id)   return { type = "cdNotReady",  spell = id } end
 local function cdReady(id)  return { type = "cdReady",     spell = id } end
+local function refreshable(id) return { type = "refreshable", spell = id } end
 local moteUp   = { type = "moteUp" }
 local moteDown = { type = "moteDown" }
 
@@ -204,7 +205,7 @@ local spec = {
             { spell = "AncestralSwiftness" },
             { spell = "Ascendance", cond = OR(cdReady(ID_STORMKEEPER), buffUp(ID_STORMKEEPER)) },
             -- Flame Shock upkeep (applier varies by build)
-            { spell = "FlameShock",  ignoreCD = true, cond = AND(moteDown, buffDown(ID_FLAMESHOCK)) },
+            { spell = "FlameShock",  ignoreCD = true, cond = AND(moteDown, OR(buffDown(ID_FLAMESHOCK), refreshable(ID_FLAMESHOCK))) },
             { spell = "VoltaicBlaze", cond = buffDown(ID_FLAMESHOCK) },
             -- MotE window: spend with Elemental Blast, build with Lava Burst, consume
             -- with a Stormkeeper Lightning Bolt (all inert on non-MotE builds).
@@ -224,7 +225,7 @@ local spec = {
         cleave = {
             { spell = "Stormkeeper" },
             { spell = "AncestralSwiftness" },
-            { spell = "FlameShock",  ignoreCD = true, cond = AND(moteDown, buffDown(ID_FLAMESHOCK)) },
+            { spell = "FlameShock",  ignoreCD = true, cond = AND(moteDown, OR(buffDown(ID_FLAMESHOCK), refreshable(ID_FLAMESHOCK))) },
             { spell = "VoltaicBlaze", cond = buffDown(ID_FLAMESHOCK) },
             { spell = "Ascendance",  cond = OR(cdReady(ID_STORMKEEPER), buffUp(ID_STORMKEEPER)) },
             { spell = "LavaBurst",   cond = AND(buffUp(ID_PURGING), buffUp(ID_LAVASURGE)) },
@@ -247,7 +248,7 @@ local spec = {
             { spell = "Stormkeeper" },
             { spell = "AncestralSwiftness" },
             -- Flame Shock upkeep when not in a MotE window (FS applier varies by build)
-            { spell = "FlameShock",  ignoreCD = true, cond = AND(moteDown, buffDown(ID_FLAMESHOCK)) },
+            { spell = "FlameShock",  ignoreCD = true, cond = AND(moteDown, OR(buffDown(ID_FLAMESHOCK), refreshable(ID_FLAMESHOCK))) },
             { spell = "VoltaicBlaze", cond = AND(moteDown, buffDown(ID_FLAMESHOCK)) },
             { spell = "Ascendance",  cond = OR(cdReady(ID_STORMKEEPER), buffUp(ID_STORMKEEPER)) },
             -- Instant Lava Burst cleave off a proc

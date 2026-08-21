@@ -43,6 +43,7 @@ Cond.types = {
     { value = "talentNo",    text = "Talent not selected", needsTalent = true },
     { value = "lastCast",    text = "Just cast",       needsSpell = true },
     { value = "lastCastNot", text = "Didn't just cast", needsSpell = true },
+    { value = "refreshable", text = "In pandemic (refreshable)", needsSpell = true },
     { value = "moteUp",      text = "MotE up" },
     { value = "moteDown",    text = "MotE down" },
     { value = "skStacks",    text = "SK stacks \226\137\165", needsValue = true, min = 1, max = 4, def = 1 },
@@ -69,6 +70,7 @@ function Cond.ClauseLabel(cl, selfSid)
     elseif t == "talentNo" then return "no " .. (cl.spell and SpellShort(cl.spell) or "talent") .. " talent"
     elseif t == "lastCast" then return "just cast " .. name
     elseif t == "lastCastNot" then return "not just " .. name
+    elseif t == "refreshable" then return name .. " refreshable"
     elseif t == "moteUp" then return "MotE up"
     elseif t == "moteDown" then return "MotE down"
     elseif t == "skStacks" then return "SK \226\137\165 " .. (cl.v or 1)
@@ -122,6 +124,10 @@ local function EvalClause(cl, S, selfSid)
     elseif t == "talentNo" then return not API.IsTalentSelected(cl.spell)
     elseif t == "lastCast" then return LastCastMatch(cl.spell or selfSid, S)
     elseif t == "lastCastNot" then return not LastCastMatch(cl.spell or selfSid, S)
+    -- Pandemic window read (secret-safe via the Cooldown Viewer). Only true when
+    -- Blizzard confirms the DoT is refreshable; nil/false -> not (so it never fires
+    -- early, and degrades to "refresh on missing" if the pandemic alert is off).
+    elseif t == "refreshable" then return API.InPandemic(sid) == true
     -- MotE is predicted, not readable. Gate on the talent so these are correct on
     -- builds that don't take it (no talent -> never "up", always "down").
     elseif t == "moteUp" then return Engine.hasMote and S.mote and true or false
@@ -159,6 +165,9 @@ function Cond.ClauseStatus(cl, S, selfSid)
     elseif t == "buffMissing" then
         local a = API.IsAuraActive(sid); if a == nil then return "open" end
         return (a == false) and "pass" or "fail"
+    elseif t == "refreshable" then
+        local a = API.InPandemic(sid); if a == nil then return "open" end
+        return a and "pass" or "fail"
     end
     return EvalClause(cl, S, selfSid) and "pass" or "fail"
 end
