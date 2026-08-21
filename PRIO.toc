@@ -10,6 +10,7 @@ Core.lua
 API.lua
 Engine.lua
 Spec_Elemental.lua
+Spec_Enhancement.lua
 Spec_Marksmanship.lua
 Spec_BeastMastery.lua
 Spec_Arms.lua

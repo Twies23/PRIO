@@ -9,6 +9,7 @@ Built to work within 12.1's "secret value" API restrictions — health/power/aur
 | Class   | Spec           | Spec ID | Status |
 |---------|----------------|---------|--------|
 | Shaman  | Elemental      | 262     | Primary / most-tested |
+| Shaman  | Enhancement    | 263     | New — needs testing |
 | Hunter  | Marksmanship   | 254     | New — needs testing |
 | Hunter  | Beast Mastery  | 253     | New — needs testing |
 | Warrior | Arms           | 71      | New — needs testing |
