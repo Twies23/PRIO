@@ -517,6 +517,7 @@ function Pages.general()
     tog("Pre-combat reminders", "showPrecombat")
     tog("Advance primary while casting", "advanceWhileCasting")
     tog("Minimap button", "minimapShow", function() if PRIO.UpdateMinimapButton then PRIO.UpdateMinimapButton() end end)
+    tog("Auto-enable enemy nameplates", "manageNameplates", function() if API.EnsureNameplates then API.EnsureNameplates() end end)
 
     Section("Enemy detection")
     SettingRow("Count method", 30, function(r)

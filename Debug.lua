@@ -84,6 +84,7 @@ function Debug:Rebuild(spec)
     head("Read live")
     row("mode", "Mode", "read")
     row("enemies", "Enemies", "read")
+    row("plates", "Nameplates", "read")
     row("resource", (spec and spec.resourceLabel) or "Resource", "read")
     row("casting", "Casting", "read")
 
@@ -166,6 +167,15 @@ function Debug:Update()
 
     local method = (PRIO.db and PRIO.db.enemyDetect) or "engaged"
     set("enemies", ("%d  |cff5a6a76(%s)|r"):format(API.EnemyCount(), method))
+
+    -- Nameplate status: EnemyCount can't see targets without enemy nameplates.
+    if API.NameplatesEnabled then
+        if API.NameplatesEnabled() then
+            set("plates", ("|cff0cd29fon|r  |cff5a6a76%d shown|r"):format(API.NameplateCount()))
+        else
+            set("plates", "|cffe0685aOFF -- enable enemy nameplates|r")
+        end
+    end
 
     -- Resource: real value when readable, else the prediction the gate uses.
     local realMs = spec and spec.resource and API.Power(spec.resource) or nil

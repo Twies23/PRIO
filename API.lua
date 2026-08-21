@@ -548,6 +548,30 @@ function API.IsTalentSelectedByName(name)
 end
 
 --------------------------------------------------------------------------------
+-- Enemy nameplates are how EnemyCount sees targets. If they're disabled the count
+-- freezes at 1 and the mode gets stuck in ST. Turn them on out of combat (unless
+-- the user opted out), and expose the status for the Debug window / options.
+--------------------------------------------------------------------------------
+function API.NameplatesEnabled()
+    local ok, v = pcall(GetCVar, "nameplateShowEnemies")
+    return ok and v == "1"
+end
+
+function API.NameplateCount()
+    if not (C_NamePlate and C_NamePlate.GetNamePlates) then return 0 end
+    local ok, plates = pcall(C_NamePlate.GetNamePlates)
+    return (ok and type(plates) == "table") and #plates or 0
+end
+
+function API.EnsureNameplates()
+    if PRIO.db and PRIO.db.manageNameplates == false then return end
+    if InCombatLockdown() then return end
+    if not API.NameplatesEnabled() then pcall(SetCVar, "nameplateShowEnemies", 1) end
+end
+PRIO:On("PLAYER_ENTERING_WORLD", function() API.EnsureNameplates() end)
+PRIO:On("PLAYER_REGEN_ENABLED", function() API.EnsureNameplates() end)
+
+--------------------------------------------------------------------------------
 -- Keep the tracked-frame map fresh.
 --------------------------------------------------------------------------------
 local function refreshAll() API.RefreshTracked(); API.RefreshTalents() end
