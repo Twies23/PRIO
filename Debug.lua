@@ -196,6 +196,9 @@ function Debug:Update()
                 else
                     set(id, yesno(P.mote))
                 end
+            elseif d.kind == "hasMote" then
+                set(id, PRIO.Engine and PRIO.Engine.hasMote
+                    and "|cff0cd29fdetected|r" or "|cffe0685anot detected|r")
             elseif d.kind == "skStacks" then
                 set(id, tostring(P.skStacks or 0))
             else

@@ -197,8 +197,12 @@ function Engine:OnSpecChanged()
 end
 
 -- Cache talent-derived flags used by conditions (e.g. Master of the Elements).
+-- Prefer a stable spell-ID match (spec.moteTalentID); fall back to the name lookup,
+-- which is brittle to localization / node naming.
 function Engine:RefreshTalentFlags()
-    self.hasMote = spec and spec.moteTalent and API.IsTalentSelectedByName(spec.moteTalent) or false
+    local byID   = spec and spec.moteTalentID and API.IsTalentSelected(spec.moteTalentID)
+    local byName = spec and spec.moteTalent   and API.IsTalentSelectedByName(spec.moteTalent)
+    self.hasMote = (byID or byName) and true or false
 end
 PRIO:On("TRAIT_CONFIG_UPDATED", function() Engine:RefreshTalentFlags() end)
 PRIO:On("PLAYER_TALENT_UPDATE", function() Engine:RefreshTalentFlags() end)

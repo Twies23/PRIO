@@ -35,7 +35,8 @@ local spec = {
     className = "Shaman",
     specID   = 262,
     resource = MAELSTROM,
-    moteTalent = "Master of the Elements",   -- gates moteUp/moteDown (not readable)
+    moteTalent   = "Master of the Elements", -- gates moteUp/moteDown (not readable)
+    moteTalentID = 16166,                    -- stable ID match (preferred over the name)
 
     spells = {
         LightningBolt      = 188196,
@@ -171,6 +172,7 @@ local spec = {
     -- Debug metadata (see Debug.lua). Rows shown live; economy is informational.
     --------------------------------------------------------------------------------
     debug = {
+        { label = "MotE talent",            kind = "hasMote" },
         { label = "Master of the Elements", kind = "mote" },
         { label = "Stormkeeper stacks",     kind = "skStacks" },
         { label = "Lava Burst charges",     kind = "charges", key = "LavaBurst" },
