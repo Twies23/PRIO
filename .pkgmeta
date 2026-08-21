@@ -1,0 +1,12 @@
+# CurseForge / BigWigs packager config.
+# Addon source lives at the repo root, so package it INTO a folder named "PRIO"
+# (must match the .toc base name so the game loads it).
+package-as: PRIO
+
+enable-nolib-creation: no
+
+# Files that shouldn't ship inside the addon zip.
+ignore:
+  - .gitignore
+  - .pkgmeta
+  - branding
