@@ -404,6 +404,45 @@ function API.IsTracked(spellID)
     return spellID ~= nil and trackedFrames[spellID] ~= nil
 end
 
+-- Pandemic / "is refreshable" read, secret-safe. Blizzard's Cooldown Viewer computes
+-- the pandemic window (the last ~30% where refreshing doesn't clip) and, while the
+-- aura is inside it, shows a PandemicIcon on the item frame. We read that already-
+-- computed VISUAL state (a clean bool) instead of the secret expiration times.
+-- Returns true (refresh now) / false (too early) / nil (not tracked).
+-- CAVEAT: Blizzard only computes this when the spell's "Pandemic Time" alert is
+-- enabled in the Cooldown Manager; if it isn't, PandemicIcon is never created and
+-- this reads false. (See API.RefreshCarryover for a settings-independent probe.)
+function API.InPandemic(spellID)
+    local frame = trackedFrames[spellID]
+    if not frame then return nil end
+    local icon = frame.PandemicIcon
+    if icon == nil then return false end            -- niled when not in pandemic
+    local ok, shown = pcall(icon.IsShown, icon)
+    if ok and not IsSecret(shown) then return shown and true or false end
+    return nil
+end
+
+-- Settings-independent pandemic probe: how much of the current aura would carry over
+-- if refreshed right now (Blizzard's own pandemic math). > 0 across the whole active
+-- window, but equals min(remaining, 30% base) -- so we surface it to TEST whether the
+-- duration APIs read clean here. Returns carriedOver seconds, or nil if unreadable.
+function API.RefreshCarryover(spellID)
+    if not (C_UnitAuras and C_UnitAuras.GetRefreshExtendedDuration and C_UnitAuras.GetAuraBaseDuration) then
+        return nil
+    end
+    local d = findAura(spellID)
+    if not (d and d.auraInstanceID) then return nil end
+    -- The aura was found on player or target; try both units for the duration APIs.
+    for _, u in ipairs({ "player", "target" }) do
+        local okB, base = pcall(C_UnitAuras.GetAuraBaseDuration, u, d.auraInstanceID, spellID)
+        local okE, ext  = pcall(C_UnitAuras.GetRefreshExtendedDuration, u, d.auraInstanceID, spellID)
+        if okB and okE and type(base) == "number" and type(ext) == "number" then
+            return ext - base
+        end
+    end
+    return nil
+end
+
 -- Simple "do I have this buff" (used out of combat for pre-combat checks).
 function API.HasAura(spellID)
     if not (spellID and C_UnitAuras and C_UnitAuras.GetPlayerAuraBySpellID) then return false end

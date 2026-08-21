@@ -178,6 +178,7 @@ local spec = {
         { label = "Lava Burst charges",     kind = "charges", key = "LavaBurst" },
         { label = "Flame Shock (target)",   kind = "buff", spell = ID_FLAMESHOCK },
         { label = "Flame Shock remaining",  kind = "remaining", spell = ID_FLAMESHOCK },
+        { label = "Flame Shock pandemic",   kind = "pandemic",  spell = ID_FLAMESHOCK },
         { label = "Lava Surge",             kind = "buff", spell = ID_LAVASURGE },
         { label = "Purging Flames",         kind = "buff", spell = ID_PURGING },
     },
