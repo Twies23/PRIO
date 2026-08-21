@@ -18,6 +18,7 @@ local ID_STORMKEEPER = 191634   -- cooldown + buff
 local ID_FLAMESHOCK  = 470411   -- Flame Shock aura (TrackedBar)
 local ID_PURGING     = 1259471  -- Purging Flames buff (from Voltaic Blaze)
 local ID_LAVASURGE   = 77762    -- Lava Surge BUFF aura (77756 is the passive/proc, not the buff)
+local ID_VOLTAIC     = 470057   -- Voltaic Blaze (talent gate; shares an override with Flame Shock)
 
 -- Condition helpers (keep the all-inclusive list readable).
 local function AND(...) return { op = "and", clauses = { ... } } end
@@ -27,6 +28,7 @@ local function buffDown(id) return { type = "buffMissing", spell = id } end
 local function cdDown(id)   return { type = "cdNotReady",  spell = id } end
 local function cdReady(id)  return { type = "cdReady",     spell = id } end
 local function refreshable(id) return { type = "refreshable", spell = id } end
+local function talent(id)      return { type = "talentYes", spell = id } end
 local moteUp   = { type = "moteUp" }
 local moteDown = { type = "moteDown" }
 
@@ -237,7 +239,7 @@ local spec = {
             { spell = "Stormkeeper" },
             { spell = "AncestralSwiftness" },
             { spell = "FlameShock",  ignoreCD = true, cond = OR(buffDown(ID_FLAMESHOCK), refreshable(ID_FLAMESHOCK)) },
-            { spell = "VoltaicBlaze" },                            -- 3+: on cooldown (also keeps Flame Shock up)
+            { spell = "VoltaicBlaze", cond = talent(ID_VOLTAIC) },  -- 3+: on cooldown, only if talented
             { spell = "Ascendance",  cond = OR(cdReady(ID_STORMKEEPER), buffUp(ID_STORMKEEPER)) },
             { spell = "LavaBurst",   cond = AND(buffUp(ID_PURGING), buffUp(ID_LAVASURGE)) },
             { spell = "Tempest",     cond = moteUp },
@@ -258,7 +260,7 @@ local spec = {
             { spell = "AncestralSwiftness" },
             -- Flame Shock upkeep when not in a MotE window (FS applier varies by build)
             { spell = "FlameShock",  ignoreCD = true, cond = OR(buffDown(ID_FLAMESHOCK), refreshable(ID_FLAMESHOCK)) },
-            { spell = "VoltaicBlaze" },                            -- 3+: on cooldown (also keeps Flame Shock up)
+            { spell = "VoltaicBlaze", cond = talent(ID_VOLTAIC) },  -- 3+: on cooldown, only if talented
             { spell = "Ascendance",  cond = OR(cdReady(ID_STORMKEEPER), buffUp(ID_STORMKEEPER)) },
             -- Instant Lava Burst cleave off a proc
             { spell = "LavaBurst",   cond = AND(buffUp(ID_PURGING), buffUp(ID_LAVASURGE)) },

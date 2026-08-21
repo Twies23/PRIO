@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.1.23
+- Elemental: Voltaic Blaze in Cleave/AoE now only appears when the **Voltaic Blaze talent is selected**. It was showing even without it because Voltaic Blaze shares an override with Flame Shock (so "is known" read true). Reset Cleave/AoE to default to pick this up.
+
 ## 0.1.22
 - Fixed conditions showing "?" — old custom lists made before a fix could collapse a nested condition into an empty clause. Condition copy is now recursive, and the pandemic clause reads "in pandemic".
 - Priority dots (and the text export) now show a grey **not talented** state for abilities you don't have, instead of a misleading green.
