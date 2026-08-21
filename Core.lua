@@ -217,6 +217,35 @@ SlashCmdList.PRIO = function(msg)
                 end
             end
         end
+    elseif msg == "power" then
+        -- Validate which class resources read clean vs. secret. Run IN COMBAT on the
+        -- class you care about -- everything is readable out of combat.
+        local API = PRIO.API
+        local E = Enum and Enum.PowerType or {}
+        local LIST = {
+            { "Mana", E.Mana or 0 }, { "Rage", E.Rage or 1 }, { "Focus", E.Focus or 2 },
+            { "Energy", E.Energy or 3 }, { "ComboPoints", E.ComboPoints or 4 },
+            { "Runes", E.Runes or 5 }, { "RunicPower", E.RunicPower or 6 },
+            { "SoulShards", E.SoulShards or 7 }, { "AstralPower", E.LunarPower or 8 },
+            { "HolyPower", E.HolyPower or 9 }, { "Maelstrom", E.Maelstrom or 11 },
+            { "Chi", E.Chi or 12 }, { "Insanity", E.Insanity or 13 },
+            { "ArcaneCharges", E.ArcaneCharges or 16 }, { "Fury", E.Fury or 17 },
+            { "Pain", E.Pain or 18 }, { "Essence", E.Essence or 19 },
+        }
+        print(("|cff0cd29fPRIO|r power readability (%s):")
+            :format(InCombatLockdown() and "|cff0cd29fin combat|r" or "|cffe0a03aOUT of combat - values are always readable here|r"))
+        for _, p in ipairs(LIST) do
+            local ok, v = pcall(UnitPower, "player", p[2])
+            local mx = select(2, pcall(UnitPowerMax, "player", p[2]))
+            local secret = ok and API.IsSecret(v)
+            local maxN = (not API.IsSecret(mx)) and tonumber(mx) or nil
+            if maxN and maxN > 0 then                       -- only classes-relevant resources
+                local shown = secret and "|cffe0685aSECRET|r"
+                    or ("|cff0cd29f" .. tostring(tonumber(v) or "?") .. "|r / " .. maxN)
+                print(string.format("   %-14s %s", p[1], shown))
+            end
+        end
+        print("|cff5a6a76(only resources your class has a max for are shown)|r")
     else
         if PRIO.Options then PRIO.Options:Toggle() end
     end
