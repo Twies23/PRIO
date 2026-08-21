@@ -515,6 +515,7 @@ function Pages.general()
     tog("Show out of combat", "showOOC")
     tog("Opener at pull", "useOpener")
     tog("Pre-combat reminders", "showPrecombat")
+    tog("Advance primary while casting", "advanceWhileCasting")
     tog("Minimap button", "minimapShow", function() if PRIO.UpdateMinimapButton then PRIO.UpdateMinimapButton() end end)
 
     Section("Enemy detection")

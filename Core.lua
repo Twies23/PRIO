@@ -41,6 +41,7 @@ PRIO.defaults = {
     mode          = "auto",     -- auto | st | cleave | aoe
     useOpener     = true,       -- play the hardcoded opener at pull
     showPrecombat = true,       -- pre-combat reminders out of combat
+    advanceWhileCasting = true, -- while hard-casting, advance the primary to the next GCD
     enemyDetect   = "engaged",  -- engaged (threat/combat/target) | nameplates (all attackable)
     cleaveAt      = 3,          -- >= this many enemies -> cleave (AoE rotation starts at 3)
     aoeAt         = 4,          -- >= this many enemies -> aoe (Earthquake at 4+)

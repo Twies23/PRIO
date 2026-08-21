@@ -540,6 +540,19 @@ local function ApplyEffects(sim, key)
     if fx.skDelta then sim.sk = math.max(0, (sim.sk or 0) + fx.skDelta) end
 end
 
+-- The spec spell the player is currently hard-casting or channeling (nil if instant
+-- / not casting / not a rotational spell). Instants never appear here, so this only
+-- fires for casts that actually occupy time -- exactly when we want the primary to
+-- advance past the spell already in flight.
+local function InFlightCast()
+    local spellID = select(9, UnitCastingInfo("player"))
+    if type(spellID) ~= "number" then
+        spellID = select(8, UnitChannelInfo("player"))
+    end
+    if type(spellID) ~= "number" then return nil end
+    return idToKey[spellID], spellID
+end
+
 function Engine:Evaluate()
     if not spec then return nil end
 
@@ -592,6 +605,23 @@ function Engine:Evaluate()
         lastCastKey = S.lastCastKey, lastCastID = S.lastCastID,
     }
     S._sim = sim.aura
+
+    -- If the player is mid-cast, treat that cast as already committed: fold its
+    -- effects into the sim (so MotE/aura assumptions carry) and exclude it, so the
+    -- PRIMARY advances to the next GCD instead of repeating the spell in flight.
+    if PRIO.db.advanceWhileCasting ~= false then
+        local castKey, castSid = InFlightCast()
+        if castKey and castSid then
+            ApplyEffects(sim, castKey)
+            sim.lastCastKey, sim.lastCastID = castKey, castSid
+            local rep, maxC = Repeatable(castSid)
+            if maxC then
+                usedCharges[castSid] = (usedCharges[castSid] or 0) + 1   -- one charge spent
+            elseif not rep then
+                usedSpell[castSid] = true                                -- don't re-show it
+            end
+        end
+    end
 
     for slot = 1, want do
         S.mote        = sim.mote and true or false
