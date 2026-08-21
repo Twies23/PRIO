@@ -94,13 +94,31 @@ function Setup:Build()
     intro:SetJustifyH("LEFT"); intro:SetWordWrap(true)
     intro:SetText("Each item turns green once it's set. \"Action needed\" items are required; \"Optional\" ones improve accuracy.")
 
-    local done = CreateFrame("Button", nil, win)
-    done:SetSize(120, 28); done:SetPoint("BOTTOM", 0, 16)
-    local bg = UI.Solid(done, "BACKGROUND", C.accent, 0.14); bg:SetAllPoints()
-    local dt = UI.Font(done, 13, C.accent); dt:SetPoint("CENTER"); dt:SetText("Done")
-    done:SetScript("OnEnter", function() bg:SetColorTexture(C.accent[1], C.accent[2], C.accent[3], 0.28) end)
-    done:SetScript("OnLeave", function() bg:SetColorTexture(C.accent[1], C.accent[2], C.accent[3], 0.14) end)
-    done:SetScript("OnClick", function() win:Hide() end)
+    -- Footer buttons.
+    local function mkButton(text, w, onClick, filled)
+        local b = CreateFrame("Button", nil, win)
+        b:SetSize(w, 28)
+        local col = filled and C.accent or C.control
+        local a0 = filled and 0.16 or 0.10
+        local bg = UI.Solid(b, "BACKGROUND", col, a0); bg:SetAllPoints()
+        local t = UI.Font(b, 13, filled and C.accent or C.text); t:SetPoint("CENTER"); t:SetText(text)
+        b:SetScript("OnEnter", function() bg:SetColorTexture(col[1], col[2], col[3], a0 + 0.14) end)
+        b:SetScript("OnLeave", function() bg:SetColorTexture(col[1], col[2], col[3], a0) end)
+        b:SetScript("OnClick", onClick)
+        return b
+    end
+
+    local apply = mkButton("Apply recommended settings", 210, function()
+        PRIO:ApplyPreset("Recommended")
+    end, true)
+    local custom = mkButton("Customize\226\128\166", 120, function()
+        if PRIO.Options then PRIO.Options:Toggle() end
+    end)
+    local done = mkButton("Done", 90, function() win:Hide() end)
+
+    apply:SetPoint("BOTTOMLEFT", 22, 16)
+    done:SetPoint("BOTTOMRIGHT", -22, 16)
+    custom:SetPoint("RIGHT", done, "LEFT", -10, 0)
 
     win:SetScript("OnUpdate", function(_, dt2)
         elapsed = elapsed + dt2

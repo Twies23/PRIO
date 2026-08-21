@@ -27,6 +27,28 @@ UI.C = {
 }
 local C = UI.C
 
+-- The signature PRIO green, and the live accent hex for text color codes.
+UI.GREEN = { 0.047, 0.824, 0.616 }
+UI.accentHex = "0cd29f"
+
+-- Recolor the accent to the player's CLASS COLOR (or PRIO green if disabled). Mutates
+-- C.accent / C.accentDim IN PLACE so widgets built afterward (and any captured
+-- references to the table) pick it up. Call before frames are built (login); built
+-- frames need a /reload to recolor.
+function UI.ApplyAccent()
+    local db = PRIO.db
+    local col = UI.GREEN
+    if not (db and db.classColor == false) then
+        local _, class = UnitClass("player")
+        local cc = class and ((C_ClassColor and C_ClassColor.GetClassColor and C_ClassColor.GetClassColor(class))
+            or (RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]))
+        if cc and cc.r then col = { cc.r, cc.g, cc.b } end
+    end
+    C.accent[1], C.accent[2], C.accent[3] = col[1], col[2], col[3]
+    C.accentDim[1], C.accentDim[2], C.accentDim[3] = col[1] * 0.45, col[2] * 0.45, col[3] * 0.45
+    UI.accentHex = string.format("%02x%02x%02x", col[1] * 255, col[2] * 255, col[3] * 255)
+end
+
 --------------------------------------------------------------------------------
 -- Primitives
 --------------------------------------------------------------------------------

@@ -48,6 +48,14 @@ local function setGlow(on)
     else logo:SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3], 1) end
 end
 
+-- The logo textures are painted at file load (before the accent is class-colored),
+-- so re-apply the current accent once it's resolved. ACCENT is the live C.accent
+-- table, mutated in place by UI.ApplyAccent.
+function PRIO.RecolorMinimapButton()
+    ring:SetColorTexture(ACCENT[1], ACCENT[2], ACCENT[3], 1)
+    logo:SetTextColor(ACCENT[1], ACCENT[2], ACCENT[3], 1)
+end
+
 local border = btn:CreateTexture(nil, "OVERLAY")
 border:SetSize(53, 53)
 border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")

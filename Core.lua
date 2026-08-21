@@ -52,6 +52,7 @@ PRIO.defaults = {
     -- Minimap button
     minimapShow   = true,
     minimapAngle  = 205,
+    classColor    = true,       -- tint the UI accent with the player's class color
     -- Fonts (display text)
     font          = "Fonts\\FRIZQT__.TTF",
     titleSize     = 12,
@@ -107,6 +108,31 @@ PRIO:On("ADDON_LOADED", function(name)
     DeepFill(PRIODB, PRIO.defaults)
     PRIO.db = PRIODB
 end)
+
+--------------------------------------------------------------------------------
+-- Presets: named bundles of display/behavior settings the user can one-click apply
+-- (does not touch priority lists, keybinds, or the display position).
+--------------------------------------------------------------------------------
+PRIO.presets = {
+    -- The author's tuned layout: compact strip, left growth, faster polling.
+    Recommended = {
+        numQueue = 2, primarySize = 50, queueSize = 50, spacing = 5, growth = "LEFT",
+        showKeybinds = true, showNames = false, showGlow = false, showTitle = true,
+        showCooldown = true, showFlash = true,
+        showOOC = true, useOpener = false, showPrecombat = false, advanceWhileCasting = true,
+        enemyDetect = "engaged", cleaveAt = 2, aoeAt = 4, combatRate = 0.05, idleRate = 0.1,
+        font = "Fonts\\ARIALN.TTF", titleSize = 12, keybindSize = 15, nameSize = 11,
+    },
+}
+
+function PRIO:ApplyPreset(name)
+    local p = self.presets and self.presets[name]
+    if not (p and self.db) then return end
+    for k, v in pairs(p) do self.db[k] = v end
+    if self.Display and self.Display.Refresh then self.Display:Refresh() end
+    self:StartTicker()
+    print("|cff" .. (PRIO.UI and PRIO.UI.accentHex or "0cd29f") .. "PRIO|r: applied the \"" .. name .. "\" preset.")
+end
 
 --------------------------------------------------------------------------------
 -- Ticker
@@ -166,6 +192,11 @@ end
 --------------------------------------------------------------------------------
 -- Lifecycle wiring
 --------------------------------------------------------------------------------
+PRIO:On("PLAYER_LOGIN", function()
+    if PRIO.UI then PRIO.UI.ApplyAccent() end   -- class-color the accent before frames build
+    if PRIO.RecolorMinimapButton then PRIO.RecolorMinimapButton() end
+end)
+
 PRIO:On("PLAYER_ENTERING_WORLD", function()
     if PRIO.Display then PRIO.Display:EnsureCreated() end
     if PRIO.Engine  then PRIO.Engine:OnSpecChanged() end

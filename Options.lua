@@ -518,6 +518,11 @@ function Pages.general()
     tog("Advance primary while casting", "advanceWhileCasting")
     tog("Minimap button", "minimapShow", function() if PRIO.UpdateMinimapButton then PRIO.UpdateMinimapButton() end end)
     tog("Auto-enable enemy nameplates", "manageNameplates", function() if API.EnsureNameplates then API.EnsureNameplates() end end)
+    tog("Class-colored accent", "classColor", function()
+        if PRIO.UI then PRIO.UI.ApplyAccent() end
+        if PRIO.RecolorMinimapButton then PRIO.RecolorMinimapButton() end
+        print("|cff" .. (PRIO.UI and PRIO.UI.accentHex or "0cd29f") .. "PRIO|r: accent updated \226\128\148 /reload to recolor already-open windows.")
+    end)
 
     Section("Enemy detection")
     SettingRow("Count method", 30, function(r)
