@@ -14,7 +14,12 @@ PRIO.Options = Options
 local win, sidebar, header, scroll, content
 local navButtons = {}
 local kids = {}          -- content widgets, rebuilt per page
+local statusRows = {}    -- priority rows w/ live condition dots, rebuilt per page
 local currentPage = "display"
+
+local DOTCOL = {
+    pass = { 0.047, 0.824, 0.616 }, fail = { 0.88, 0.41, 0.35 }, open = { 0.878, 0.627, 0.227 },
+}
 
 local SIDEBAR_W = 192
 
@@ -215,6 +220,7 @@ end
 function Pages.rotation()
     local db = PRIO.db
     if picker then picker:Hide() end
+    wipe(statusRows)
     local spec = CurrentSpec()
     local mode = CurrentMode()
 
@@ -306,6 +312,10 @@ function Pages.rotation()
         end, refresh)
         t:SetPoint("RIGHT", rm, "LEFT", -10, 0)
 
+        -- live pass/fail dot for this row's condition
+        local dot = UI.Solid(row, "OVERLAY", C.muted); dot:SetSize(9, 9)
+        statusRows[#statusRows + 1] = { dot = dot, cond = e.cond, sid = sid }
+
         -- condition chip (click to open the editor)
         local summary = Cond.Summary(e.cond, sid)
         local isAlways = (summary == "always")
@@ -319,6 +329,8 @@ function Pages.rotation()
         chip:SetSize(math.min(164, math.max(50, ct:GetStringWidth() + 18)), 18)
         chip:SetPoint("RIGHT", t, "LEFT", -10, 0)
         chip:SetScript("OnClick", function() Options:OpenCondEditor(spec, mode, i) end)
+
+        dot:SetPoint("RIGHT", chip, "LEFT", -7, 0)
     end
 
     -- Add ability
@@ -632,6 +644,21 @@ function Options:Build()
     local ver = UI.Font(win, 11, C.faint)
     ver:SetPoint("TOPLEFT", win.title, "BOTTOMLEFT", 1, -1)
     ver:SetText("v" .. PRIO.version)
+
+    -- Live condition dots on the priority page.
+    local acc = 0
+    win:SetScript("OnUpdate", function(_, dt)
+        acc = acc + dt
+        if acc < 0.15 or currentPage ~= "rotation" or #statusRows == 0 then return end
+        acc = 0
+        local S = PRIO.Engine and PRIO.Engine:CurrentState()
+        if not S then return end
+        for _, sr in ipairs(statusRows) do
+            local st = PRIO.Cond.RowStatus(sr.cond, S, sr.sid)
+            local col = DOTCOL[st] or DOTCOL.open
+            sr.dot:SetColorTexture(col[1], col[2], col[3], 1)
+        end
+    end)
 
     -- Sidebar background + divider
     sidebar = UI.Solid(win, "BACKGROUND", C.sidebar)

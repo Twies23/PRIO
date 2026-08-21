@@ -172,6 +172,15 @@ function Cond.ClauseStatus(cl, S, selfSid)
     return EvalClause(cl, S, selfSid) and "pass" or "fail"
 end
 
+-- Whole-row status for the priority list dots: "pass" / "fail" / "open". A single
+-- clause reports its own open state; groups collapse to pass/fail on the result.
+function Cond.RowStatus(cond, S, selfSid)
+    if not cond then return "pass" end                      -- no condition = always
+    if not cond.clauses then return Cond.ClauseStatus(cond, S, selfSid) end
+    if #cond.clauses == 0 then return "pass" end
+    return Cond.Eval(cond, S, selfSid) and "pass" or "fail"
+end
+
 --------------------------------------------------------------------------------
 -- Spec (re)binding
 --------------------------------------------------------------------------------
