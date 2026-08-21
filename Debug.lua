@@ -240,14 +240,12 @@ function Debug:Update()
                         or act == false and "|cff5a6a76gone|r" or "|cffe0a03a?|r")
                 end
             elseif d.kind == "pandemic" then
+                -- Secret-safe: reads Blizzard's PandemicIcon (needs the spell's
+                -- "Pandemic Time" alert enabled in the Cooldown Manager).
                 local ip = API.InPandemic and API.InPandemic(d.spell)
-                local co = API.RefreshCarryover and API.RefreshCarryover(d.spell)
-                local left = ip == true and "|cff0cd29fREFRESH|r"
-                    or ip == false and "|cff5a6a76hold|r" or "|cffe0a03a?|r"
-                local right = (type(co) == "number")
-                    and ("  |cff5a6a76carry %.1fs (read!)|r"):format(co)
-                    or "  |cff5a6a76carry: secret|r"
-                set(id, left .. right)
+                set(id, ip == true and "|cff0cd29fREFRESH (in pandemic)|r"
+                    or ip == false and "|cff5a6a76hold|r"
+                    or "|cffe0a03auntracked|r")
             elseif d.kind == "hasMote" then
                 set(id, PRIO.Engine and PRIO.Engine.hasMote
                     and "|cff0cd29fdetected|r" or "|cffe0685anot detected|r")
