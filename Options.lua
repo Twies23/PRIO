@@ -410,6 +410,23 @@ function Options:OpenCondEditor(spec, mode, index)
             spellOpts[#spellOpts + 1] = o
         end
     end
+    -- Also include every aura referenced by this spec's conditions (this entry + all
+    -- default lists), so build-specific buffs (Purging Flames, Lava Surge, ...) show
+    -- their name in the dropdown even when you're not talented into them / not tracked.
+    local function collectCond(c)
+        if not c then return end
+        if c.clauses then for _, cl in ipairs(c.clauses) do collectCond(cl) end
+        elseif c.spell and c.spell ~= 0 and not seen[c.spell] then
+            seen[c.spell] = true
+            spellOpts[#spellOpts + 1] =
+                { value = c.spell, text = API.SpellName(c.spell) or ("#" .. c.spell), icon = API.SpellTexture(c.spell) }
+        end
+    end
+    collectCond(cond)
+    for _, m in ipairs({ "st", "cleave", "aoe" }) do
+        local L = spec.priority and spec.priority[m]
+        if L then for _, en in ipairs(L) do collectCond(en.cond) end end
+    end
     -- Talent options (for "Talent selected / not selected" clauses).
     local talentOpts = { { value = 0, text = "\226\128\148 pick talent \226\128\148" } }
     for _, o in ipairs(API.GetTalentList()) do talentOpts[#talentOpts + 1] = o end
