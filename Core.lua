@@ -171,7 +171,9 @@ PRIO:On("PLAYER_ENTERING_WORLD", function()
     if PRIO.Engine  then PRIO.Engine:OnSpecChanged() end
     PRIO:StartTicker()
     PRIO:Tick()
-    C_Timer.After(4, function() PRIO:MaybeShowPandemicTip() end)   -- after spec data loads
+    C_Timer.After(4, function()                                    -- after spec data loads
+        if PRIO.Setup then PRIO.Setup:MaybeAutoOpen() end
+    end)
 end)
 
 PRIO:On("PLAYER_REGEN_DISABLED", function() PRIO:StartTicker() end)   -- entered combat
@@ -245,6 +247,8 @@ SlashCmdList.PRIO = function(msg)
                 end
             end
         end
+    elseif msg == "setup" then
+        if PRIO.Setup then PRIO.Setup:Toggle() end
     elseif msg == "pandemic" then
         StaticPopup_Show("PRIO_PANDEMIC_TIP")
     elseif msg == "power" then

@@ -38,7 +38,17 @@ local spec = {
     resource = MAELSTROM,
     moteTalent   = "Master of the Elements", -- gates moteUp/moteDown (not readable)
     moteTalentID = 16166,                    -- stable ID match (preferred over the name)
-    usesPandemic = true,                     -- shows the one-time Cooldown Manager tip
+    usesPandemic = true,                     -- shows the pandemic setup item
+    -- First-time setup checklist (see Setup.lua). Global checks (nameplates) are added
+    -- automatically; these are the spec-specific ones.
+    setup = {
+        { kind = "trackedAura", label = "Flame Shock tracked", spell = 470411,
+          hint = "Add Flame Shock to your Cooldown Manager tracked bars so PRIO can read its state." },
+        { kind = "trackedAura", label = "Lava Surge tracked", spell = 77762,
+          hint = "Track Lava Surge so instant Lava Burst procs are detected." },
+        { kind = "pandemic", label = "Flame Shock pandemic alert", spell = 470411,
+          hint = "Optional: enable the Pandemic Time alert on Flame Shock (Edit Mode -> Cooldown Manager) for no-clip refresh timing. Turns green once detected in combat." },
+    },
 
     spells = {
         LightningBolt      = 188196,
