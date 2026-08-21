@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.2
+- Promotes the recent work to the main release: **Windwalker Monk** support, the profile manager, the "defaults changed" login prompt, condition text export, and the Arms/MM review. (Devourer is included as an early scaffold that still needs in-game spec/spell ID verification.)
+
+
 ## 0.2.1 (alpha)
 - **New spec: Windwalker Monk.** Chi is readable so spenders gate on real Chi; Combo Strikes (never repeat an ability) is modeled from your cast history. Covers Shado-Pan + Conduit of the Celestials.
 - **New spec: Devourer Demon Hunter (scaffold).** Structure is in place, but as a brand-new spec its spec ID and most spell IDs need in-game verification (see below) before it works fully.
