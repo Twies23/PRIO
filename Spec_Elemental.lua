@@ -216,8 +216,8 @@ local spec = {
             { spell = "AncestralSwiftness" },
             { spell = "Ascendance", cond = OR(cdReady(ID_STORMKEEPER), buffUp(ID_STORMKEEPER)) },
             -- Flame Shock upkeep (applier varies by build)
-            { spell = "FlameShock",  ignoreCD = true, cond = OR(buffDown(ID_FLAMESHOCK), AND(moteDown, refreshable(ID_FLAMESHOCK))) },
-            { spell = "VoltaicBlaze", cond = OR(buffDown(ID_FLAMESHOCK), AND(moteDown, refreshable(ID_FLAMESHOCK))) },
+            { spell = "FlameShock",  ignoreCD = true, cond = OR(buffDown(ID_FLAMESHOCK), refreshable(ID_FLAMESHOCK)) },
+            { spell = "VoltaicBlaze", cond = OR(buffDown(ID_FLAMESHOCK), refreshable(ID_FLAMESHOCK)) },
             -- MotE window: spend with Elemental Blast, build with Lava Burst, consume
             -- with a Stormkeeper Lightning Bolt (all inert on non-MotE builds).
             { spell = "ElementalBlast", cond = moteUp },
@@ -236,7 +236,7 @@ local spec = {
         cleave = {
             { spell = "Stormkeeper" },
             { spell = "AncestralSwiftness" },
-            { spell = "FlameShock",  ignoreCD = true, cond = OR(buffDown(ID_FLAMESHOCK), AND(moteDown, refreshable(ID_FLAMESHOCK))) },
+            { spell = "FlameShock",  ignoreCD = true, cond = OR(buffDown(ID_FLAMESHOCK), refreshable(ID_FLAMESHOCK)) },
             { spell = "VoltaicBlaze" },                            -- 3+: on cooldown (also keeps Flame Shock up)
             { spell = "Ascendance",  cond = OR(cdReady(ID_STORMKEEPER), buffUp(ID_STORMKEEPER)) },
             { spell = "LavaBurst",   cond = AND(buffUp(ID_PURGING), buffUp(ID_LAVASURGE)) },
@@ -258,7 +258,7 @@ local spec = {
             { spell = "Stormkeeper" },
             { spell = "AncestralSwiftness" },
             -- Flame Shock upkeep when not in a MotE window (FS applier varies by build)
-            { spell = "FlameShock",  ignoreCD = true, cond = OR(buffDown(ID_FLAMESHOCK), AND(moteDown, refreshable(ID_FLAMESHOCK))) },
+            { spell = "FlameShock",  ignoreCD = true, cond = OR(buffDown(ID_FLAMESHOCK), refreshable(ID_FLAMESHOCK)) },
             { spell = "VoltaicBlaze" },                            -- 3+: on cooldown (also keeps Flame Shock up)
             { spell = "Ascendance",  cond = OR(cdReady(ID_STORMKEEPER), buffUp(ID_STORMKEEPER)) },
             -- Instant Lava Burst cleave off a proc

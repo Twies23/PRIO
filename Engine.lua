@@ -110,6 +110,7 @@ local function LastCastMatch(ref, S)
 end
 
 local function EvalClause(cl, S, selfSid)
+    if cl.clauses then return Cond.Eval(cl, S, selfSid) end   -- nested group -> recurse
     local t = cl.type
     local sid = cl.spell or selfSid
     if t == "buffActive" then
