@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.1.24
+- **Profiles** (Options → Profiles): save your settings and priority lists as named profiles, then apply or delete them. The recommended preset lives here too.
+- When a future release changes the default priorities, PRIO now prompts you on login (only if you have customized lists) to reset to the new defaults.
+
 ## 0.1.23
 - Elemental: Voltaic Blaze in Cleave/AoE now only appears when the **Voltaic Blaze talent is selected**. It was showing even without it because Voltaic Blaze shares an override with Flame Shock (so "is known" read true). Reset Cleave/AoE to default to pick this up.
 

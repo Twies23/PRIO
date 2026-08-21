@@ -660,19 +660,81 @@ function Pages.general()
     end)
 end
 
+local RED = { 0.88, 0.41, 0.35 }
+local function textButton(parent, w, label, color, onClick)
+    local b = UI.Card(parent, color, 0.13); b:SetSize(w, 24)
+    local bb = CreateFrame("Button", nil, b); bb:SetAllPoints()
+    local fs = UI.Font(b, 12, color); fs:SetPoint("CENTER"); fs:SetText(label)
+    bb:SetScript("OnEnter", function() b:SetBackdropColor(color[1], color[2], color[3], 0.26) end)
+    bb:SetScript("OnLeave", function() b:SetBackdropColor(color[1], color[2], color[3], 0.13) end)
+    bb:SetScript("OnClick", onClick)
+    return b
+end
+
+function Pages.profiles()
+    local db = PRIO.db
+
+    Section("Preset")
+    SettingRow("Author's recommended layout", 28, function(r)
+        local b = textButton(r, 160, "Apply recommended", C.accent,
+            function() PRIO:ApplyPreset("Recommended"); Options:ShowPage("profiles") end)
+        b:SetPoint("RIGHT", 0, 0)
+    end)
+
+    Section("Save current setup")
+    SettingRow("Name it, then Save", 30, function(r)
+        local save
+        local box = UI.Card(r, C.control, 0.08); box:SetSize(210, 26); box:SetPoint("RIGHT", 88, 0)
+        local eb = CreateFrame("EditBox", nil, box); eb:SetAllPoints(); eb:SetAutoFocus(false)
+        eb:SetFontObject(ChatFontNormal); eb:SetTextInsets(8, 8, 0, 0); eb:SetMaxLetters(32)
+        local function doSave()
+            local n = eb:GetText()
+            if n and n:gsub("%s", "") ~= "" then PRIO:SaveProfile(n); Options:ShowPage("profiles") end
+        end
+        eb:SetScript("OnEnterPressed", function() doSave(); eb:ClearFocus() end)
+        eb:SetScript("OnEscapePressed", function() eb:ClearFocus() end)
+        save = textButton(r, 80, "Save", C.accent, doSave)
+        save:SetPoint("RIGHT", 0, 0)
+    end)
+
+    Section("Saved profiles")
+    local names = {}
+    for n in pairs(db.profiles or {}) do names[#names + 1] = n end
+    table.sort(names)
+    if #names == 0 then
+        local none = Track(UI.Font(content, 12, C.faint))
+        none:SetPoint("TOPLEFT", 0, -cursorY)
+        none:SetText("No saved profiles yet. Enter a name above and click Save.")
+        cursorY = cursorY + 26
+    else
+        for _, n in ipairs(names) do
+            SettingRow(n, 28, function(r)
+                local del = textButton(r, 70, "Delete", RED,
+                    function() PRIO:DeleteProfile(n); Options:ShowPage("profiles") end)
+                del:SetPoint("RIGHT", 0, 0)
+                local ap = textButton(r, 70, "Apply", C.accent,
+                    function() PRIO:ApplyProfile(n); Options:ShowPage("profiles") end)
+                ap:SetPoint("RIGHT", del, "LEFT", -8, 0)
+            end)
+        end
+    end
+end
+
 --------------------------------------------------------------------------------
 -- Sidebar navigation
 --------------------------------------------------------------------------------
 local NAV = {
     { header = "DISPLAY",  items = { { label = "Icons & Layout", page = "display" } } },
     { header = "ROTATION", items = { { label = "Priorities",     page = "rotation" } } },
-    { header = "GENERAL",  items = { { label = "Behavior",       page = "general" } } },
+    { header = "GENERAL",  items = { { label = "Behavior",       page = "general" },
+                                     { label = "Profiles",       page = "profiles" } } },
 }
 
 local PAGE_META = {
     display  = { title = "Display",    desc = "Size, layout, and what the strip draws on each icon." },
     rotation = { title = "Priorities", desc = "Order abilities highest to lowest. PRIO shows the first one that's ready and passes its condition." },
     general  = { title = "Behavior",   desc = "Enable, lock, out-of-combat visibility, and auto-mode thresholds." },
+    profiles = { title = "Profiles",   desc = "Save your settings and priority lists as named profiles, or apply the recommended preset." },
 }
 
 function Options:ShowPage(key)
@@ -696,6 +758,11 @@ function Options:ShowPage(key)
     Pages[key]()
     content:SetHeight(math.max(cursorY + 20, 360))
     scroll:SetVerticalScroll(0)
+end
+
+-- Rebuild the current page if the window is open (e.g. after an external change).
+function Options:RefreshOpen()
+    if win and win:IsShown() then self:ShowPage(currentPage) end
 end
 
 --------------------------------------------------------------------------------

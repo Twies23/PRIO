@@ -9,6 +9,20 @@ _G.PRIO = PRIO
 PRIO.name    = ADDON
 PRIO.version = C_AddOns and C_AddOns.GetAddOnMetadata(ADDON, "Version") or "0.1.0"
 
+-- Bump this ONLY when a shipped default PRIORITY LIST changes. On login, users who
+-- have customized lists and haven't seen this revision get prompted to reset.
+PRIO.defaultsRevision = 1
+
+-- Settings a saved profile captures (everything except the display position).
+PRIO.PROFILE_KEYS = {
+    "enabled", "locked", "showOOC", "scale", "numQueue", "primarySize", "queueSize",
+    "spacing", "growth", "showKeybinds", "showNames", "showGlow", "showTitle",
+    "showCooldown", "showFlash", "mode", "useOpener", "showPrecombat",
+    "advanceWhileCasting", "enemyDetect", "manageNameplates", "cleaveAt", "aoeAt",
+    "combatRate", "idleRate", "minimapShow", "classColor",
+    "font", "titleSize", "keybindSize", "nameSize",
+}
+
 -- Colors reused across the UI (EllesmereUI-style accent).
 PRIO.color = {
     accent = { 0.047, 0.824, 0.616 },   -- #0CD29D
@@ -106,8 +120,69 @@ PRIO:On("ADDON_LOADED", function(name)
     if name ~= ADDON then return end
     PRIODB = PRIODB or {}
     DeepFill(PRIODB, PRIO.defaults)
+    PRIODB.profiles = PRIODB.profiles or {}
+    -- First run after this key was added: start "up to date" so we don't prompt on
+    -- the very first login; only prompt when the revision actually increases later.
+    if PRIODB.defaultsRevisionSeen == nil then PRIODB.defaultsRevisionSeen = PRIO.defaultsRevision end
     PRIO.db = PRIODB
 end)
+
+--------------------------------------------------------------------------------
+-- Profiles: save/apply/delete named bundles of settings (+ custom priority lists).
+--------------------------------------------------------------------------------
+function PRIO:SaveProfile(name)
+    if not (self.db and name and name:gsub("%s", "") ~= "") then return end
+    local p = {}
+    for _, k in ipairs(self.PROFILE_KEYS) do p[k] = self.db[k] end
+    p.customPriorities = CopyTable(self.db.customPriorities or {})
+    self.db.profiles[name] = p
+    print("|cff" .. (self.UI and self.UI.accentHex or "0cd29f") .. "PRIO|r: saved profile \"" .. name .. "\".")
+end
+
+function PRIO:ApplyProfile(name)
+    local p = self.db and self.db.profiles and self.db.profiles[name]
+    if not p then return end
+    for _, k in ipairs(self.PROFILE_KEYS) do if p[k] ~= nil then self.db[k] = p[k] end end
+    if p.customPriorities then self.db.customPriorities = CopyTable(p.customPriorities) end
+    if self.UI then self.UI.ApplyAccent() end
+    if self.RecolorMinimapButton then self.RecolorMinimapButton() end
+    if self.Display and self.Display.Refresh then self.Display:Refresh() end
+    if self.UpdateMinimapButton then self.UpdateMinimapButton() end
+    self:StartTicker()
+    print("|cff" .. (self.UI and self.UI.accentHex or "0cd29f") .. "PRIO|r: applied profile \"" .. name .. "\".")
+end
+
+function PRIO:DeleteProfile(name)
+    if self.db and self.db.profiles then self.db.profiles[name] = nil end
+end
+
+--------------------------------------------------------------------------------
+-- "Defaults changed" prompt: shown once when a release updates default priorities.
+--------------------------------------------------------------------------------
+StaticPopupDialogs["PRIO_DEFAULTS_CHANGED"] = {
+    text = "|cff0cd29fPRIO|r's default rotation priorities were updated in this release.\n\n"
+        .. "Reset your customized priority lists to the new defaults?\n"
+        .. "|cffe0a03aThis discards your custom priority edits (settings are kept).|r",
+    button1 = "Reset to defaults",
+    button2 = "Keep mine",
+    OnAccept = function()
+        if PRIO.db then
+            wipe(PRIO.db.customPriorities)
+            if PRIO.Options and PRIO.Options.RefreshOpen then PRIO.Options:RefreshOpen() end
+            print("|cff" .. (PRIO.UI and PRIO.UI.accentHex or "0cd29f") .. "PRIO|r: priority lists reset to defaults.")
+        end
+    end,
+    OnCancel = function() end,
+    timeout = 0, whileDead = true, hideOnEscape = true, preferredIndex = 3,
+}
+
+function PRIO:MaybePromptDefaults()
+    if not self.db then return end
+    if (self.db.defaultsRevisionSeen or 0) >= self.defaultsRevision then return end
+    local hasCustom = self.db.customPriorities and next(self.db.customPriorities) ~= nil
+    self.db.defaultsRevisionSeen = self.defaultsRevision   -- mark seen either way
+    if hasCustom then StaticPopup_Show("PRIO_DEFAULTS_CHANGED") end
+end
 
 --------------------------------------------------------------------------------
 -- Presets: named bundles of display/behavior settings the user can one-click apply
@@ -204,6 +279,7 @@ PRIO:On("PLAYER_ENTERING_WORLD", function()
     PRIO:StartTicker()
     PRIO:Tick()
     C_Timer.After(4, function()                                    -- after spec data loads
+        PRIO:MaybePromptDefaults()
         if PRIO.Setup then PRIO.Setup:MaybeAutoOpen() end
     end)
 end)
