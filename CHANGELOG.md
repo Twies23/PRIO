@@ -1,5 +1,10 @@
 # PRIO Changelog
 
+## 0.1.20
+- The condition editor now lists each spec's full set of relevant buffs/debuffs, so you can build lists referencing anything the spec uses even when you aren't talented into it.
+- **Arms:** Rend now refreshes in its pandemic window (like Elemental Flame Shock), with a setup checklist and optional Rend pandemic alert.
+- **Marksmanship & Beast Mastery:** added first-time setup checklists and their relevant-buff lists.
+
 ## 0.1.19
 - Fixed the condition editor showing a blank ("—") spell for build-specific buffs (like Purging Flames or Lava Surge) when you aren't talented into them. The dropdown now always lists every aura referenced by the spec's conditions, across all specs.
 

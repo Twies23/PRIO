@@ -36,6 +36,17 @@ local spec = {
     cleaveAt = 2,   -- Wild Thrash / Beast Cleave starts at 2 targets
     aoeAt    = 3,
 
+    -- Relevant buffs (selectable in the condition editor regardless of build).
+    -- NOTE: Frenzy lives on the pet, so it can't be tracked by the Cooldown Viewer.
+    auras = {
+        Frenzy      = ID_FRENZY,
+        BeastCleave = ID_BEASTCLEAVE,
+    },
+    setup = {
+        { kind = "trackedAura", label = "Beast Cleave tracked", spell = ID_BEASTCLEAVE,
+          hint = "Track Beast Cleave so AoE lines know when to refresh it (Wild Thrash)." },
+    },
+
     spells = {
         KillCommand  = 34026,
         BarbedShot   = 217200,

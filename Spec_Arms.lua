@@ -29,6 +29,7 @@ local function OR(...)  return { op = "or",  clauses = { ... } } end
 local function buffUp(id)   return { type = "buffActive",  spell = id } end
 local function buffDown(id) return { type = "buffMissing", spell = id } end
 local function talent(id)   return { type = "talentYes",   spell = id } end
+local function refreshable(id) return { type = "refreshable", spell = id } end
 
 local spec = {
     key      = "WARRIOR_ARMS",
@@ -39,6 +40,27 @@ local spec = {
     resourceLabel = "Rage",
     cleaveAt = 2,
     aoeAt    = 3,
+    usesPandemic = true,             -- Rend refreshes in its pandemic window
+
+    -- Relevant buffs/debuffs (selectable in the condition editor regardless of build).
+    auras = {
+        Rend          = ID_REND,
+        SuddenDeath   = ID_SUDDENDEATH,
+        ColossusSmash = ID_COLOSSUS_DBF,
+        ColossalMight = ID_COLOSSALMIGHT,
+        Opportunist   = ID_OPPORTUNIST,
+        SweepingStrikes = ID_SWEEPING,
+    },
+
+    -- First-time setup checklist (Setup.lua adds the global nameplate check).
+    setup = {
+        { kind = "trackedAura", label = "Rend tracked", spell = ID_REND,
+          hint = "Track Rend in your Cooldown Manager so PRIO knows when to refresh it." },
+        { kind = "trackedAura", label = "Colossus Smash tracked", spell = ID_COLOSSUS_DBF,
+          hint = "Track the Colossus Smash debuff so burst windows read correctly." },
+        { kind = "pandemic", label = "Rend pandemic alert", spell = ID_REND,
+          hint = "Optional: enable the Pandemic Time alert on Rend (Edit Mode -> Cooldown Manager) for no-clip refresh timing." },
+    },
 
     spells = {
         MortalStrike   = 12294,
@@ -99,7 +121,7 @@ local spec = {
         -- Single target (Colossus + Slayer merged).
         st = {
             { spell = "MortalStrike" },                           -- primary generator / Colossal Might
-            { spell = "Rend", cond = buffDown(ID_REND) },         -- maintain Rend (only when missing)
+            { spell = "Rend", cond = OR(buffDown(ID_REND), refreshable(ID_REND)) }, -- maintain Rend (missing or pandemic)
             { spell = "Ravager" },                                -- just before Colossus Smash
             { spell = "Avatar" },                                 -- on CD
             { spell = "ThunderousRoar" },                         -- on CD

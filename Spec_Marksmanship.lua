@@ -29,6 +29,18 @@ local spec = {
     cleaveAt = 2,   -- AoE (Multi-Shot / Trick Shots) starts at 2 targets
     aoeAt    = 3,
 
+    -- Relevant buffs (selectable in the condition editor regardless of build).
+    auras = {
+        PreciseShots = ID_PRECISE,
+        TrickShots   = ID_TRICK,
+    },
+    setup = {
+        { kind = "trackedAura", label = "Precise Shots tracked", spell = ID_PRECISE,
+          hint = "Track Precise Shots so PRIO knows when to spend it (Arcane/Kill Shot)." },
+        { kind = "trackedAura", label = "Trick Shots tracked", spell = ID_TRICK,
+          hint = "Track Trick Shots so AoE Aimed/Rapid Fire lines read correctly." },
+    },
+
     spells = {
         AimedShot       = 19434,
         RapidFire       = 257044,

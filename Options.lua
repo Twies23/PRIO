@@ -404,6 +404,14 @@ function Options:OpenCondEditor(spec, mode, index)
             spellOpts[#spellOpts + 1] = { value = s, text = API.SpellName(s), icon = API.SpellTexture(s) }
         end
     end
+    -- The spec's declared relevant auras (buffs/debuffs it reasons about), so they're
+    -- always selectable even when not talented / not currently tracked.
+    for _, s in pairs(spec.auras or {}) do
+        if s and not seen[s] then
+            seen[s] = true
+            spellOpts[#spellOpts + 1] = { value = s, text = API.SpellName(s) or ("#" .. s), icon = API.SpellTexture(s) }
+        end
+    end
     for _, o in ipairs(API.EnumerateTracked()) do
         if not seen[o.value] then
             seen[o.value] = true
