@@ -17,7 +17,7 @@ local MAELSTROM = (Enum and Enum.PowerType and Enum.PowerType.Maelstrom) or 11
 local ID_STORMKEEPER = 191634   -- cooldown + buff
 local ID_FLAMESHOCK  = 470411   -- Flame Shock aura (TrackedBar)
 local ID_PURGING     = 1259471  -- Purging Flames buff (from Voltaic Blaze)
-local ID_LAVASURGE   = 77756    -- Lava Surge proc
+local ID_LAVASURGE   = 77762    -- Lava Surge BUFF aura (77756 is the passive/proc, not the buff)
 
 -- Condition helpers (keep the all-inclusive list readable).
 local function AND(...) return { op = "and", clauses = { ... } } end
