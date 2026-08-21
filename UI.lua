@@ -232,8 +232,25 @@ function UI.Window(name, w, h, titleText, subText)
         f.sub = sub
     end
 
-    local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
-    close:SetPoint("TOPRIGHT", -4, -4)
+    -- Custom close button: a styled "×" with an explicit Hide handler, raised well
+    -- above any content frame a window adds on top (Debug/Setup add a full-size body,
+    -- which was covering the old UIPanelCloseButton so clicks never landed).
+    local close = CreateFrame("Button", nil, f)
+    close:SetSize(26, 26)
+    close:SetPoint("TOPRIGHT", -8, -8)
+    close:SetFrameLevel(f:GetFrameLevel() + 50)
+    local cbg = close:CreateTexture(nil, "BACKGROUND")
+    cbg:SetAllPoints(); cbg:SetColorTexture(0.88, 0.41, 0.35, 0)   -- red, shown on hover
+    local cx = UI.Font(close, 20, C.muted)
+    cx:SetPoint("CENTER", 0, 1); cx:SetText("\195\151")            -- × (U+00D7)
+    close:SetScript("OnEnter", function()
+        cbg:SetColorTexture(0.88, 0.41, 0.35, 0.9); cx:SetTextColor(1, 1, 1, 1)
+    end)
+    close:SetScript("OnLeave", function()
+        cbg:SetColorTexture(0.88, 0.41, 0.35, 0); cx:SetTextColor(C.muted[1], C.muted[2], C.muted[3], 1)
+    end)
+    close:SetScript("OnClick", function() f:Hide() end)
+    f.closeButton = close
 
     f:Hide()   -- start hidden so :Toggle() opens on the FIRST call, not the second
     return f

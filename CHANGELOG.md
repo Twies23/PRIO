@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.1.15
+- Fixed the **close (×) button** on PRIO windows not responding (it was being covered by window content), and gave it a cleaner look that highlights red on hover.
+
 ## 0.1.14
 - The UI accent is now **class-colored** by default (toggle "Class-colored accent" in Behavior to go back to PRIO green).
 - The Setup checklist now has **Apply recommended settings** (a tuned layout preset) and **Customize** (opens the options) buttons.
