@@ -404,6 +404,32 @@ function API.IsTracked(spellID)
     return spellID ~= nil and trackedFrames[spellID] ~= nil
 end
 
+-- Live buff STACK COUNT, secret-safe. Blizzard's Cooldown Viewer renders the aura's
+-- application count to a fontstring on the BuffIcon item frame; we read that rendered
+-- text (a clean string) rather than the secret .applications value. Blizzard only
+-- draws the number when it's > 1, so: no frame -> nil; not active -> 0; active with a
+-- number -> that number; active without a number -> 1. Requires the buff to be tracked
+-- in the Cooldown Manager.
+function API.AuraStackCount(spellID)
+    local frame = trackedFrames[spellID]
+    if not frame then return nil end
+    local active = API.IsAuraActive(spellID)
+    if active == false then return 0 end
+    -- Applications fontstring lives at frame.Applications.Applications on BuffIcon
+    -- items; guard everything since the layout differs by viewer type.
+    local af = frame.Applications
+    local fs = af and (af.Applications or (af.GetText and af))
+    if fs and fs.GetText then
+        local ok, txt = pcall(fs.GetText, fs)
+        if ok and type(txt) == "string" and txt ~= "" then
+            local n = tonumber((txt:gsub("%D", "")))
+            if n then return n end
+        end
+    end
+    if active == true then return 1 end       -- up, but Blizzard drew no number = 1 stack
+    return nil
+end
+
 -- Pandemic / "is refreshable" read, secret-safe. Blizzard's Cooldown Viewer computes
 -- the pandemic window (the last ~30% where refreshing doesn't clip) and, while the
 -- aura is inside it, shows a PandemicIcon on the item frame. We read that already-

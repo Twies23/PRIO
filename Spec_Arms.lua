@@ -158,13 +158,13 @@ local spec = {
     -- Debug metadata (see Debug.lua). Rows shown live; economy is informational.
     --------------------------------------------------------------------------------
     debug = {
-        { label = "Overpower charges", kind = "charges", key = "Overpower" },
-        { label = "Rend (target)",     kind = "buff", spell = ID_REND },
-        { label = "Sudden Death",      kind = "buff", spell = ID_SUDDENDEATH },
-        { label = "Colossus Smash (t)",kind = "buff", spell = ID_COLOSSUS_DBF },
-        { label = "Colossal Might",    kind = "buff", spell = ID_COLOSSALMIGHT },
-        { label = "Opportunist",       kind = "buff", spell = ID_OPPORTUNIST },
-        { label = "Sweeping Strikes",  kind = "buff", spell = ID_SWEEPING },
+        { label = "Overpower charges",    kind = "charges", key = "Overpower" },
+        { label = "Rend (target)",        kind = "buff",  spell = ID_REND },
+        { label = "Sudden Death stacks",  kind = "stacks", spell = ID_SUDDENDEATH },
+        { label = "Collateral Dmg stacks", kind = "stacks", spell = 334779 },
+        { label = "Colossal Might stacks", kind = "stacks", spell = ID_COLOSSALMIGHT },
+        { label = "Colossus Smash (t)",   kind = "buff",  spell = ID_COLOSSUS_DBF },
+        { label = "Sweeping Strikes",     kind = "buff",  spell = ID_SWEEPING },
     },
     economy = {
         gen   = { "Auto-attack", "Mortal Strike", "Skullsplitter", "Overpower" },

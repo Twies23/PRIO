@@ -1,5 +1,10 @@
 # PRIO Changelog
 
+## 0.2.7 (alpha)
+- Fixed saving profiles (the name popup edit box wasn't being read on some clients).
+- Added secret-safe **buff stack-count reading** (via the Cooldown Manager, like the pandemic read). Arms Debug now shows Sudden Death / Collateral Damage / Colossal Might stack counts — a test toward stack-based conditions.
+
+
 ## 0.2.6 (alpha)
 - **Profiles reworked** to the standard dropdown style: a dropdown to load a profile (applies on select), a "Save current as…" popup for naming, and a Delete button. Fixes the name box that trapped your cursor.
 

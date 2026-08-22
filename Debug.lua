@@ -222,13 +222,13 @@ function Debug:Update()
                     set(id, yesno(P.mote))
                 end
             elseif d.kind == "stacks" then
-                local s = API.AuraStacks and API.AuraStacks(d.spell)
-                if s then
-                    set(id, "|cff0cd29f" .. s .. " stacks|r  |cff5a6a76(read!)|r")
+                local s = API.AuraStackCount and API.AuraStackCount(d.spell)
+                if s and s > 0 then
+                    set(id, ("|cff0cd29f%d stack%s|r  |cff5a6a76(read)|r"):format(s, s > 1 and "s" or ""))
+                elseif s == 0 then
+                    set(id, "|cff5a6a76none|r")
                 else
-                    local act = API.IsAuraActive(d.spell)
-                    set(id, act == true and "|cffe0a03aup (count secret)|r"
-                        or act == false and "|cff5a6a76none|r" or "|cffe0a03a?|r")
+                    set(id, "|cffe0a03auntracked|r")
                 end
             elseif d.kind == "remaining" then
                 local r = API.AuraRemaining and API.AuraRemaining(d.spell)

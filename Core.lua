@@ -178,27 +178,34 @@ StaticPopupDialogs["PRIO_DEFAULTS_CHANGED"] = {
 }
 
 -- Name-entry popup for saving a profile (a modal edit box handles focus cleanly,
--- unlike an inline one).
+-- unlike an inline one). The edit box accessor differs across client versions, so
+-- resolve it defensively.
+local function popupEditBox(dialog)
+    if not dialog then return nil end
+    return dialog.editBox or dialog.EditBox
+        or (dialog.GetEditBox and dialog:GetEditBox())
+        or (dialog.GetName and dialog:GetName() and _G[dialog:GetName() .. "EditBox"])
+end
+local function doSaveProfileFrom(dialog)
+    local eb = popupEditBox(dialog)
+    local n = eb and eb:GetText()
+    if n and n:gsub("%s", "") ~= "" then
+        PRIO:SaveProfile(n)
+        if PRIO.Options and PRIO.Options.RefreshOpen then PRIO.Options:RefreshOpen() end
+        return true
+    end
+    return false
+end
 StaticPopupDialogs["PRIO_NEW_PROFILE"] = {
     text = "Save current settings + priority lists as a profile named:",
     button1 = "Save", button2 = "Cancel",
     hasEditBox = true, maxLetters = 32,
-    OnShow = function(self) self.editBox:SetText(""); self.editBox:SetFocus() end,
-    OnAccept = function(self)
-        local n = self.editBox:GetText()
-        if n and n:gsub("%s", "") ~= "" then
-            PRIO:SaveProfile(n)
-            if PRIO.Options and PRIO.Options.RefreshOpen then PRIO.Options:RefreshOpen() end
-        end
-    end,
+    OnShow = function(self) local eb = popupEditBox(self); if eb then eb:SetText(""); eb:SetFocus() end end,
+    OnAccept = function(self) doSaveProfileFrom(self) end,
     EditBoxOnEnterPressed = function(self)
-        local parent = self:GetParent()
-        local n = parent.editBox:GetText()
-        if n and n:gsub("%s", "") ~= "" then
-            PRIO:SaveProfile(n)
-            if PRIO.Options and PRIO.Options.RefreshOpen then PRIO.Options:RefreshOpen() end
-        end
-        parent:Hide()
+        local dialog = self:GetParent()
+        doSaveProfileFrom(dialog)
+        dialog:Hide()
     end,
     EditBoxOnEscapePressed = function(self) self:GetParent():Hide() end,
     timeout = 0, whileDead = true, hideOnEscape = true, preferredIndex = 3,
