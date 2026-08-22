@@ -11,6 +11,10 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.10", {
+        "New conditions: Resource >= / <= N (Chi, Holy Power, ...), and Usable / Not usable (another ability).",
+        "Windwalker uses Chi thresholds for its low-Chi lines.",
+    } },
     { "0.2.9", {
         "Arms rebuilt to the Slayer priority (stack/charge-driven).",
         "New conditions: Buff stacks >= / <= N, and Charges >= / <= N.",

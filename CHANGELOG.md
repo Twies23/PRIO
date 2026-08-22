@@ -1,5 +1,10 @@
 # PRIO Changelog
 
+## 0.2.10 (alpha)
+- **New condition types: Resource (>= / <= N) and Usable / Not usable.** Resource reads your discrete class power (Chi, Holy Power, Combo Points, Runes, Soul Shards, Arcane Charges, Essence) — the secret-safe ones. Usable/Not usable references another ability's `IsUsable` state.
+- **Windwalker** now uses Chi thresholds on its low-Chi lines: Zenith Stomp and a Tiger Palm builder gate on Chi ≤ 2, and the high-Chi Spinning Crane Kick gates on Chi ≥ 5. (Reset your Windwalker lists to default to pick this up.)
+
+
 ## 0.2.9
 - **New condition types: Buff stacks (>= / <= N) and Charges (>= / <= N)** — read secret-safe from the Cooldown Manager, so single-spec APLs that key off stacks now work.
 - **Arms rebuilt to the Slayer priority** using them: Execute at 2 Sudden Death, Cleave at 3 Collateral Damage, pre-Bladestorm Execute under 3 Imminent Demise, Overpower at 2 charges, Heroic Strike. Colossus/talent abilities fold in automatically.

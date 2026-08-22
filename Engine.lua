@@ -51,6 +51,10 @@ Cond.types = {
     { value = "stacksMax",   text = "Buff stacks \226\137\164", needsSpell = true, needsValue = true, min = 0, max = 10, def = 1 },
     { value = "chargesMin",  text = "Charges \226\137\165", needsSpell = true, needsValue = true, min = 1, max = 5, def = 2 },
     { value = "chargesMax",  text = "Charges \226\137\164", needsSpell = true, needsValue = true, min = 0, max = 5, def = 1 },
+    { value = "resourceMin", text = "Resource \226\137\165", needsValue = true, min = 0, max = 12, def = 2 },
+    { value = "resourceMax", text = "Resource \226\137\164", needsValue = true, min = 0, max = 12, def = 2 },
+    { value = "usable",      text = "Usable",       needsSpell = true },
+    { value = "notUsable",   text = "Not usable",   needsSpell = true },
     { value = "enemiesMin",  text = "Enemies \226\137\165",   needsValue = true, min = 1, max = 10, def = 2 },
     { value = "enemiesMax",  text = "Enemies \226\137\164",   needsValue = true, min = 1, max = 10, def = 1 },
 }
@@ -79,6 +83,10 @@ function Cond.ClauseLabel(cl, selfSid)
     elseif t == "stacksMax" then return name .. " \226\137\164 " .. (cl.v or 1) .. " stk"
     elseif t == "chargesMin" then return name .. " \226\137\165 " .. (cl.v or 1) .. " chg"
     elseif t == "chargesMax" then return name .. " \226\137\164 " .. (cl.v or 1) .. " chg"
+    elseif t == "resourceMin" then return (spec and spec.resourceLabel or "resource") .. " \226\137\165 " .. (cl.v or 0)
+    elseif t == "resourceMax" then return (spec and spec.resourceLabel or "resource") .. " \226\137\164 " .. (cl.v or 0)
+    elseif t == "usable" then return name .. " usable"
+    elseif t == "notUsable" then return name .. " unusable"
     elseif t == "moteUp" then return "MotE up"
     elseif t == "moteDown" then return "MotE down"
     elseif t == "skStacks" then return "SK \226\137\165 " .. (cl.v or 1)
@@ -174,6 +182,12 @@ local function EvalClause(cl, S, selfSid)
     elseif t == "stacksMax" then return (API.AuraStackCount(sid) or 0) <= (cl.v or 1)
     elseif t == "chargesMin" then return (ChargeCount(sid) or 0) >= (cl.v or 1)
     elseif t == "chargesMax" then return (ChargeCount(sid) or 0) <= (cl.v or 1)
+    -- Resource threshold on the spec's own power (Chi/Holy Power/... read clean;
+    -- secret bars use the predicted value). S.maelstrom is the spec resource amount.
+    elseif t == "resourceMin" then return (S.maelstrom or 0) >= (cl.v or 0)
+    elseif t == "resourceMax" then return (S.maelstrom or 0) <= (cl.v or 0)
+    elseif t == "usable" then return API.IsUsable(sid) and true or false
+    elseif t == "notUsable" then return not API.IsUsable(sid)
     -- MotE is predicted, not readable. Gate on the talent so these are correct on
     -- builds that don't take it (no talent -> never "up", always "down").
     elseif t == "moteUp" then return Engine.hasMote and S.mote and true or false
@@ -221,6 +235,14 @@ function Cond.ClauseStatus(cl, S, selfSid)
     elseif t == "chargesMin" or t == "chargesMax" then
         local c = ChargeCount(sid); if c == nil then return "open" end
         local ok = (t == "chargesMin") and (c >= (cl.v or 1)) or (c <= (cl.v or 1))
+        return ok and "pass" or "fail"
+    elseif t == "resourceMin" or t == "resourceMax" then
+        local v = S and S.maelstrom; if v == nil then return "open" end
+        local ok = (t == "resourceMin") and (v >= (cl.v or 0)) or (v <= (cl.v or 0))
+        return ok and "pass" or "fail"
+    elseif t == "usable" or t == "notUsable" then
+        local u = API.IsUsable(sid); if u == nil then return "open" end
+        local ok = (t == "usable") and u or not u
         return ok and "pass" or "fail"
     end
     return EvalClause(cl, S, selfSid) and "pass" or "fail"

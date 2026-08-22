@@ -30,6 +30,8 @@ local ID_OBSIDIAN    = 1249832  -- Obsidian Spiral (talent)
 local function buffUp(id)   return { type = "buffActive",  spell = id } end
 local function buffDown(id) return { type = "buffMissing", spell = id } end
 local function OR(...)  return { op = "or",  clauses = { ... } } end
+local function chiMin(n) return { type = "resourceMin", v = n } end   -- Chi >= n
+local function chiMax(n) return { type = "resourceMax", v = n } end   -- Chi <= n (low Chi)
 local comboOK = { type = "lastCastNot" }   -- Combo Strikes: not the previous ability
 
 local spec = {
@@ -119,13 +121,14 @@ local spec = {
             { spell = "WhirlingDragonPunch" },                     -- CD (needs RSK + FoF down)
             { spell = "StrikeOfTheWindlord" },                     -- CD (builds Heart of Jade Serpent)
             { spell = "CelestialConduit", cond = buffDown(ID_HEARTJADE) }, -- Conduit: build the buff
-            { spell = "ZenithStomp" },                             -- CD (Chi gen; Shado-Pan)
+            { spell = "ZenithStomp", cond = chiMax(2) },           -- generate when low on Chi
+            { spell = "TigerPalm",   cond = chiMax(2) },           -- build Chi for Fists of Fury
             { spell = "FistsOfFury" },                             -- CD (Chi spender)
             { spell = "RushingWindKick" },                         -- CD
             { spell = "SpinningCraneKick", cond = OR(buffUp(ID_DANCECHIJI), buffUp(ID_UNBROKEN)) }, -- free / empowered
             { spell = "RisingSunKick" },                           -- CD (Chi spender)
             { spell = "BlackoutKick", cond = OR(buffUp(ID_COMBOBREAK), buffUp(ID_ZENITH)) }, -- proc / Zenith
-            { spell = "SpinningCraneKick", cond = buffUp(ID_ZENITH) }, -- Zenith window
+            { spell = "SpinningCraneKick", cond = chiMin(5) },     -- spend high Chi (Zenith window)
             { spell = "SlicingWinds" },                            -- Conduit: on CD
             { spell = "TouchOfDeath" },                            -- execute CD
             { spell = "TigerPalm",   cond = comboOK },             -- Chi builder / filler
