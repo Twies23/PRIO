@@ -16,13 +16,14 @@ PRIO.specs = PRIO.specs or {}
 
 local RAGE = (Enum and Enum.PowerType and Enum.PowerType.Rage) or 1
 
--- Readable buff/debuff IDs (verify with /prio tracked).
-local ID_SUDDENDEATH = 52437     -- Sudden Death (free/instant Execute)
-local ID_COLOSSUS_DBF = 208086   -- Colossus Smash debuff (on target)
-local ID_OPPORTUNIST = 217344    -- Opportunist (empowers Overpower)
-local ID_COLOSSALMIGHT = 440989  -- Colossal Might stacks (Colossus)
-local ID_SWEEPING    = 260708    -- Sweeping Strikes (self)
-local ID_REND        = 772       -- Rend debuff (on target)
+-- Readable buff/debuff IDs (verified via /prio tracked in 12.1).
+local ID_SUDDENDEATH  = 29725    -- Sudden Death (free/instant Execute) -- tracked buff
+local ID_COLLATERAL   = 334779   -- Collateral Damage (stacks to 3; Sweeping Strikes)
+local ID_EXECPREC     = 386634   -- Executioner's Precision (stacks)
+local ID_IMMINENT     = 445606   -- Imminent Demise (stacks)
+local ID_COLOSSUS_DBF = 167105   -- Colossus Smash (tracked bar / debuff)
+local ID_SWEEPING     = 260708   -- Sweeping Strikes (self)
+local ID_REND         = 772      -- Rend debuff (on target)
 
 local function AND(...) return { op = "and", clauses = { ... } } end
 local function OR(...)  return { op = "or",  clauses = { ... } } end
@@ -46,9 +47,10 @@ local spec = {
     auras = {
         Rend          = ID_REND,
         SuddenDeath   = ID_SUDDENDEATH,
+        CollateralDamage = ID_COLLATERAL,
+        ExecutionersPrecision = ID_EXECPREC,
+        ImminentDemise = ID_IMMINENT,
         ColossusSmash = ID_COLOSSUS_DBF,
-        ColossalMight = ID_COLOSSALMIGHT,
-        Opportunist   = ID_OPPORTUNIST,
         SweepingStrikes = ID_SWEEPING,
     },
 
@@ -106,10 +108,10 @@ local spec = {
         Execute = { type = "buffActive", spell = ID_SUDDENDEATH },
     },
 
-    -- Colossal Might is built by Colossus Smash / Warbreaker (Colossus tree).
+    -- Colossus Smash / Warbreaker apply the Colossus Smash debuff (look-ahead).
     spellEffects = {
-        ColossusSmash = { grant = { ID_COLOSSUS_DBF, ID_COLOSSALMIGHT } },
-        Warbreaker    = { grant = { ID_COLOSSUS_DBF, ID_COLOSSALMIGHT } },
+        ColossusSmash = { grant = { ID_COLOSSUS_DBF } },
+        Warbreaker    = { grant = { ID_COLOSSUS_DBF } },
     },
 
     maelstromMax = 100,   -- Rage cap (generic "resource" fields)
@@ -161,8 +163,9 @@ local spec = {
         { label = "Overpower charges",    kind = "charges", key = "Overpower" },
         { label = "Rend (target)",        kind = "buff",  spell = ID_REND },
         { label = "Sudden Death stacks",  kind = "stacks", spell = ID_SUDDENDEATH },
-        { label = "Collateral Dmg stacks", kind = "stacks", spell = 334779 },
-        { label = "Colossal Might stacks", kind = "stacks", spell = ID_COLOSSALMIGHT },
+        { label = "Collateral Dmg stacks", kind = "stacks", spell = ID_COLLATERAL },
+        { label = "Exec. Precision stacks", kind = "stacks", spell = ID_EXECPREC },
+        { label = "Imminent Demise stacks", kind = "stacks", spell = ID_IMMINENT },
         { label = "Colossus Smash (t)",   kind = "buff",  spell = ID_COLOSSUS_DBF },
         { label = "Sweeping Strikes",     kind = "buff",  spell = ID_SWEEPING },
     },

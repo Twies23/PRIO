@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.8 (alpha)
+- Corrected Arms buff IDs from the tracked dump: **Sudden Death is 29725** (was 52437) — this also fixes the Execute-on-Sudden-Death condition. Stack probes now cover Collateral Damage, Executioner's Precision, and Imminent Demise; removed the untrackable Colossal Might.
+
+
 ## 0.2.7 (alpha)
 - Fixed saving profiles (the name popup edit box wasn't being read on some clients).
 - Added secret-safe **buff stack-count reading** (via the Cooldown Manager, like the pandemic read). Arms Debug now shows Sudden Death / Collateral Damage / Colossal Might stack counts — a test toward stack-based conditions.
