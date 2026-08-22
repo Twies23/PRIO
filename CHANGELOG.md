@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.4
+Promotes the 0.2.3 work to the main release: the editing-list/live-mode split, Elemental Flame Shock assume-on-cast and Voltaic talent handling, and the rebuilt Windwalker Monk. (Devourer remains an early scaffold pending in-game ID verification.)
+
+
 ## 0.2.3 (alpha)
 - **Priorities page: separate "Editing list" from "Live mode"** — pick which list (ST/Cleave/AoE) you're editing without changing what's actively shown, so you can tweak any list mid-combat.
 - **Elemental:** after you cast Flame Shock or Voltaic Blaze, PRIO assumes Flame Shock is up for ~4s (covers the Cooldown Manager read lag), self-correcting if the target was immune.
