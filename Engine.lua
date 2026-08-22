@@ -47,6 +47,10 @@ Cond.types = {
     { value = "moteUp",      text = "MotE up" },
     { value = "moteDown",    text = "MotE down" },
     { value = "skStacks",    text = "SK stacks \226\137\165", needsValue = true, min = 1, max = 4, def = 1 },
+    { value = "stacksMin",   text = "Buff stacks \226\137\165", needsSpell = true, needsValue = true, min = 1, max = 10, def = 2 },
+    { value = "stacksMax",   text = "Buff stacks \226\137\164", needsSpell = true, needsValue = true, min = 0, max = 10, def = 1 },
+    { value = "chargesMin",  text = "Charges \226\137\165", needsSpell = true, needsValue = true, min = 1, max = 5, def = 2 },
+    { value = "chargesMax",  text = "Charges \226\137\164", needsSpell = true, needsValue = true, min = 0, max = 5, def = 1 },
     { value = "enemiesMin",  text = "Enemies \226\137\165",   needsValue = true, min = 1, max = 10, def = 2 },
     { value = "enemiesMax",  text = "Enemies \226\137\164",   needsValue = true, min = 1, max = 10, def = 1 },
 }
@@ -71,6 +75,10 @@ function Cond.ClauseLabel(cl, selfSid)
     elseif t == "lastCast" then return "just cast " .. name
     elseif t == "lastCastNot" then return "not just " .. name
     elseif t == "refreshable" then return name .. " in pandemic"
+    elseif t == "stacksMin" then return name .. " \226\137\165 " .. (cl.v or 1) .. " stk"
+    elseif t == "stacksMax" then return name .. " \226\137\164 " .. (cl.v or 1) .. " stk"
+    elseif t == "chargesMin" then return name .. " \226\137\165 " .. (cl.v or 1) .. " chg"
+    elseif t == "chargesMax" then return name .. " \226\137\164 " .. (cl.v or 1) .. " chg"
     elseif t == "moteUp" then return "MotE up"
     elseif t == "moteDown" then return "MotE down"
     elseif t == "skStacks" then return "SK \226\137\165 " .. (cl.v or 1)
@@ -122,6 +130,15 @@ local function LastCastMatch(ref, S)
     return ref == S.lastCastID
 end
 
+-- Current charges of a spell: predicted for spec-tracked charge spells, else the
+-- readable count. nil when the spell has no charges / can't tell.
+local function ChargeCount(sid)
+    local pc = Engine:PredictedCharges(sid)
+    if pc ~= nil then return pc end
+    local _, cur = API.Charges(sid)
+    return cur
+end
+
 -- Was this aura just applied by our own cast (short assume window)? Covers the tick
 -- or two before the Cooldown Viewer read catches up.
 local function Assumed(sid, S)
@@ -151,6 +168,12 @@ local function EvalClause(cl, S, selfSid)
     -- Blizzard confirms the DoT is refreshable; nil/false -> not (so it never fires
     -- early, and degrades to "refresh on missing" if the pandemic alert is off).
     elseif t == "refreshable" then return API.InPandemic(sid) == true
+    -- Buff stack thresholds (secret-safe via the Cooldown Viewer). Unreadable/untracked
+    -- reads as 0 stacks -> below any min, within any max.
+    elseif t == "stacksMin" then return (API.AuraStackCount(sid) or 0) >= (cl.v or 1)
+    elseif t == "stacksMax" then return (API.AuraStackCount(sid) or 0) <= (cl.v or 1)
+    elseif t == "chargesMin" then return (ChargeCount(sid) or 0) >= (cl.v or 1)
+    elseif t == "chargesMax" then return (ChargeCount(sid) or 0) <= (cl.v or 1)
     -- MotE is predicted, not readable. Gate on the talent so these are correct on
     -- builds that don't take it (no talent -> never "up", always "down").
     elseif t == "moteUp" then return Engine.hasMote and S.mote and true or false
@@ -191,6 +214,14 @@ function Cond.ClauseStatus(cl, S, selfSid)
     elseif t == "refreshable" then
         local a = API.InPandemic(sid); if a == nil then return "open" end
         return a and "pass" or "fail"
+    elseif t == "stacksMin" or t == "stacksMax" then
+        local s = API.AuraStackCount(sid); if s == nil then return "open" end
+        local ok = (t == "stacksMin") and (s >= (cl.v or 1)) or (s <= (cl.v or 1))
+        return ok and "pass" or "fail"
+    elseif t == "chargesMin" or t == "chargesMax" then
+        local c = ChargeCount(sid); if c == nil then return "open" end
+        local ok = (t == "chargesMin") and (c >= (cl.v or 1)) or (c <= (cl.v or 1))
+        return ok and "pass" or "fail"
     end
     return EvalClause(cl, S, selfSid) and "pass" or "fail"
 end

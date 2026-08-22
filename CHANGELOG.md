@@ -1,5 +1,12 @@
 # PRIO Changelog
 
+## 0.2.9
+- **New condition types: Buff stacks (>= / <= N) and Charges (>= / <= N)** — read secret-safe from the Cooldown Manager, so single-spec APLs that key off stacks now work.
+- **Arms rebuilt to the Slayer priority** using them: Execute at 2 Sudden Death, Cleave at 3 Collateral Damage, pre-Bladestorm Execute under 3 Imminent Demise, Overpower at 2 charges, Heroic Strike. Colossus/talent abilities fold in automatically.
+- **In-app changelog** — open it with /prio changelog.
+- Arms Setup checklist now lists the stack buffs to track (Sudden Death, Collateral Damage, Imminent Demise, Executioner's Precision).
+
+
 ## 0.2.8 (alpha)
 - Corrected Arms buff IDs from the tracked dump: **Sudden Death is 29725** (was 52437) — this also fixes the Execute-on-Sudden-Death condition. Stack probes now cover Collateral Damage, Executioner's Precision, and Imminent Demise; removed the untrackable Colossal Might.
 

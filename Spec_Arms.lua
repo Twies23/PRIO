@@ -31,6 +31,10 @@ local function buffUp(id)   return { type = "buffActive",  spell = id } end
 local function buffDown(id) return { type = "buffMissing", spell = id } end
 local function talent(id)   return { type = "talentYes",   spell = id } end
 local function refreshable(id) return { type = "refreshable", spell = id } end
+local function cdReady(id)  return { type = "cdReady",     spell = id } end
+local function stacksMin(id, n) return { type = "stacksMin", spell = id, v = n } end
+local function stacksMax(id, n) return { type = "stacksMax", spell = id, v = n } end
+local function chargesMin(id, n) return { type = "chargesMin", spell = id, v = n } end
 
 local spec = {
     key      = "WARRIOR_ARMS",
@@ -58,8 +62,14 @@ local spec = {
     setup = {
         { kind = "trackedAura", label = "Rend tracked", spell = ID_REND,
           hint = "Track Rend in your Cooldown Manager so PRIO knows when to refresh it." },
-        { kind = "trackedAura", label = "Colossus Smash tracked", spell = ID_COLOSSUS_DBF,
-          hint = "Track the Colossus Smash debuff so burst windows read correctly." },
+        { kind = "trackedAura", label = "Sudden Death tracked", spell = ID_SUDDENDEATH,
+          hint = "Track Sudden Death (Buff Icons) so PRIO can read its stacks for Execute timing." },
+        { kind = "trackedAura", label = "Collateral Damage tracked", spell = ID_COLLATERAL,
+          hint = "Track Collateral Damage so AoE Cleave fires at 3 stacks." },
+        { kind = "trackedAura", label = "Imminent Demise tracked", spell = ID_IMMINENT,
+          hint = "Track Imminent Demise so the pre-Bladestorm Execute reads its stacks." },
+        { kind = "trackedAura", label = "Executioner's Precision tracked", spell = ID_EXECPREC,
+          hint = "Track Executioner's Precision for execute-window Mortal Strike timing." },
         { kind = "pandemic", label = "Rend pandemic alert", spell = ID_REND,
           hint = "Optional: enable the Pandemic Time alert on Rend (Edit Mode -> Cooldown Manager) for no-clip refresh timing." },
     },
@@ -82,6 +92,7 @@ local spec = {
         Ravager        = 228920,   -- talent
         Demolish       = 436358,   -- Colossus
         ThunderousRoar = 384318,
+        HeroicStrike   = 1269383,  -- Slayer proc (Slam-swap)
     },
 
     openerReady = { "Avatar", "ColossusSmash", "Warbreaker" },
@@ -91,7 +102,7 @@ local spec = {
     precombat = {},   -- Rend is a target debuff (opener leads with it), not a self-buff
 
     pickable = {
-        "MortalStrike", "Overpower", "Execute", "Slam", "Cleave", "ThunderClap",
+        "MortalStrike", "Overpower", "Execute", "Slam", "Cleave", "HeroicStrike", "ThunderClap",
         "Bladestorm", "ColossusSmash", "Warbreaker", "Rend", "Skullsplitter",
         "ChampionsSpear", "Avatar", "SweepingStrikes", "Ravager", "Demolish",
         "ThunderousRoar",
@@ -120,38 +131,47 @@ local spec = {
     OnCast = function(P, key, now) end,
 
     priority = {
-        -- Single target (Colossus + Slayer merged).
+        -- Single target (Slayer list from Icy Veins; talent CDs fold in via IsKnown).
+        -- Cleave applies/refreshes Rend in this build (no separate Rend cast).
         st = {
-            { spell = "MortalStrike" },                           -- primary generator / Colossal Might
-            { spell = "Rend", cond = OR(buffDown(ID_REND), refreshable(ID_REND)) }, -- maintain Rend (missing or pandemic)
-            { spell = "Ravager" },                                -- just before Colossus Smash
+            { spell = "Cleave", cond = AND(refreshable(ID_REND), cdReady(ID_COLOSSUS_DBF)) }, -- refresh Rend before Colossus Smash
             { spell = "Avatar" },                                 -- on CD
-            { spell = "ThunderousRoar" },                         -- on CD
-            { spell = "ChampionsSpear" },                         -- on CD
+            { spell = "ThunderousRoar" },                         -- talent CD
+            { spell = "ChampionsSpear" },                         -- talent CD
             { spell = "ColossusSmash" },                          -- on CD (smart-swaps to Warbreaker if talented)
+            { spell = "Ravager" },                                -- talent: with Colossus Smash
             { spell = "Demolish" },                               -- Colossus: during Colossus Smash
-            { spell = "Execute", cond = buffUp(ID_SUDDENDEATH) }, -- Sudden Death proc
-            { spell = "Overpower" },                              -- charges; empowered by Opportunist
-            { spell = "Skullsplitter" },                          -- Rage generator
-            { spell = "Bladestorm" },                             -- Slayer: weave during Colossus Smash
-            { spell = "Slam" },                                   -- Rage dump / filler
+            { spell = "Execute", cond = stacksMin(ID_SUDDENDEATH, 2) }, -- 2 stacks Sudden Death
+            { spell = "Execute", cond = AND(stacksMax(ID_IMMINENT, 2), cdReady(227847)) }, -- before Bladestorm, <3 Imminent Demise
+            { spell = "Bladestorm", cond = buffUp(ID_COLOSSUS_DBF) }, -- during Colossus Smash
+            { spell = "HeroicStrike" },                           -- Slayer proc (when available)
+            { spell = "MortalStrike" },
+            { spell = "Execute", cond = buffUp(ID_SUDDENDEATH) }, -- during Sudden Death
+            { spell = "Overpower" },
+            { spell = "Cleave", cond = OR(buffDown(ID_REND), refreshable(ID_REND)) }, -- keep Rend up
+            { spell = "Slam" },                                   -- filler
         },
 
-        -- Cleave / AoE. Sweeping Strikes + Cleave (applies Rend to all).
-        cleave = {
-            { spell = "SweepingStrikes" },                        -- on CD (3+ targets)
-            { spell = "Ravager" },
+        -- AoE (3+): Sweeping Strikes + Cleave-heavy. Cleave applies Rend and is the
+        -- Collateral Damage spender at 3 stacks.
+        aoe = {
+            { spell = "SweepingStrikes" },                        -- on CD
+            { spell = "Cleave", cond = buffDown(ID_REND) },       -- early, to apply Rend
             { spell = "Avatar" },
             { spell = "ThunderousRoar" },
             { spell = "ChampionsSpear" },
-            { spell = "ColossusSmash" },                          -- smart-swaps to Warbreaker if talented
-            { spell = "Bladestorm" },                             -- AoE window
-            { spell = "Cleave" },                                 -- main AoE, applies Rend
+            { spell = "ColossusSmash" },
+            { spell = "Ravager" },
+            { spell = "Cleave", cond = stacksMin(ID_COLLATERAL, 3) }, -- 3 stacks Collateral Damage
+            { spell = "Bladestorm" },
             { spell = "Demolish" },
+            { spell = "Execute", cond = stacksMin(ID_SUDDENDEATH, 2) },
+            { spell = "Cleave" },                                 -- main AoE spender
+            { spell = "Overpower", cond = chargesMin(7384, 2) },  -- with 2 charges
             { spell = "Execute", cond = buffUp(ID_SUDDENDEATH) },
-            { spell = "MortalStrike" },
-            { spell = "ThunderClap" },
             { spell = "Overpower" },
+            { spell = "MortalStrike" },
+            { spell = "Execute" },
             { spell = "Slam" },                                   -- filler
         },
     },
@@ -174,6 +194,10 @@ local spec = {
         spend = { "Execute", "Slam", "Cleave", "Bladestorm" },
     },
 }
-spec.priority.aoe = spec.priority.cleave   -- same list for 3+
+
+-- 2-target cleave = Sweeping Strikes up + the single-target list (Arms cleaves its
+-- ST rotation onto a second target via Sweeping Strikes).
+spec.priority.cleave = { { spell = "SweepingStrikes" } }
+for _, e in ipairs(spec.priority.st) do spec.priority.cleave[#spec.priority.cleave + 1] = e end
 
 PRIO.specs[spec.specID] = spec

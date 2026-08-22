@@ -415,17 +415,27 @@ function API.AuraStackCount(spellID)
     if not frame then return nil end
     local active = API.IsAuraActive(spellID)
     if active == false then return 0 end
-    -- Applications fontstring lives at frame.Applications.Applications on BuffIcon
-    -- items; guard everything since the layout differs by viewer type.
-    local af = frame.Applications
-    local fs = af and (af.Applications or (af.GetText and af))
-    if fs and fs.GetText then
-        local ok, txt = pcall(fs.GetText, fs)
-        if ok and type(txt) == "string" and txt ~= "" then
-            local n = tonumber((txt:gsub("%D", "")))
-            if n then return n end
+    -- The Applications fontstring lives in different places by viewer type (BuffIcon:
+    -- frame.Applications.Applications; BuffBar: an icon sub-frame). Try the known spots
+    -- inside one pcall so an unexpected layout degrades to "1 stack" instead of erroring.
+    local ok, n = pcall(function()
+        local spots = {}
+        local af = rawget and frame.Applications or frame.Applications
+        if af then spots[#spots + 1] = af.Applications; spots[#spots + 1] = af end
+        if frame.Icon and frame.Icon.Applications then spots[#spots + 1] = frame.Icon.Applications end
+        if frame.Bar and frame.Bar.Applications then spots[#spots + 1] = frame.Bar.Applications end
+        for _, fs in ipairs(spots) do
+            if type(fs) == "table" and fs.GetText then
+                local txt = fs:GetText()
+                if type(txt) == "string" and txt ~= "" then
+                    local num = tonumber((txt:gsub("%D", "")))
+                    if num then return num end
+                end
+            end
         end
-    end
+        return nil
+    end)
+    if ok and n then return n end
     if active == true then return 1 end       -- up, but Blizzard drew no number = 1 stack
     return nil
 end
