@@ -29,6 +29,7 @@ local function cdDown(id)   return { type = "cdNotReady",  spell = id } end
 local function cdReady(id)  return { type = "cdReady",     spell = id } end
 local function refreshable(id) return { type = "refreshable", spell = id } end
 local function talent(id)      return { type = "talentYes", spell = id } end
+local function talentNo(id)    return { type = "talentNo",  spell = id } end
 local moteUp   = { type = "moteUp" }
 local moteDown = { type = "moteDown" }
 
@@ -148,6 +149,14 @@ local spec = {
         ChainLightning = { skDelta = -1, mote = false },
     },
 
+    -- Casting these applies Flame Shock, but the Cooldown Viewer read can lag a tick.
+    -- Assume Flame Shock is up for a few seconds so we don't re-suggest it immediately
+    -- (short window -> corrects itself if the target actually immuned it).
+    assumeOnCast = {
+        FlameShock   = { aura = ID_FLAMESHOCK, dur = 4 },
+        VoltaicBlaze = { aura = ID_FLAMESHOCK, dur = 4 },
+    },
+
     maelstromMax = 150,
     maelstromGen = {
         LightningBolt  = 8,
@@ -238,7 +247,10 @@ local spec = {
         cleave = {
             { spell = "Stormkeeper" },
             { spell = "AncestralSwiftness" },
-            { spell = "FlameShock",  ignoreCD = true, cond = OR(buffDown(ID_FLAMESHOCK), refreshable(ID_FLAMESHOCK)) },
+            -- Non-Voltaic builds keep Flame Shock up manually; Voltaic builds use Voltaic
+            -- Blaze on cooldown instead (which applies Flame Shock).
+            { spell = "FlameShock",  ignoreCD = true, cond = AND(buffDown(ID_FLAMESHOCK), talentNo(ID_VOLTAIC)) },
+            { spell = "FlameShock",  ignoreCD = true, cond = AND(refreshable(ID_FLAMESHOCK), talentNo(ID_VOLTAIC)) },
             { spell = "VoltaicBlaze", cond = talent(ID_VOLTAIC) },  -- 3+: on cooldown, only if talented
             { spell = "Ascendance",  cond = OR(cdReady(ID_STORMKEEPER), buffUp(ID_STORMKEEPER)) },
             { spell = "LavaBurst",   cond = AND(buffUp(ID_PURGING), buffUp(ID_LAVASURGE)) },
@@ -258,8 +270,10 @@ local spec = {
         aoe = {
             { spell = "Stormkeeper" },
             { spell = "AncestralSwiftness" },
-            -- Flame Shock upkeep when not in a MotE window (FS applier varies by build)
-            { spell = "FlameShock",  ignoreCD = true, cond = OR(buffDown(ID_FLAMESHOCK), refreshable(ID_FLAMESHOCK)) },
+            -- Non-Voltaic builds keep Flame Shock up manually; Voltaic builds use Voltaic
+            -- Blaze on cooldown instead (which applies Flame Shock).
+            { spell = "FlameShock",  ignoreCD = true, cond = AND(buffDown(ID_FLAMESHOCK), talentNo(ID_VOLTAIC)) },
+            { spell = "FlameShock",  ignoreCD = true, cond = AND(refreshable(ID_FLAMESHOCK), talentNo(ID_VOLTAIC)) },
             { spell = "VoltaicBlaze", cond = talent(ID_VOLTAIC) },  -- 3+: on cooldown, only if talented
             { spell = "Ascendance",  cond = OR(cdReady(ID_STORMKEEPER), buffUp(ID_STORMKEEPER)) },
             -- Instant Lava Burst cleave off a proc

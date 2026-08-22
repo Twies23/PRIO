@@ -16,6 +16,7 @@ local navButtons = {}
 local kids = {}          -- content widgets, rebuilt per page
 local statusRows = {}    -- priority rows w/ live condition dots, rebuilt per page
 local currentPage = "display"
+local editMode = "st"    -- which list the Priorities page is EDITING (independent of db.mode)
 
 local DOTCOL = {
     pass = { 0.047, 0.824, 0.616 }, fail = { 0.88, 0.41, 0.35 }, open = { 0.878, 0.627, 0.227 },
@@ -150,7 +151,7 @@ local chipColor = { buff = C.accent, tgt = { 0.54, 0.71, 1 }, res = { 0.88, 0.63
 local picker
 
 local function CurrentSpec() local id = API.GetSpecID(); return id and PRIO.specs and PRIO.specs[id] end
-local function CurrentMode() local m = PRIO.db.mode; return (m ~= "auto") and m or "st" end
+local function CurrentMode() return editMode end   -- the list being edited (not the live mode)
 
 local function IsCustom(spec, mode)
     local cp = PRIO.db.customPriorities
@@ -273,12 +274,19 @@ function Pages.rotation()
         fs:SetPoint("LEFT", sw, "RIGHT", 8, 0)
         fs:SetText(spec and (spec.label .. " " .. (spec.className or "")) or "Unsupported spec")
     end)
-    SettingRow("Mode", 30, function(r)
+    SettingRow("Live mode (what's shown)", 30, function(r)
         local seg = UI.Segmented(r, {
             { value = "auto", text = "Auto" }, { value = "st", text = "ST" },
             { value = "cleave", text = "Cleave" }, { value = "aoe", text = "AoE" },
-        }, function() return db.mode end, function(v) db.mode = v end, function()
-            AfterChange(); Options:ShowPage("rotation")
+        }, function() return db.mode end, function(v) db.mode = v end, AfterChange)
+        seg:SetPoint("RIGHT", 0, 0)
+    end)
+    SettingRow("Editing list", 30, function(r)
+        local seg = UI.Segmented(r, {
+            { value = "st", text = "ST" }, { value = "cleave", text = "Cleave" },
+            { value = "aoe", text = "AoE" },
+        }, function() return editMode end, function(v) editMode = v end, function()
+            Options:ShowPage("rotation")
         end)
         seg:SetPoint("RIGHT", 0, 0)
     end)

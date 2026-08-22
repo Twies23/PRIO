@@ -122,15 +122,24 @@ local function LastCastMatch(ref, S)
     return ref == S.lastCastID
 end
 
+-- Was this aura just applied by our own cast (short assume window)? Covers the tick
+-- or two before the Cooldown Viewer read catches up.
+local function Assumed(sid, S)
+    local a = Engine.P and Engine.P.assumeActive and Engine.P.assumeActive[sid]
+    return a and a > (S.now or GetTime())
+end
+
 local function EvalClause(cl, S, selfSid)
     if cl.clauses then return Cond.Eval(cl, S, selfSid) end   -- nested group -> recurse
     local t = cl.type
     local sid = cl.spell or selfSid
     if t == "buffActive" then
         if S._sim and S._sim[sid] ~= nil then return S._sim[sid] end
+        if Assumed(sid, S) then return true end
         local a = API.IsAuraActive(sid); return a == true or a == nil
     elseif t == "buffMissing" then
         if S._sim and S._sim[sid] ~= nil then return not S._sim[sid] end
+        if Assumed(sid, S) then return false end             -- just applied -> not missing
         local a = API.IsAuraActive(sid); return a == false or a == nil
     elseif t == "cdReady" then return API.IsReady(sid) and true or false
     elseif t == "cdNotReady" then return not API.IsReady(sid)
@@ -202,7 +211,7 @@ function Engine:OnSpecChanged()
     local id = API.GetSpecID()
     spec = id and PRIO.specs and PRIO.specs[id] or nil
     wipe(idToKey)
-    self.P = { fsExpire = 0, mote = false, skStacks = 0, maelstrom = 0, charges = {} }
+    self.P = { fsExpire = 0, mote = false, skStacks = 0, maelstrom = 0, charges = {}, assumeActive = {} }
     if not spec then return end
     if spec.chargeTrack then
         for key, cfg in pairs(spec.chargeTrack) do
@@ -360,6 +369,14 @@ PRIO:On("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
     end
     if spec.OnCast then
         pcall(spec.OnCast, Engine.P, key, GetTime())
+    end
+    -- Assume a just-applied aura is up briefly, since the Cooldown Viewer read can lag
+    -- a tick or two after you apply it (e.g. Flame Shock via Voltaic Blaze). The short
+    -- window means a genuine immune/miss corrects itself once it expires.
+    local ao = spec.assumeOnCast and spec.assumeOnCast[key]
+    if ao then
+        Engine.P.assumeActive = Engine.P.assumeActive or {}
+        Engine.P.assumeActive[ao.aura] = GetTime() + (ao.dur or 4)
     end
     Engine:ApplyMaelstrom(Engine.P, spellID, key)   -- advance predicted Maelstrom
     Engine:AdvanceOpener(key)

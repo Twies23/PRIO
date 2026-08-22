@@ -1,5 +1,12 @@
 # PRIO Changelog
 
+## 0.2.3 (alpha)
+- **Priorities page: separate "Editing list" from "Live mode"** — pick which list (ST/Cleave/AoE) you're editing without changing what's actively shown, so you can tweak any list mid-combat.
+- **Elemental:** after you cast Flame Shock or Voltaic Blaze, PRIO assumes Flame Shock is up for ~4s (covers the Cooldown Manager read lag), self-correcting if the target was immune.
+- **Elemental Cleave/AoE:** Flame Shock is kept up manually only on non-Voltaic builds; Voltaic builds use Voltaic Blaze on cooldown to apply it.
+- **Windwalker:** rebuilt to the 12.1 Conduit + Shado-Pan priority with correct spell IDs (Zenith Stomp, Rushing Wind Kick, Slicing Winds) and buff-driven conditions.
+
+
 ## 0.2.2
 - Promotes the recent work to the main release: **Windwalker Monk** support, the profile manager, the "defaults changed" login prompt, condition text export, and the Arms/MM review. (Devourer is included as an early scaffold that still needs in-game spec/spell ID verification.)
 
