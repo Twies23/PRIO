@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.5 (alpha)
+- Applying a profile (or the recommended preset) now refreshes the open options window immediately, so the change is visible right away.
+
+
 ## 0.2.4
 Promotes the 0.2.3 work to the main release: the editing-list/live-mode split, Elemental Flame Shock assume-on-cast and Voltaic talent handling, and the rebuilt Windwalker Monk. (Devourer remains an early scaffold pending in-game ID verification.)
 

@@ -148,6 +148,7 @@ function PRIO:ApplyProfile(name)
     if self.RecolorMinimapButton then self.RecolorMinimapButton() end
     if self.Display and self.Display.Refresh then self.Display:Refresh() end
     if self.UpdateMinimapButton then self.UpdateMinimapButton() end
+    if self.Options and self.Options.RefreshOpen then self.Options:RefreshOpen() end
     self:StartTicker()
     print("|cff" .. (self.UI and self.UI.accentHex or "0cd29f") .. "PRIO|r: applied profile \"" .. name .. "\".")
 end
@@ -205,6 +206,7 @@ function PRIO:ApplyPreset(name)
     if not (p and self.db) then return end
     for k, v in pairs(p) do self.db[k] = v end
     if self.Display and self.Display.Refresh then self.Display:Refresh() end
+    if self.Options and self.Options.RefreshOpen then self.Options:RefreshOpen() end
     self:StartTicker()
     print("|cff" .. (PRIO.UI and PRIO.UI.accentHex or "0cd29f") .. "PRIO|r: applied the \"" .. name .. "\" preset.")
 end
