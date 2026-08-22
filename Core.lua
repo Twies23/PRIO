@@ -177,6 +177,33 @@ StaticPopupDialogs["PRIO_DEFAULTS_CHANGED"] = {
     timeout = 0, whileDead = true, hideOnEscape = true, preferredIndex = 3,
 }
 
+-- Name-entry popup for saving a profile (a modal edit box handles focus cleanly,
+-- unlike an inline one).
+StaticPopupDialogs["PRIO_NEW_PROFILE"] = {
+    text = "Save current settings + priority lists as a profile named:",
+    button1 = "Save", button2 = "Cancel",
+    hasEditBox = true, maxLetters = 32,
+    OnShow = function(self) self.editBox:SetText(""); self.editBox:SetFocus() end,
+    OnAccept = function(self)
+        local n = self.editBox:GetText()
+        if n and n:gsub("%s", "") ~= "" then
+            PRIO:SaveProfile(n)
+            if PRIO.Options and PRIO.Options.RefreshOpen then PRIO.Options:RefreshOpen() end
+        end
+    end,
+    EditBoxOnEnterPressed = function(self)
+        local parent = self:GetParent()
+        local n = parent.editBox:GetText()
+        if n and n:gsub("%s", "") ~= "" then
+            PRIO:SaveProfile(n)
+            if PRIO.Options and PRIO.Options.RefreshOpen then PRIO.Options:RefreshOpen() end
+        end
+        parent:Hide()
+    end,
+    EditBoxOnEscapePressed = function(self) self:GetParent():Hide() end,
+    timeout = 0, whileDead = true, hideOnEscape = true, preferredIndex = 3,
+}
+
 function PRIO:MaybePromptDefaults()
     if not self.db then return end
     if (self.db.defaultsRevisionSeen or 0) >= self.defaultsRevision then return end

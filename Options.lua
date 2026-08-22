@@ -680,53 +680,50 @@ local function textButton(parent, w, label, color, onClick)
     return b
 end
 
+local selectedProfile = ""
 function Pages.profiles()
     local db = PRIO.db
 
     Section("Preset")
     SettingRow("Author's recommended layout", 28, function(r)
         local b = textButton(r, 160, "Apply recommended", C.accent,
-            function() PRIO:ApplyPreset("Recommended"); Options:ShowPage("profiles") end)
+            function() PRIO:ApplyPreset("Recommended") end)
         b:SetPoint("RIGHT", 0, 0)
     end)
 
-    Section("Save current setup")
-    SettingRow("Name it, then Save", 30, function(r)
-        local save
-        local box = UI.Card(r, C.control, 0.08); box:SetSize(210, 26); box:SetPoint("RIGHT", 88, 0)
-        local eb = CreateFrame("EditBox", nil, box); eb:SetAllPoints(); eb:SetAutoFocus(false)
-        eb:SetFontObject(ChatFontNormal); eb:SetTextInsets(8, 8, 0, 0); eb:SetMaxLetters(32)
-        local function doSave()
-            local n = eb:GetText()
-            if n and n:gsub("%s", "") ~= "" then PRIO:SaveProfile(n); Options:ShowPage("profiles") end
-        end
-        eb:SetScript("OnEnterPressed", function() doSave(); eb:ClearFocus() end)
-        eb:SetScript("OnEscapePressed", function() eb:ClearFocus() end)
-        save = textButton(r, 80, "Save", C.accent, doSave)
-        save:SetPoint("RIGHT", 0, 0)
-    end)
-
-    Section("Saved profiles")
     local names = {}
     for n in pairs(db.profiles or {}) do names[#names + 1] = n end
     table.sort(names)
-    if #names == 0 then
-        local none = Track(UI.Font(content, 12, C.faint))
-        none:SetPoint("TOPLEFT", 0, -cursorY)
-        none:SetText("No saved profiles yet. Enter a name above and click Save.")
-        cursorY = cursorY + 26
-    else
-        for _, n in ipairs(names) do
-            SettingRow(n, 28, function(r)
-                local del = textButton(r, 70, "Delete", RED,
-                    function() PRIO:DeleteProfile(n); Options:ShowPage("profiles") end)
-                del:SetPoint("RIGHT", 0, 0)
-                local ap = textButton(r, 70, "Apply", C.accent,
-                    function() PRIO:ApplyProfile(n); Options:ShowPage("profiles") end)
-                ap:SetPoint("RIGHT", del, "LEFT", -8, 0)
-            end)
-        end
+    if selectedProfile ~= "" and not (db.profiles and db.profiles[selectedProfile]) then
+        selectedProfile = ""   -- was deleted
     end
+
+    Section("Profiles")
+    SettingRow("Load a profile", 30, function(r)
+        local opts = {}
+        for _, n in ipairs(names) do opts[#opts + 1] = { value = n, text = n } end
+        if #opts == 0 then opts[1] = { value = "", text = "(no profiles saved)" } end
+        local dd = UI.Dropdown(r, 200, opts,
+            function() return selectedProfile end,
+            function(v) selectedProfile = v end,
+            function() if selectedProfile ~= "" then PRIO:ApplyProfile(selectedProfile) end end)
+        dd:SetPoint("RIGHT", 0, 0)
+    end)
+    SettingRow("Manage", 30, function(r)
+        local del = textButton(r, 80, "Delete", RED, function()
+            if selectedProfile ~= "" then PRIO:DeleteProfile(selectedProfile); selectedProfile = ""; Options:ShowPage("profiles") end
+        end)
+        del:SetPoint("RIGHT", 0, 0)
+        local save = textButton(r, 150, "Save current as\226\128\166", C.accent,
+            function() StaticPopup_Show("PRIO_NEW_PROFILE") end)
+        save:SetPoint("RIGHT", del, "LEFT", -8, 0)
+    end)
+
+    local hint = Track(UI.Font(content, 11.5, C.faint))
+    hint:SetPoint("TOPLEFT", 0, -cursorY); hint:SetPoint("RIGHT", content, "RIGHT", -8, 0)
+    hint:SetJustifyH("LEFT"); hint:SetWordWrap(true)
+    hint:SetText("Selecting a profile applies it immediately. A profile stores your settings and all custom priority lists.")
+    cursorY = cursorY + 34
 end
 
 --------------------------------------------------------------------------------

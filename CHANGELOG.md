@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.6 (alpha)
+- **Profiles reworked** to the standard dropdown style: a dropdown to load a profile (applies on select), a "Save current as…" popup for naming, and a Delete button. Fixes the name box that trapped your cursor.
+
+
 ## 0.2.5 (alpha)
 - Applying a profile (or the recommended preset) now refreshes the open options window immediately, so the change is visible right away.
 
