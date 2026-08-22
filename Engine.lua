@@ -161,10 +161,15 @@ local function EvalClause(cl, S, selfSid)
     if t == "buffActive" then
         if S._sim and S._sim[sid] ~= nil then return S._sim[sid] end
         if Assumed(sid, S) then return true end
+        -- Untracked (no Cooldown Viewer frame) -> we can't confirm the buff, so FAIL
+        -- rather than ignore-pass: a proc/buff line you're not specced into (or haven't
+        -- tracked) shouldn't silently pass. Tracked auras read a clean bool.
+        if not API.IsTracked(sid) then return false end
         local a = API.IsAuraActive(sid); return a == true or a == nil
     elseif t == "buffMissing" then
         if S._sim and S._sim[sid] ~= nil then return not S._sim[sid] end
         if Assumed(sid, S) then return false end             -- just applied -> not missing
+        if not API.IsTracked(sid) then return false end      -- untracked -> can't confirm -> fail
         local a = API.IsAuraActive(sid); return a == false or a == nil
     elseif t == "cdReady" then return API.IsReady(sid) and true or false
     elseif t == "cdNotReady" then return not API.IsReady(sid)
@@ -220,9 +225,11 @@ function Cond.ClauseStatus(cl, S, selfSid)
     local t = cl.type
     local sid = cl.spell or selfSid
     if t == "buffActive" then
+        if not API.IsTracked(sid) then return "fail" end     -- untracked -> fail, not ignored
         local a = API.IsAuraActive(sid); if a == nil then return "open" end
         return a and "pass" or "fail"
     elseif t == "buffMissing" then
+        if not API.IsTracked(sid) then return "fail" end
         local a = API.IsAuraActive(sid); if a == nil then return "open" end
         return (a == false) and "pass" or "fail"
     elseif t == "refreshable" then
@@ -758,7 +765,12 @@ function Engine:Evaluate()
                     -- A single-use spell listed in multiple rows (like SimC's
                     -- repeated earthquake/elemental_blast lines) fires only once.
                     local dupBlocked = usedSpell[sid] and not rep and not maxC
-                    if chargeOK and not dupBlocked then
+                    -- Combo Strikes (Windwalker mastery): never cast the same ability
+                    -- twice in a row -- skip a candidate equal to the previous cast.
+                    -- The safety net below still prevents ever going blank.
+                    local comboBlocked = spec.comboStrikes and sim.lastCastKey
+                                         and idToKey[sid] == sim.lastCastKey
+                    if chargeOK and not dupBlocked and not comboBlocked then
                         local ready = e.ignoreCD or API.IsReady(sid)
                         -- Spender gate ONLY when Maelstrom is readable (out of combat).
                         -- In secret combat we can't trust the value, so never let it

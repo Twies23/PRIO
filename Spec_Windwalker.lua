@@ -23,8 +23,8 @@ local CHI = (Enum and Enum.PowerType and Enum.PowerType.Chi) or 12
 local ID_HEARTJADE   = 443294   -- Heart of the Jade Serpent (from WDP / Strike / Conduit)
 local ID_ZENITH      = 1249625  -- Zenith window
 local ID_UNBROKEN    = 1296624  -- Unbroken Rhythm
-local ID_COMBOBREAK  = 137384   -- Combo Breaker (free Blackout Kick)
-local ID_DANCECHIJI  = 325201   -- Dance of Chi-Ji (free Spinning Crane Kick)
+local ID_COMBOBREAK  = 137284   -- Combo Breaker (free Blackout Kick)
+local ID_DANCECHIJI  = 325202   -- Dance of Chi-Ji (free Spinning Crane Kick)
 local ID_OBSIDIAN    = 1249832  -- Obsidian Spiral (talent)
 
 local function buffUp(id)   return { type = "buffActive",  spell = id } end
@@ -43,6 +43,7 @@ local spec = {
     resourceLabel = "Chi",
     cleaveAt = 3,   -- ~single-target up to 2; AoE (Spinning Crane Kick) at 3+
     aoeAt    = 3,
+    comboStrikes = true,   -- mastery: engine never queues the same ability twice in a row
 
     spells = {
         TigerPalm          = 100780,

@@ -11,6 +11,11 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.11", {
+        "Untracked buffs now FAIL their row (red dot) instead of silently passing.",
+        "Windwalker Combo Strikes: never queues the same ability twice in a row.",
+        "Fixed Windwalker Dance of Chi-Ji / Combo Breaker buff IDs.",
+    } },
     { "0.2.10", {
         "New conditions: Resource >= / <= N (Chi, Holy Power, ...), and Usable / Not usable (another ability).",
         "Windwalker uses Chi thresholds for its low-Chi lines.",

@@ -1,5 +1,11 @@
 # PRIO Changelog
 
+## 0.2.11 (alpha)
+- **Untracked buffs now fail their row instead of silently passing.** Previously a line gated on a buff you hadn't tracked (or aren't specced into) read as "open" and effectively passed — now it fails (red dot), so a Combo Breaker / Dance of Chi-Ji / Heart of Jade Serpent line won't be treated as fine when the buff can't actually be read. Track the buff (via /prio setup) to make it evaluate.
+- **Windwalker Combo Strikes** is now modeled engine-wide: PRIO never queues the same ability twice in a row (the safety net still prevents a blank).
+- Fixed Windwalker buff IDs: **Dance of Chi-Ji 325202** (was 325201) and **Combo Breaker 137284** (was 137384).
+
+
 ## 0.2.10 (alpha)
 - **New condition types: Resource (>= / <= N) and Usable / Not usable.** Resource reads your discrete class power (Chi, Holy Power, Combo Points, Runes, Soul Shards, Arcane Charges, Essence) — the secret-safe ones. Usable/Not usable references another ability's `IsUsable` state.
 - **Windwalker** now uses Chi thresholds on its low-Chi lines: Zenith Stomp and a Tiger Palm builder gate on Chi ≤ 2, and the high-Chi Spinning Crane Kick gates on Chi ≥ 5. (Reset your Windwalker lists to default to pick this up.)
