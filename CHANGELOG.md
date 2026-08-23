@@ -1,5 +1,13 @@
 # PRIO Changelog
 
+## 0.2.12 (alpha)
+- **Windwalker rebuilt to the current Icy Veins priorities, split by hero tree.** PRIO now keeps separate Shado-Pan and Conduit of the Celestials lists (ST + AoE) and auto-selects based on your hero talents (Celestial Conduit known = Conduit). Options → Priorities has a "Hero list to edit" switch so you can customize each independently.
+- **Removed the retired Storm, Earth, and Fire.**
+- **Rushing Wind Kick** now only fires when its "available" proc buff (1250554) is up.
+- **Chi prediction** is now cost/generation-accurate (Zenith/Combo Breaker/Dance discounts, Energy Burst / Airborne Rhythm / Obsidian Spiral generation), so the queue looks ahead on real Chi.
+- Reset your Windwalker lists to default to pick all this up. New tracked auras to add (via /prio setup): Zenith, Unbroken Rhythm, Rushing Wind Kick, Touch of Death.
+
+
 ## 0.2.11 (alpha)
 - **Untracked buffs now fail their row instead of silently passing.** Previously a line gated on a buff you hadn't tracked (or aren't specced into) read as "open" and effectively passed — now it fails (red dot), so a Combo Breaker / Dance of Chi-Ji / Heart of Jade Serpent line won't be treated as fine when the buff can't actually be read. Track the buff (via /prio setup) to make it evaluate.
 - **Windwalker Combo Strikes** is now modeled engine-wide: PRIO never queues the same ability twice in a row (the safety net still prevents a blank).

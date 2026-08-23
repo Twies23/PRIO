@@ -11,6 +11,12 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.12", {
+        "Windwalker rebuilt to Icy Veins prios, split by hero (Shado-Pan / Conduit) with auto-select.",
+        "Removed retired Storm, Earth, and Fire.",
+        "Rushing Wind Kick only fires when its proc buff is up.",
+        "Chi prediction is now cost/generation-accurate for the look-ahead queue.",
+    } },
     { "0.2.11", {
         "Untracked buffs now FAIL their row (red dot) instead of silently passing.",
         "Windwalker Combo Strikes: never queues the same ability twice in a row.",

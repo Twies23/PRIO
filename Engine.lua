@@ -514,6 +514,13 @@ end)
 function Engine:ApplyMaelstrom(P, sid, key)
     P.maelstrom = P.maelstrom or 0
     local cap = P.maelstromMax or (spec and spec.maelstromMax) or 150
+    if spec and spec.ResourceDelta then
+        local ok, delta = pcall(spec.ResourceDelta, spec, key, sid, { maelstrom = P.maelstrom })
+        if ok and type(delta) == "number" then
+            P.maelstrom = math.max(0, math.min(cap, P.maelstrom + delta))
+            return
+        end
+    end
     local cost = API.PowerCostAmount(sid)
     if cost then P.maelstrom = math.max(0, P.maelstrom - cost) end
     local gen = spec and spec.maelstromGen and key and spec.maelstromGen[key]
@@ -568,6 +575,7 @@ local function BuildState(self, mode, enemies)
         mode      = mode,
         enemies   = enemies,
         maelstrom = P.maelstrom or 0,                  -- predicted (synced when readable)
+        maelstromMax = P.maelstromMax or (spec and spec.maelstromMax) or 0,
         maelstromReadable = realMs ~= nil,
         mote      = P.mote and true or false,
         skStacks  = P.skStacks or 0,
@@ -602,12 +610,35 @@ end
 
 -- The effective list for a spec/mode: the user's custom copy if present, else the
 -- built-in default.
-function Engine:EffectiveList(specKey, mode)
+local function ActivePriorityVariant(s)
+    if not (s and s.priorityVariants and s.activeHero) then return nil end
+    local ok, key = pcall(s.activeHero)
+    return ok and key or nil
+end
+
+local function BuiltInList(s, mode, variantKey)
+    if variantKey and s.priorityByVariant and s.priorityByVariant[variantKey] then
+        local lists = s.priorityByVariant[variantKey]
+        return lists[mode] or lists.st
+    end
+    return s.priority[mode] or s.priority.st
+end
+
+function Engine:EffectiveList(specKey, mode, variantKey)
     local cp = PRIO.db.customPriorities
-    if cp and cp[specKey] and cp[specKey][mode] then
+    local curSpec = spec and spec.key == specKey and spec or nil
+    local activeVariant = variantKey or ActivePriorityVariant(curSpec)
+    if activeVariant and cp and cp[specKey] and cp[specKey].variants
+        and cp[specKey].variants[activeVariant] and cp[specKey].variants[activeVariant][mode] then
+        return cp[specKey].variants[activeVariant][mode], true
+    end
+    if activeVariant and cp and cp[specKey] and cp[specKey][mode] then
         return cp[specKey][mode], true
     end
-    return spec.priority[mode] or spec.priority.st, false
+    if not activeVariant and cp and cp[specKey] and cp[specKey][mode] then
+        return cp[specKey][mode], true
+    end
+    return BuiltInList(curSpec or spec, mode, activeVariant), false
 end
 
 -- Current evaluation state (for the condition editor's live status).
@@ -651,6 +682,24 @@ local function ApplyEffects(sim, key)
     if fx.mote ~= nil then sim.mote = fx.mote end
     if fx.skSet ~= nil then sim.sk = fx.skSet end
     if fx.skDelta then sim.sk = math.max(0, (sim.sk or 0) + fx.skDelta) end
+end
+
+local function ResourceCost(key, sid, S)
+    if spec and spec.ResourceCost then
+        local ok, cost = pcall(spec.ResourceCost, spec, key, sid, S)
+        if ok and type(cost) == "number" then return cost end
+    end
+    return API.PowerCostAmount(sid)
+end
+
+local function ApplyResourceDelta(sim, key, sid, S)
+    if not (spec and spec.ResourceDelta and sim.resource ~= nil) then return end
+    S.maelstrom = sim.resource
+    local ok, delta = pcall(spec.ResourceDelta, spec, key, sid, S)
+    if ok and type(delta) == "number" then
+        local cap = S.maelstromMax or (spec and spec.maelstromMax) or 150
+        sim.resource = math.max(0, math.min(cap, sim.resource + delta))
+    end
 end
 
 -- The spec spell the player is currently hard-casting or channeling (nil if instant
@@ -727,7 +776,7 @@ function Engine:Evaluate()
     -- queue slot evaluates against the state AFTER the earlier picks "cast".
     local realMote, realSk = S.mote, S.skStacks   -- for the debug window (S is mutated below)
     local sim = {
-        aura = {}, mote = S.mote, sk = S.skStacks,
+        aura = {}, mote = S.mote, sk = S.skStacks, resource = S.maelstrom,
         lastCastKey = S.lastCastKey, lastCastID = S.lastCastID,
     }
     S._sim = sim.aura
@@ -739,6 +788,7 @@ function Engine:Evaluate()
         local castKey, castSid = self:InFlightCast()
         if castKey and castSid then
             ApplyEffects(sim, castKey)
+            ApplyResourceDelta(sim, castKey, castSid, S)
             sim.lastCastKey, sim.lastCastID = castKey, castSid
             local rep, maxC = Repeatable(castSid)
             if maxC then
@@ -752,6 +802,7 @@ function Engine:Evaluate()
     for slot = 1, want do
         S.mote        = sim.mote and true or false
         S.skStacks    = sim.sk or 0
+        S.maelstrom   = sim.resource or S.maelstrom
         S.lastCastKey = sim.lastCastKey
         S.lastCastID  = sim.lastCastID
         local pick
@@ -775,8 +826,8 @@ function Engine:Evaluate()
                         -- Spender gate ONLY when Maelstrom is readable (out of combat).
                         -- In secret combat we can't trust the value, so never let it
                         -- freeze a spender -- fail open and let it fire.
-                        if ready and API.HasPowerCost(sid) and S.maelstromReadable then
-                            local cost = API.PowerCostAmount(sid)
+                        if ready and S.maelstromReadable and (API.HasPowerCost(sid) or spec.ResourceCost) then
+                            local cost = ResourceCost(idToKey[sid], sid, S)
                             if cost and S.maelstrom < cost then ready = false end
                         end
                         if ready and API.IsUsable(sid) and PRIO.Cond.Eval(e.cond, S, sid) then
@@ -794,6 +845,7 @@ function Engine:Evaluate()
         local fcond = spec.flash and fkey and spec.flash[fkey]
         picks[slot].flash = fcond and PRIO.Cond.Eval(fcond, S, pick.sid) or false
         ApplyEffects(sim, fkey)                             -- advance the look-ahead
+        ApplyResourceDelta(sim, fkey, pick.sid, S)
         sim.lastCastKey, sim.lastCastID = fkey, pick.sid    -- "this slot cast" for the next
         if pick.maxC then                                   -- charge spell
             usedCharges[pick.sid] = (usedCharges[pick.sid] or 0) + 1

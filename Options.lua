@@ -152,23 +152,60 @@ local picker
 
 local function CurrentSpec() local id = API.GetSpecID(); return id and PRIO.specs and PRIO.specs[id] end
 local function CurrentMode() return editMode end   -- the list being edited (not the live mode)
+local editVariant
 
-local function IsCustom(spec, mode)
+local function ActiveVariant(spec)
+    if not (spec and spec.priorityVariants and spec.activeHero) then return nil end
+    local ok, key = pcall(spec.activeHero)
+    return ok and key or nil
+end
+
+local function VariantIsValid(spec, key)
+    if not (spec and spec.priorityVariants and key) then return false end
+    for _, v in ipairs(spec.priorityVariants) do
+        if v.key == key then return true end
+    end
+    return false
+end
+
+local function CurrentVariant(spec)
+    if not (spec and spec.priorityVariants) then return nil end
+    if not VariantIsValid(spec, editVariant) then
+        editVariant = ActiveVariant(spec) or (spec.priorityVariants[1] and spec.priorityVariants[1].key)
+    end
+    return editVariant
+end
+
+local function VariantLabel(spec, key)
+    if not (spec and spec.priorityVariants and key) then return nil end
+    for _, v in ipairs(spec.priorityVariants) do
+        if v.key == key then return v.label or v.key end
+    end
+    return key
+end
+
+local function IsCustom(spec, mode, variant)
     local cp = PRIO.db.customPriorities
+    if variant then
+        return ((cp and cp[spec.key] and cp[spec.key].variants
+            and cp[spec.key].variants[variant] and cp[spec.key].variants[variant][mode])
+            or (cp and cp[spec.key] and cp[spec.key][mode])) and true or false
+    end
     return (cp and cp[spec.key] and cp[spec.key][mode]) and true or false
 end
 
 -- Build a plain-text breakdown of a spec/mode priority list (for the copy box).
-local function BuildExportText(spec, mode)
+local function BuildExportText(spec, mode, variant)
     if not spec then return "No supported spec is active." end
     local L = { }
-    L[#L+1] = ("PRIO v%s  |  %s %s  |  %s  (%s)"):format(
+    local variantText = variant and ("  |  " .. VariantLabel(spec, variant)) or ""
+    L[#L+1] = ("PRIO v%s  |  %s %s%s  |  %s  (%s)"):format(
         PRIO.version or "?", spec.label or "", spec.className or "",
-        mode:upper(), IsCustom(spec, mode) and "customized" or "default")
+        variantText, mode:upper(), IsCustom(spec, mode, variant) and "customized" or "default")
     L[#L+1] = ("enemies=%d  mode(auto->)=%s"):format(API.EnemyCount(),
         PRIO.Engine and PRIO.Engine:ResolveMode(API.EnemyCount()) or "?")
     L[#L+1] = string.rep("-", 60)
-    local list = PRIO.Engine:EffectiveList(spec.key, mode)
+    local list = PRIO.Engine:EffectiveList(spec.key, mode, variant)
     local S = PRIO.Engine and PRIO.Engine:CurrentState()
     for i, e in ipairs(list) do
         local sid  = PRIO.Engine:EntrySpellID(e)
@@ -191,27 +228,45 @@ end
 function Options:ExportCurrent()
     local spec = CurrentSpec()
     local mode = CurrentMode()
+    local variant = CurrentVariant(spec)
     UI.CopyBox("PRIO  Export",
-        (spec and (spec.label .. " / " .. mode:upper()) or "") .. "   —   Ctrl+A, Ctrl+C to copy",
-        BuildExportText(spec, mode))
+        (spec and (spec.label .. (variant and (" / " .. VariantLabel(spec, variant)) or "") .. " / " .. mode:upper()) or "")
+            .. "   —   Ctrl+A, Ctrl+C to copy",
+        BuildExportText(spec, mode, variant))
 end
 
 -- Copy-on-write: materialize an editable custom list for spec/mode from the default.
-local function EnsureCustom(spec, mode)
+local function BuiltInList(spec, mode, variant)
+    if variant and spec.priorityByVariant and spec.priorityByVariant[variant] then
+        local lists = spec.priorityByVariant[variant]
+        return lists[mode] or lists.st
+    end
+    return spec.priority[mode] or spec.priority.st
+end
+
+local function EnsureCustom(spec, mode, variant)
     local cp = PRIO.db.customPriorities
     cp[spec.key] = cp[spec.key] or {}
-    if not cp[spec.key][mode] then
+    local owner = cp[spec.key]
+    if variant then
+        owner.variants = owner.variants or {}
+        owner.variants[variant] = owner.variants[variant] or {}
+        owner = owner.variants[variant]
+    end
+    if not owner[mode] then
         local copy = {}
-        for i, e in ipairs(spec.priority[mode] or {}) do
+        local source = (variant and cp[spec.key][mode]) or BuiltInList(spec, mode, variant)
+        for i, e in ipairs(source or {}) do
             copy[i] = {
                 spell    = (type(e.spell) == "number") and e.spell or spec.spells[e.spell],
                 cond     = Cond.Copy(e.cond),
                 ignoreCD = e.ignoreCD or nil,
+                off      = e.off or nil,
             }
         end
-        cp[spec.key][mode] = copy
+        owner[mode] = copy
     end
-    return cp[spec.key][mode]
+    return owner[mode]
 end
 
 local function IconButton(parent, glyph, enabled, onClick)
@@ -263,6 +318,7 @@ function Pages.rotation()
     wipe(statusRows)
     local spec = CurrentSpec()
     local mode = CurrentMode()
+    local variant = CurrentVariant(spec)
 
     Section("Spec & Mode")
     SettingRow("Specialization", 30, function(r)
@@ -281,6 +337,19 @@ function Pages.rotation()
         }, function() return db.mode end, function(v) db.mode = v end, AfterChange)
         seg:SetPoint("RIGHT", 0, 0)
     end)
+    if spec and spec.priorityVariants then
+        SettingRow("Hero list to edit", 30, function(r)
+            local choices = {}
+            for _, v in ipairs(spec.priorityVariants) do
+                choices[#choices + 1] = { value = v.key, text = v.label or v.key }
+            end
+            local seg = UI.Segmented(r, choices,
+                function() return CurrentVariant(spec) end,
+                function(v) editVariant = v end,
+                function() Options:ShowPage("rotation") end)
+            seg:SetPoint("RIGHT", 0, 0)
+        end)
+    end
     SettingRow("Editing list", 30, function(r)
         local seg = UI.Segmented(r, {
             { value = "st", text = "ST" }, { value = "cleave", text = "Cleave" },
@@ -301,27 +370,39 @@ function Pages.rotation()
     end
 
     -- Header row: list status + reset
-    Section("Priority  ·  " .. mode:upper() .. (IsCustom(spec, mode) and "   (custom)" or "   (default)"))
+    Section("Priority  ·  "
+        .. (variant and (VariantLabel(spec, variant) .. " / ") or "")
+        .. mode:upper()
+        .. (IsCustom(spec, mode, variant) and "   (custom)" or "   (default)"))
     SettingRow("Export this list as text", 26, function(r)
         local b = UI.Card(r, C.control, 0.1); b:SetSize(110, 24); b:SetPoint("RIGHT", 0, 0)
         local bb = CreateFrame("Button", nil, b); bb:SetAllPoints()
         local fs = UI.Font(b, 12, C.accent); fs:SetPoint("CENTER"); fs:SetText("Export")
         bb:SetScript("OnClick", function() Options:ExportCurrent() end)
     end)
-    if IsCustom(spec, mode) then
+    if IsCustom(spec, mode, variant) then
         SettingRow("This list is customized", 26, function(r)
             local b = UI.Card(r, C.control, 0.1); b:SetSize(130, 24); b:SetPoint("RIGHT", 0, 0)
             local bb = CreateFrame("Button", nil, b); bb:SetAllPoints()
             local fs = UI.Font(b, 12, C.accent); fs:SetPoint("CENTER"); fs:SetText("Reset to default")
             bb:SetScript("OnClick", function()
-                PRIO.db.customPriorities[spec.key][mode] = nil
+                if variant then
+                    local vstore = PRIO.db.customPriorities[spec.key].variants
+                    if vstore and vstore[variant] and vstore[variant][mode] then
+                        vstore[variant][mode] = nil
+                    else
+                        PRIO.db.customPriorities[spec.key][mode] = nil
+                    end
+                else
+                    PRIO.db.customPriorities[spec.key][mode] = nil
+                end
                 AfterChange(); Options:ShowPage("rotation")
             end)
         end)
     end
 
     local function refresh() AfterChange(); Options:ShowPage("rotation") end
-    local list = PRIO.Engine:EffectiveList(spec.key, mode)
+    local list = PRIO.Engine:EffectiveList(spec.key, mode, variant)
 
     for i, e in ipairs(list) do
         local sid = PRIO.Engine:EntrySpellID(e)
@@ -332,11 +413,11 @@ function Pages.rotation()
 
         -- reorder up/down (materialize custom on use)
         local up = IconButton(row, "\226\150\178", i > 1, function()
-            local L = EnsureCustom(spec, mode); L[i], L[i - 1] = L[i - 1], L[i]; refresh()
+            local L = EnsureCustom(spec, mode, variant); L[i], L[i - 1] = L[i - 1], L[i]; refresh()
         end)
         up:SetPoint("TOPLEFT", 6, -3)
         local dn = IconButton(row, "\226\150\188", i < #list, function()
-            local L = EnsureCustom(spec, mode); L[i], L[i + 1] = L[i + 1], L[i]; refresh()
+            local L = EnsureCustom(spec, mode, variant); L[i], L[i + 1] = L[i + 1], L[i]; refresh()
         end)
         dn:SetPoint("BOTTOMLEFT", 6, 3)
 
@@ -355,13 +436,13 @@ function Pages.rotation()
 
         -- remove
         local rm = IconButton(row, "\195\151", true, function()
-            local L = EnsureCustom(spec, mode); table.remove(L, i); refresh()
+            local L = EnsureCustom(spec, mode, variant); table.remove(L, i); refresh()
         end)
         rm:SetSize(18, 18); rm:SetPoint("RIGHT", -8, 0)
 
         -- enable toggle
         local t = UI.Toggle(row, function() return not e.off end, function(v)
-            local L = EnsureCustom(spec, mode); L[i].off = (not v) and true or nil
+            local L = EnsureCustom(spec, mode, variant); L[i].off = (not v) and true or nil
         end, refresh)
         t:SetPoint("RIGHT", rm, "LEFT", -10, 0)
 
@@ -381,7 +462,7 @@ function Pages.rotation()
         ct:SetWidth(150); ct:SetJustifyH("CENTER"); ct:SetWordWrap(false); ct:SetText(summary)
         chip:SetSize(math.min(164, math.max(50, ct:GetStringWidth() + 18)), 18)
         chip:SetPoint("RIGHT", t, "LEFT", -10, 0)
-        chip:SetScript("OnClick", function() Options:OpenCondEditor(spec, mode, i) end)
+        chip:SetScript("OnClick", function() Options:OpenCondEditor(spec, mode, i, variant) end)
 
         dot:SetPoint("RIGHT", chip, "LEFT", -7, 0)
     end
@@ -395,7 +476,7 @@ function Pages.rotation()
     local al = UI.Font(addRow, 13, C.accent); al:SetPoint("CENTER"); al:SetText("+  Add ability")
     addRow:SetScript("OnClick", function()
         ShowSpellPicker(addRow, spec, function(sid)
-            local L = EnsureCustom(spec, mode)
+            local L = EnsureCustom(spec, mode, variant)
             L[#L + 1] = { spell = sid, cond = nil }
             refresh()
         end)
@@ -408,8 +489,8 @@ end
 -- optional spell reference (cross-spell cooldown/buff checks).
 --------------------------------------------------------------------------------
 local editor
-function Options:OpenCondEditor(spec, mode, index)
-    local L = EnsureCustom(spec, mode)
+function Options:OpenCondEditor(spec, mode, index, variant)
+    local L = EnsureCustom(spec, mode, variant)
     local e = L[index]
     -- Normalize to group form for editing.
     if not e.cond then
@@ -484,9 +565,18 @@ function Options:OpenCondEditor(spec, mode, index)
         end
     end
     collectCond(cond)
-    for _, m in ipairs({ "st", "cleave", "aoe" }) do
-        local L = spec.priority and spec.priority[m]
-        if L then for _, en in ipairs(L) do collectCond(en.cond) end end
+    if spec.priorityByVariant then
+        for _, lists in pairs(spec.priorityByVariant) do
+            for _, m in ipairs({ "st", "cleave", "aoe" }) do
+                local L = lists[m]
+                if L then for _, en in ipairs(L) do collectCond(en.cond) end end
+            end
+        end
+    else
+        for _, m in ipairs({ "st", "cleave", "aoe" }) do
+            local L = spec.priority and spec.priority[m]
+            if L then for _, en in ipairs(L) do collectCond(en.cond) end end
+        end
     end
     -- Talent options (for "Talent selected / not selected" clauses).
     local talentOpts = { { value = 0, text = "\226\128\148 pick talent \226\128\148" } }
