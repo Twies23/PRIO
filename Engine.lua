@@ -918,11 +918,26 @@ local function ResourceCost(key, sid, S)
 end
 
 -- Spend an Energy spender's cost from the look-ahead floor (no regen -- conservative).
+-- Approx Energy regenerated in one look-ahead slot (~1 GCD). For an energy spec the GCD
+-- shortens with haste at nearly the same rate Energy regen rises, so per-GCD gain is
+-- roughly the un-hasted rate (base * talent * bias) -- no haste term needed.
+local function EnergyPerSlot(m)
+    local r = m.regenPerSec or 10
+    if m.regenTalents then
+        for tid, frac in pairs(m.regenTalents) do if API.IsKnown(tid) then r = r * (1 + frac) end end
+    end
+    return r * (m.regenBias or 1)
+end
+
+-- Advance the look-ahead Energy one slot: spend this cast's cost AND add ~1 GCD of regen,
+-- so a spender isn't permanently locked out for the rest of the queue.
 local function ApplyEnergy(sim, key)
     if sim.energy == nil then return end
-    local em = spec and spec.energyModel and spec.energyModel.costs and spec.energyModel.costs[key]
-    local cost = EnergyCostOf(em)
-    if cost then sim.energy = math.max(0, sim.energy - cost) end
+    local m = spec and spec.energyModel
+    if not m then return end
+    local cost = EnergyCostOf(m.costs and m.costs[key]) or 0
+    local max  = (Engine.P and Engine.P.energyMax) or 150
+    sim.energy = math.max(0, math.min(max, sim.energy - cost + EnergyPerSlot(m)))
 end
 
 local function ApplyResourceDelta(sim, key, sid, S)
@@ -1035,15 +1050,14 @@ function Engine:Evaluate()
         end
     end
 
-    -- Test one list row as a candidate. STRICT only -- every gate (known, charges, dup,
-    -- Combo Strikes, cooldown, usable, Chi/Energy affordability, and the row's own
-    -- condition) is enforced. There is no "relax" pass: a well-formed list is meant to be
-    -- self-sustaining because the look-ahead carries all state forward (Chi/Energy spent
-    -- and generated, buffs consumed/granted, charges/cooldowns used, last cast), so a
-    -- lower-priority row becomes valid for the next slot. If the walk ever finds nothing,
-    -- that's a context-propagation gap to fix -- not something to paper over by casting
-    -- an ability whose condition is false or that breaks Combo Strikes.
-    local function tryCandidate(i)
+    -- Test one list row as a candidate. HARD gates (known, charges, dup, cooldown, usable,
+    -- Chi affordability, the row's own condition) are ALWAYS enforced -- we never suggest a
+    -- button that can't be pressed or whose condition is false. The two SOFT gates -- Combo
+    -- Strikes and the Energy PREDICTION -- are relaxed only in a fallback pass (relaxSoft),
+    -- used when the strict walk can't fill a slot. Combo is a preference and the Energy
+    -- gate is a guess, so relaxing them to avoid a blank beats leaving the queue short;
+    -- Chi and cooldown are real, so they never relax.
+    local function tryCandidate(i, relaxSoft)
         local e   = list[i]
         local sid = self:EntrySpellID(e)
         if not (sid and not e.off and API.IsKnown(sid)) then return nil end
@@ -1051,7 +1065,7 @@ function Engine:Evaluate()
         if maxC and (usedCharges[sid] or 0) >= maxC then return nil end   -- charges spent
         if usedSpell[sid] and not rep and not maxC then return nil end    -- single-use, already picked
         -- Combo Strikes (Windwalker mastery): never cast the same ability twice in a row.
-        if spec.comboStrikes and sim.lastCastKey and idToKey[sid] == sim.lastCastKey then
+        if not relaxSoft and spec.comboStrikes and sim.lastCastKey and idToKey[sid] == sim.lastCastKey then
             return nil
         end
 
@@ -1061,11 +1075,9 @@ function Engine:Evaluate()
             local cost = ResourceCost(idToKey[sid], sid, S)
             if cost and S.maelstrom < cost then ready = false end
         end
-        -- Energy checkpoint gate: the bar is secret, but sim.energy is a floor inferred
-        -- from which abilities are usable, spent as we pick. Skip an Energy spender we
-        -- can't afford. At slot 1 this equals the live usable flag; in the queue it stops
-        -- a second Tiger Palm the first one's spend put out of reach.
-        if ready and sim.energy ~= nil then
+        -- Energy prediction gate (soft): the bar is secret, so this is a dead-reckoned
+        -- guess -- enforce it strictly, but relax it in the fallback rather than blank.
+        if ready and not relaxSoft and sim.energy ~= nil then
             local em = spec.energyModel and spec.energyModel.costs and spec.energyModel.costs[idToKey[sid]]
             local ecost = EnergyCostOf(em)
             if ecost and sim.energy < ecost then ready = false end
@@ -1082,11 +1094,17 @@ function Engine:Evaluate()
         S.lastCastKey = sim.lastCastKey
         S.lastCastID  = sim.lastCastID
         local pick
-        for i = 1, #list do
-            if not usedRow[i] then
-                pick = tryCandidate(i)
-                if pick then break end
+        -- Strict pass first; if nothing qualifies, a fallback pass relaxes only the soft
+        -- gates (Combo Strikes, Energy prediction) so the queue still fills a castable
+        -- ability instead of going short.
+        for _, relaxSoft in ipairs({ false, true }) do
+            for i = 1, #list do
+                if not usedRow[i] then
+                    pick = tryCandidate(i, relaxSoft)
+                    if pick then break end
+                end
             end
+            if pick then break end
         end
         if not pick then break end
         picks[slot] = Entry(pick.sid)

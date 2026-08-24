@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.42 (alpha)
+- **Fixed the queue going short (fewer than 3 abilities).** Two causes: the look-ahead spent Energy but never regenerated it (so Tiger Palm got permanently locked out mid-queue), and the Energy prediction was a hard gate that, combined with Combo Strikes, could leave a slot blank. Now the look-ahead regenerates ~1 GCD of Energy per slot, and if the strict walk can't fill a slot it relaxes only the *predicted* gates (Combo Strikes, Energy guess) — never the real ones (cooldown, Chi, the row's condition) — so it always fills with something castable.
+
+
 ## 0.2.41 (alpha)
 - **"Missing buff" now passes for an untracked/unhad buff** (fixing a logic hole). If a buff can't be read — e.g. Unbroken Rhythm without the 4-piece — "Has buff" fails and "Missing buff" passes, consistently treating it as not up. Previously both failed, which broke "cast X if missing Y" lines for buffs you don't have.
 

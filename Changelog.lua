@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.42", {
+        "Fixed the queue going short: the look-ahead now regenerates Energy per slot, and a fallback relaxes only the soft gates (Combo Strikes, Energy guess) -- never cooldown/Chi/condition -- so it always fills 3.",
+    } },
     { "0.2.41", {
         "\"Missing buff\" now passes for an untracked/unhad buff (e.g. Unbroken Rhythm without the 4pc); symmetric with \"Has buff\".",
     } },
