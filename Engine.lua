@@ -140,18 +140,17 @@ end
 
 -- Current charges of a spell: predicted for spec-tracked charge spells, else the
 -- readable count. nil when the spell has no charges / can't tell.
-local function ChargeCount(sid)
-    -- Secret-safe clean read first (EllesmereUI's method): GetSpellCharges().isActive is
-    -- false ONLY at max, so at max we know the exact count, and "below max" is a clean
-    -- fact even while currentCharges is secret. This nails the common case (a 2-charge
-    -- spell at max, e.g. Zenith >= 2) with zero guessing.
+-- Effective current charges for conditions and the Debug window. Clean read first
+-- (EllesmereUI's method): GetSpellCharges().isActive is false ONLY at max, so at max we
+-- know the exact count, and "below max" is a clean fact even while currentCharges is
+-- secret -- combined with the usable flag this nails a 2-charge spell (Zenith) to 0/1/2.
+-- When the clean count is unknowable (usable secret while recharging), fall back to the
+-- spec prediction, clamped by the clean "below max" fact so it can't report full.
+function Engine:EffectiveCharges(sid)
     local maxC, cleanCur, belowMax = nil, nil, nil
     if API.ChargeState then maxC, cleanCur, belowMax = API.ChargeState(sid) end
     if cleanCur ~= nil then return cleanCur end
-    -- Otherwise fall back to the spec prediction (Lava Burst / mid-charge counts),
-    -- anchored by the clean signal: if we KNOW it's below max, clamp the prediction so
-    -- it can't wrongly report full.
-    local pc = Engine:PredictedCharges(sid)
+    local pc = self:PredictedCharges(sid)
     if pc ~= nil then
         if belowMax and maxC then pc = math.min(pc, maxC - 1) end
         return pc
@@ -159,6 +158,10 @@ local function ChargeCount(sid)
     if maxC and belowMax == false then return maxC end
     local _, cur = API.Charges(sid)
     return cur
+end
+
+local function ChargeCount(sid)
+    return Engine:EffectiveCharges(sid)
 end
 
 -- Was this aura just applied by our own cast (short assume window)? Covers the tick
@@ -858,11 +861,13 @@ function Engine:Evaluate()
             local cost = ResourceCost(idToKey[sid], sid, S)
             if cost and S.maelstrom < cost then ready = false end
         end
-        -- Secondary-resource (Energy) gate: skip an energy spender (Tiger Palm) the
-        -- player can't afford. Secret-safe -- only applies when Energy is readable.
-        if ready and spec.energyPower and S.energyReadable and sim.energy ~= nil then
-            local ecost = API.PowerCostOfType(sid, spec.energyPower)
-            if ecost > 0 and sim.energy < ecost then ready = false end
+        -- Insufficient-power gate: the Energy bar is secret, but IsSpellUsable's
+        -- "insufficient power" flag reads clean in combat -- so skip an energy spender
+        -- (Tiger Palm) the player literally can't afford right now. Clean-only: a secret
+        -- flag fails open. Live read: exact for the primary; a fine approximation for the
+        -- near queue (energy barely moves in 1-2 GCDs, and Combo Strikes/relax still fill).
+        if ready and API.InsufficientPower and API.InsufficientPower(sid) == true then
+            ready = false
         end
         if not (ready and API.IsUsable(sid)) then return nil end          -- hard: castable now
         if relax < 2 and not PRIO.Cond.Eval(e.cond, S, sid) then return nil end

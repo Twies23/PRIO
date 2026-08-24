@@ -1,5 +1,10 @@
 # PRIO Changelog
 
+## 0.2.21 (alpha)
+- **Tiger Palm is no longer recommended when you can't afford its Energy.** The Energy bar is secret, but the game's "insufficient power" flag reads clean in combat — PRIO now gates on that, so an Energy spender you literally can't cast is skipped in favor of one you can.
+- **Debug "Zenith charges" now shows a real count while recharging** (e.g. 1 / 2) instead of "?", labeled with its source (at max / usable / predicted) and the time to the next charge.
+
+
 ## 0.2.20 (alpha)
 - **Charges are now read EXACTLY and secret-safely, not just predicted.** Using the same technique as EllesmereUI's Cooldown Manager: the game's charge "recharge-active" flag is readable and is false only at max charges, and combining it with the spell's usable state pins the exact count (a 2-charge spell like Zenith resolves cleanly to 0 / 1 / 2). Prediction is now only a fallback for the middle counts of 3+ charge spells, and it's clamped by the real "below max" signal so it can never report full when it isn't. So "Zenith if Charges ≥ 2" is now exact. The Debug "Zenith charges" row shows the count, its source, and the time to the next charge.
 

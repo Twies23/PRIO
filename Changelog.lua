@@ -11,6 +11,10 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.21", {
+        "Tiger Palm no longer suggested when you can't afford its Energy (clean 'insufficient power' flag).",
+        "Debug: Zenith charges shows a real count while recharging (1 / 2), with source + time to next charge.",
+    } },
     { "0.2.20", {
         "Charges now read EXACTLY and secret-safely (EllesmereUI's method): recharge-active flag + usable state pin 0/1/2.",
         "\"Zenith if Charges >= 2\" is now exact, not predicted. Debug shows count, source, and time to next charge.",

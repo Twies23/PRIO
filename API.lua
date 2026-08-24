@@ -139,6 +139,21 @@ function API.UsableDebug(spellID)
     return ("usable=%s noPower=%s"):format(show(a), show(b))
 end
 
+-- Insufficient-power flag from IsSpellUsable: true = can't afford it right now,
+-- false = affordable, nil = secret/unknown. This reads CLEAN in combat even when the
+-- power bar itself is secret (confirmed for Windwalker Energy on Tiger Palm), so it's
+-- how we gate an energy spender we can't afford without ever reading the Energy value.
+function API.InsufficientPower(spellID)
+    if not (spellID and C_Spell and C_Spell.IsSpellUsable) then return nil end
+    local ok, usable, insufficient = pcall(C_Spell.IsSpellUsable, spellID)
+    if not ok then return nil end
+    if type(usable) == "table" then
+        insufficient = usable.insufficientPower or usable.noMana or usable.notEnoughPower
+    end
+    if insufficient == nil or IsSecret(insufficient) then return nil end
+    return insufficient and true or false
+end
+
 -- Strict usable read: true/false when clean, nil when secret/unknown. Unlike
 -- API.IsUsable (which fails OPEN to true), this never guesses -- used to pin a charge
 -- spell's low count (castable => >=1 charge) only when the flag is genuinely readable.
