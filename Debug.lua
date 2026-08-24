@@ -255,6 +255,17 @@ function Debug:Update()
                         set(id, ("|cffe0a03a? / %d|r  |cff5a6a76(recharging)|r%s"):format(maxC, tail))
                     end
                 end
+            elseif d.kind == "cdRemain" then
+                -- Predicted cooldown remaining (Invoke Xuen): seeded on cast, counted down.
+                local r = PRIO.Engine and PRIO.Engine.CooldownRemaining
+                    and PRIO.Engine:CooldownRemaining(d.spell)
+                if r == nil then
+                    set(id, "|cff5a6a76?|r")
+                elseif r <= 0 then
+                    set(id, "|cff0cd29fready|r")
+                else
+                    set(id, ("|cffe0685a%.0fs|r"):format(r))
+                end
             elseif d.kind == "auraRemain" then
                 -- Predicted buff time-left (Zenith): clean expirationTime out of combat,
                 -- cast-seeded timer in combat. What a "Buff time left <=" condition uses.

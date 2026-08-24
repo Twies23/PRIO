@@ -56,6 +56,8 @@ Cond.types = {
     { value = "chargesMax",  text = "Charges \226\137\164", needsValue = true, min = 0, max = 5, def = 1 },
     { value = "auraRemainMin", text = "Buff time left \226\137\165", needsSpell = true, needsValue = true, min = 0, max = 30, def = 3, target = "duration" },
     { value = "auraRemainMax", text = "Buff time left \226\137\164", needsSpell = true, needsValue = true, min = 0, max = 30, def = 3, target = "duration" },
+    { value = "cdRemainMin", text = "Cooldown \226\137\165", needsSpell = true, needsValue = true, min = 0, max = 180, def = 10, target = "ability" },
+    { value = "cdRemainMax", text = "Cooldown \226\137\164", needsSpell = true, needsValue = true, min = 0, max = 180, def = 10, target = "ability" },
     { value = "resourceMin", text = "Resource \226\137\165", needsValue = true, min = 0, max = 12, def = 2 },
     { value = "resourceMax", text = "Resource \226\137\164", needsValue = true, min = 0, max = 12, def = 2 },
     { value = "usable",      text = "Usable",       needsSpell = true, target = "ability" },
@@ -105,6 +107,8 @@ function Cond.ClauseLabel(cl, selfSid)
     elseif t == "chargesMax" then return name .. " \226\137\164 " .. (cl.v or 1) .. " chg"
     elseif t == "auraRemainMin" then return name .. " \226\137\165 " .. (cl.v or 0) .. "s left"
     elseif t == "auraRemainMax" then return name .. " \226\137\164 " .. (cl.v or 0) .. "s left"
+    elseif t == "cdRemainMin" then return name .. " CD \226\137\165 " .. (cl.v or 0) .. "s"
+    elseif t == "cdRemainMax" then return name .. " CD \226\137\164 " .. (cl.v or 0) .. "s"
     elseif t == "resourceMin" then return (spec and spec.resourceLabel or "resource") .. " \226\137\165 " .. (cl.v or 0)
     elseif t == "resourceMax" then return (spec and spec.resourceLabel or "resource") .. " \226\137\164 " .. (cl.v or 0)
     elseif t == "energyNearCap" then return "Energy near cap"
@@ -258,6 +262,21 @@ function Engine:EnergyPercent()
     return nil
 end
 
+-- Predicted remaining COOLDOWN seconds, for "cooldown >= / <= N" conditions. Remaining
+-- is secret in combat, so we seed a timer on cast (spec.cooldownTrack) and count down,
+-- anchored to the clean off-cooldown flag: ready => 0. On cooldown but unseeded (cast
+-- before we were watching) -> assume the full base, so "on a long cooldown" reads true.
+-- nil only when the spell isn't cooldown-tracked and its readiness is unknown.
+function Engine:CooldownRemaining(sid)
+    if API.IsReady(sid) then return 0 end
+    local e = self.P and self.P.cdExpire and self.P.cdExpire[sid]
+    if e then local rem = e - GetTime(); return rem > 0 and rem or 0 end
+    local key = idToKey[sid]
+    local ct = spec and spec.cooldownTrack and key and spec.cooldownTrack[key]
+    if ct then return ct.base or 0 end
+    return nil
+end
+
 -- Remaining seconds on a buff, for "buff remaining <= / >= N" conditions. Prefers the
 -- CLEAN expirationTime read (out of combat); in combat that's secret, so falls back to
 -- the cast-seeded predicted timer (spec.auraDurations). nil = not up / unknown.
@@ -330,6 +349,9 @@ local function EvalClause(cl, S, selfSid)
     -- in combat. nil (buff not up / unknown) -> the threshold is not met.
     elseif t == "auraRemainMin" then local r = Engine:AuraRemaining(sid); return r ~= nil and r >= (cl.v or 0)
     elseif t == "auraRemainMax" then local r = Engine:AuraRemaining(sid); return r ~= nil and r <= (cl.v or 0)
+    -- Predicted cooldown remaining (Xuen). nil -> unknown -> threshold not met.
+    elseif t == "cdRemainMin" then local r = Engine:CooldownRemaining(sid); return r ~= nil and r >= (cl.v or 0)
+    elseif t == "cdRemainMax" then local r = Engine:CooldownRemaining(sid); return r ~= nil and r <= (cl.v or 0)
     -- Resource threshold on the spec's own power (Chi/Holy Power/... read clean;
     -- secret bars use the predicted value). S.maelstrom is the spec resource amount.
     elseif t == "resourceMin" then return (S.maelstrom or 0) >= (cl.v or 0)
@@ -395,6 +417,10 @@ function Cond.ClauseStatus(cl, S, selfSid)
         local r = Engine:AuraRemaining(sid); if r == nil then return "fail" end
         local ok = (t == "auraRemainMin") and (r >= (cl.v or 0)) or (r <= (cl.v or 0))
         return ok and "pass" or "fail"
+    elseif t == "cdRemainMin" or t == "cdRemainMax" then
+        local r = Engine:CooldownRemaining(sid); if r == nil then return "open" end
+        local ok = (t == "cdRemainMin") and (r >= (cl.v or 0)) or (r <= (cl.v or 0))
+        return ok and "pass" or "fail"
     elseif t == "resourceMin" or t == "resourceMax" then
         local v = S and S.maelstrom; if v == nil then return "open" end
         local ok = (t == "resourceMin") and (v >= (cl.v or 0)) or (v <= (cl.v or 0))
@@ -431,7 +457,7 @@ function Engine:OnSpecChanged()
     local id = API.GetSpecID()
     spec = id and PRIO.specs and PRIO.specs[id] or nil
     wipe(idToKey)
-    self.P = { fsExpire = 0, mote = false, skStacks = 0, maelstrom = 0, charges = {}, assumeActive = {}, auraExpire = {}, energyEst = nil, energyEstTime = nil }
+    self.P = { fsExpire = 0, mote = false, skStacks = 0, maelstrom = 0, charges = {}, assumeActive = {}, auraExpire = {}, cdExpire = {}, energyEst = nil, energyEstTime = nil }
     if not spec then return end
     if spec.chargeTrack then
         for key, cfg in pairs(spec.chargeTrack) do
@@ -608,6 +634,16 @@ PRIO:On("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
         end
         Engine.P.auraExpire = Engine.P.auraExpire or {}
         Engine.P.auraExpire[ad.spell or spellID] = GetTime() + dur
+    end
+    -- Seed a predicted cooldown timer (Invoke Xuen) so "cooldown > N" reads in combat.
+    local ct = spec.cooldownTrack and spec.cooldownTrack[key]
+    if ct then
+        local cd = ct.base or 0
+        if ct.reduce then
+            for tid, sec in pairs(ct.reduce) do if API.IsKnown(tid) then cd = cd - sec end end
+        end
+        Engine.P.cdExpire = Engine.P.cdExpire or {}
+        Engine.P.cdExpire[spellID] = GetTime() + cd
     end
     -- Assume a just-applied aura is up briefly, since the Cooldown Viewer read can lag
     -- a tick or two after you apply it (e.g. Flame Shock via Voltaic Blaze). The short

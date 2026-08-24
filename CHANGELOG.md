@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.36 (alpha)
+- **New "Cooldown ≥ / ≤ N" condition, with Invoke Xuen cooldown prediction.** Cooldown-remaining is secret in combat, so PRIO seeds a timer when Xuen is cast (120s, −30s with Xuen's Bond) and counts it down, anchored to the real off-cooldown flag. This drives the Conduit "Whirling Dragon Punch / Strike of the Windlord if Xuen is more than 10s away" lines. Debug shows Invoke Xuen CD.
+
+
 ## 0.2.35 (alpha)
 - **Shado-Pan cleave + AoE default rebuilt to the tuned multi-target rotation** (shared list; uses the new "Energy near cap" gate on the avoid-cap Tiger Palm). Reset your Windwalker lists to default to pick it up.
 

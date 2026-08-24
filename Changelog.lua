@@ -11,6 +11,10 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.36", {
+        "New \"Cooldown >= / <= N\" condition with Invoke Xuen cooldown prediction (120s, -30s Xuen's Bond).",
+        "Drives the Conduit \"WDP / Strike of the Windlord if Xuen > 10s away\" lines; Debug shows Invoke Xuen CD.",
+    } },
     { "0.2.35", {
         "Shado-Pan cleave + AoE default rebuilt to the tuned multi-target rotation. Reset Windwalker lists to default.",
     } },

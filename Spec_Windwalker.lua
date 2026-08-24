@@ -41,6 +41,7 @@ local ID_ENERGYBURST = 451498   -- Energy Burst (Blackout Kick! generates 1 Chi)
 local ID_SHADOWBOX   = 392982   -- Shadowboxing Treads (talent)
 local ID_CELESTIAL   = 443028   -- Celestial Conduit (Conduit hero signature)
 local ID_INVOKEXUEN  = 123904   -- Invoke Xuen (burst-window gate)
+local ID_XUENSBOND   = 392986   -- Xuen's Bond (talent: Invoke Xuen cooldown -30s)
 local ID_TOUCHOFDEATH = 322109  -- Touch of Death (execute availability via Cooldown Viewer)
 local ID_SLICINGWINDS = 1217413 -- Slicing Winds (talent)
 local ID_DRINKINGHORN = 391370  -- Drinking Horn Cover (talent: Zenith lasts +5s)
@@ -63,12 +64,14 @@ local function chargesMin(n) return { type = "chargesMin", v = n } end       -- 
 local function cdReady(id)  return { type = "cdReady",  spell = id } end
 local function usable(id)   return { type = "usable",   spell = id } end
 local function auraRemainMax(id, s) return { type = "auraRemainMax", spell = id, v = s } end -- buff <= s sec left
+local function cdRemainMin(id, s) return { type = "cdRemainMin", spell = id, v = s } end -- cooldown >= s sec left
+local function cdRemainMax(id, s) return { type = "cdRemainMax", spell = id, v = s } end -- cooldown <= s sec left
 local energyNearCap = { type = "energyNearCap" }   -- predicted Energy at/above the near-cap threshold
 local comboOK = { type = "lastCastNot" }   -- Combo Strikes: not the previous ability
 
--- "Not right before Invoke Xuen" -- approximates the guide's "Xuen 10s+ away" by
--- holding the ability while Xuen is off cooldown (i.e. burst is imminent).
-local xuenAway = cdNotReady(ID_INVOKEXUEN)
+-- Guide's "cast unless Xuen is <10s away" -- true when Invoke Xuen's predicted
+-- cooldown still has more than 10s left (so we don't hold WDP/Strike right before burst).
+local xuenAway = cdRemainMin(ID_INVOKEXUEN, 10)
 -- Common Blackout Kick proc gate: free proc, or a Zenith Obsidian-Spiral spender.
 local bokProc  = OR(buffUp(ID_COMBOBREAK), AND(buffUp(ID_ZENITH), talentYes(ID_OBSIDIAN)))
 -- Spinning Crane Kick inside the Zenith window (single target).
@@ -265,6 +268,14 @@ local spec = {
     auraDurations = {
         Zenith = { spell = ID_ZENITH, base = 15, extend = { [ID_DRINKINGHORN] = 5 } },
     },
+
+    -- Cooldown prediction: remaining cooldown is secret in combat, so we seed a timer
+    -- when the ability is cast and count it down (anchored to the clean off-cooldown
+    -- flag). Invoke Xuen is 120s, reduced 30s by Xuen's Bond. Drives the Conduit
+    -- "Whirling Dragon Punch / Strike of the Windlord if Xuen cooldown > 10s" lines.
+    cooldownTrack = {
+        InvokeXuen = { base = 120, reduce = { [ID_XUENSBOND] = 30 } },
+    },
     cleaveAt = 2,   -- Shado-Pan uses the AoE priority for cleave as well
     aoeAt    = 3,
     comboStrikes = true,   -- mastery: engine never queues the same ability twice in a row
@@ -392,6 +403,7 @@ local spec = {
         { label = "Energy (est.)", kind = "energyFloor" },
         { label = "Tiger Palm usable", kind = "usableProbe", spell = 100780 },
         { label = "Fists of Fury",  kind = "cd",   spell = 113656 },
+        { label = "Invoke Xuen CD", kind = "cdRemain", spell = ID_INVOKEXUEN },
     },
     economy = {
         gen   = { "Tiger Palm", "Zenith Stomp", "Blackout Kick! + Energy Burst", "Slicing Winds + Airborne Rhythm", "Obsidian Spiral during Zenith" },
