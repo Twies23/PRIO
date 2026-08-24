@@ -62,6 +62,8 @@ Cond.types = {
     { value = "notUsable",   text = "Not usable",   needsSpell = true, target = "ability" },
     { value = "enemiesMin",  text = "Enemies \226\137\165",   needsValue = true, min = 1, max = 10, def = 2 },
     { value = "enemiesMax",  text = "Enemies \226\137\164",   needsValue = true, min = 1, max = 10, def = 1 },
+    { value = "energyNearCap",    text = "Energy near cap",     tag = "energy" },
+    { value = "energyNotNearCap", text = "Energy not near cap", tag = "energy" },
     { value = "energyPctMin", text = "Energy % \226\137\165", needsValue = true, min = 0, max = 100, def = 80, tag = "energy" },
     { value = "energyPctMax", text = "Energy % \226\137\164", needsValue = true, min = 0, max = 100, def = 20, tag = "energy" },
 }
@@ -105,6 +107,8 @@ function Cond.ClauseLabel(cl, selfSid)
     elseif t == "auraRemainMax" then return name .. " \226\137\164 " .. (cl.v or 0) .. "s left"
     elseif t == "resourceMin" then return (spec and spec.resourceLabel or "resource") .. " \226\137\165 " .. (cl.v or 0)
     elseif t == "resourceMax" then return (spec and spec.resourceLabel or "resource") .. " \226\137\164 " .. (cl.v or 0)
+    elseif t == "energyNearCap" then return "Energy near cap"
+    elseif t == "energyNotNearCap" then return "Energy not near cap"
     elseif t == "energyPctMin" then return "Energy \226\137\165 " .. (cl.v or 0) .. "%"
     elseif t == "energyPctMax" then return "Energy \226\137\164 " .. (cl.v or 0) .. "%"
     elseif t == "usable" then return name .. " usable"
@@ -280,6 +284,15 @@ local function EnergyPct()
     return Engine:EnergyPercent()
 end
 
+-- "Near cap": predicted Energy >= the spec's nearCapAt threshold. true/false/nil.
+local function EnergyNearCap()
+    local m = spec and spec.energyModel
+    local thr = m and m.nearCapAt
+    local e = Engine:EnergyEstimate()
+    if not (thr and e) then return nil end
+    return e >= thr
+end
+
 local function EvalClause(cl, S, selfSid)
     if cl.clauses then return Cond.Eval(cl, S, selfSid) end   -- nested group -> recurse
     local t = cl.type
@@ -322,6 +335,8 @@ local function EvalClause(cl, S, selfSid)
     elseif t == "resourceMin" then return (S.maelstrom or 0) >= (cl.v or 0)
     elseif t == "resourceMax" then return (S.maelstrom or 0) <= (cl.v or 0)
     -- Energy percent (secret-safe via UnitPowerPercent). Unknown -> threshold not met.
+    elseif t == "energyNearCap" then return EnergyNearCap() == true
+    elseif t == "energyNotNearCap" then return EnergyNearCap() == false
     elseif t == "energyPctMin" then local p = EnergyPct(); return p ~= nil and p >= (cl.v or 0)
     elseif t == "energyPctMax" then local p = EnergyPct(); return p ~= nil and p <= (cl.v or 0)
     elseif t == "usable" then return API.IsUsable(sid) and true or false
@@ -383,6 +398,10 @@ function Cond.ClauseStatus(cl, S, selfSid)
     elseif t == "resourceMin" or t == "resourceMax" then
         local v = S and S.maelstrom; if v == nil then return "open" end
         local ok = (t == "resourceMin") and (v >= (cl.v or 0)) or (v <= (cl.v or 0))
+        return ok and "pass" or "fail"
+    elseif t == "energyNearCap" or t == "energyNotNearCap" then
+        local n = EnergyNearCap(); if n == nil then return "open" end
+        local ok = (t == "energyNearCap") and n or (not n)
         return ok and "pass" or "fail"
     elseif t == "energyPctMin" or t == "energyPctMax" then
         local p = EnergyPct(); if p == nil then return "open" end

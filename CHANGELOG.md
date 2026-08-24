@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.30 (alpha)
+- **New "Energy near cap" condition** (and its inverse) — a simple boolean, true when predicted Energy is at/above the threshold (100 by default). Cleaner than a percentage for "Tiger Palm to avoid capping" lines. Debug flags NEAR CAP on the Energy row.
+
+
 ## 0.2.29 (alpha)
 - **Energy prediction leans slightly conservative (+10%)** so it errs on the high side — you'll dump Tiger Palm a touch early rather than risk wasting regen at cap.
 

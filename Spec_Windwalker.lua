@@ -239,6 +239,7 @@ local spec = {
         regenTalents = { [ID_ASCENSION] = 0.10 },
         hasteScaled = true,   -- Energy regen scales with haste
         regenBias   = 1.10,   -- +10% conservative: predict a bit high so we dump before capping
+        nearCapAt   = 100,    -- predicted Energy >= this => "near cap" (drives avoid-cap lines)
 
         probes = {
             { spell = 100780,  cost = 60, reduce = { [ID_INNERPEACE] = 5 } }, -- Tiger Palm

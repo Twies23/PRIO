@@ -272,9 +272,11 @@ function Debug:Update()
                 local est = E and E.EnergyEstimate and E:EnergyEstimate()
                 local max = E and E.P and E.P.energyMax
                 local floor = E and E.EnergyFloor and E:EnergyFloor()
+                local nc = spec.energyModel and spec.energyModel.nearCapAt
+                local near = (nc and est and est >= nc) and "  |cffe0a03aNEAR CAP|r" or ""
                 if est and max then
-                    set(id, ("|cff0cd29f%d|r / %d  |cff9fb0be%d%%|r  |cff5a6a76(predicted, \226\137\165%d)|r")
-                        :format(est, max, (est / max) * 100, floor or 0))
+                    set(id, ("|cff0cd29f%d|r / %d  |cff9fb0be%d%%|r%s")
+                        :format(est, max, (est / max) * 100, near))
                 else
                     set(id, "|cff5a6a76unknown|r")
                 end

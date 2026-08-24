@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.30", {
+        "New \"Energy near cap\" boolean condition (threshold 100) for avoid-capping lines; Debug flags NEAR CAP.",
+    } },
     { "0.2.29", {
         "Energy prediction leans +10% conservative so you dump before capping rather than after.",
     } },
