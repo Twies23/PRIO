@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.19 (alpha)
+- **Zenith charge tracking now uses prediction (the same method as Lava Burst), which actually works.** Reading the Cooldown Manager frame was unreliable (it renders the recharge timer, not a clean count). PRIO now syncs Zenith's charges to the real value out of combat and models them in combat (spend on cast, recharge on a timer), so "Zenith charges" and the Charges ≥ condition read correctly.
+
+
 ## 0.2.18 (alpha)
 - **Zenith charge tracking fixed.** The charge reader was picking up the recharge timer instead of the count; it now only accepts a number within the real max charges, so "Zenith charges" reads correctly in the Debug window (and the Charges ≥ condition with it). Zenith must be in your Cooldown Manager.
 - **Diagnostic: "Tiger Palm usable" row** added to the Debug window. Energy is a fully secret value (unreadable even out of combat), so PRIO can't gate on Energy directly — this row shows whether the game's usability flag still exposes "not enough Energy", which would give us another way in.

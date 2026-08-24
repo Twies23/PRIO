@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.19", {
+        "Zenith charges now tracked by prediction (like Lava Burst) -- the Cooldown Manager read was unreliable.",
+    } },
     { "0.2.18", {
         "Zenith charge tracking fixed (was reading the recharge timer, not the count).",
         "Debug: added a Tiger Palm usability probe -- Energy itself is a secret value, so we're checking for another readable signal.",

@@ -311,6 +311,15 @@ local spec = {
     maelstromMax = 6,   -- Chi cap (generic "resource" fields)
     maelstromGen = { TigerPalm = 2 },   -- Tiger Palm builds Chi
 
+    -- Zenith runs on 2 charges. Current charges are SECRET in combat (and the Cooldown
+    -- Manager frame renders the recharge timer, not a clean count), so -- exactly like
+    -- Lava Burst -- we PREDICT them: synced to the real count out of combat, decremented
+    -- on cast, recharged on a timer, clamped by the readable castable state. `recharge`
+    -- is a seed; the engine learns the real (haste'd) value out of combat.
+    chargeTrack = {
+        Zenith = { max = 2, recharge = 60 },
+    },
+
     ResourceCost = function(_, key, sid, S)
         return chiCost(key, S)
     end,
@@ -329,7 +338,7 @@ local spec = {
         { label = "Dance of Chi-Ji", kind = "buff", spell = ID_DANCECHIJI },
         { label = "Rushing Wind Kick", kind = "buff", spell = ID_RUSHINGWIND },
         { label = "Touch of Death", kind = "buff", spell = ID_TOUCHOFDEATH },
-        { label = "Zenith charges", kind = "chargesLive", spell = ID_ZENITH },
+        { label = "Zenith charges", kind = "charges", key = "Zenith" },
         { label = "Tiger Palm usable", kind = "usableProbe", spell = 100780 },
         { label = "Fists of Fury",  kind = "cd",   spell = 113656 },
     },
