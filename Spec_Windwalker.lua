@@ -219,12 +219,8 @@ local spec = {
     specID   = 269,
     resource = CHI,
     resourceLabel = "Chi",
-    -- Secondary resource: Tiger Palm costs Energy (Chi is the primary/tracked bar).
-    -- The engine reads it cleanly from the player's own power and won't recommend an
-    -- Energy spender you can't afford. energyRegen ~= one GCD of base regen (seed;
-    -- conservative so the look-ahead doesn't assume a second Tiger Palm too early).
-    energyPower = (Enum and Enum.PowerType and Enum.PowerType.Energy) or 3,
-    energyRegen = 12,
+    -- Tiger Palm costs Energy (secret bar), but the engine gates it on the clean
+    -- "insufficient power" flag from IsSpellUsable -- no Energy model needed.
     cleaveAt = 2,   -- Shado-Pan uses the AoE priority for cleave as well
     aoeAt    = 3,
     comboStrikes = true,   -- mastery: engine never queues the same ability twice in a row

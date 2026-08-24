@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.22", {
+        "Cleanup: removed the dead Energy model + charge-scraping code and the redundant Energy Debug row (no behavior change).",
+    } },
     { "0.2.21", {
         "Tiger Palm no longer suggested when you can't afford its Energy (clean 'insufficient power' flag).",
         "Debug: Zenith charges shows a real count while recharging (1 / 2), with source + time to next charge.",

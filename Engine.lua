@@ -573,10 +573,6 @@ local function BuildState(self, mode, enemies)
     local realMax = spec.resource and API.PowerMax(spec.resource) or nil
     if realMax ~= nil then P.maelstromMax = realMax end
 
-    -- Secondary resource (Windwalker Energy). Read cleanly from the player's own power;
-    -- nil when the spec declares none or the value is secret (-> gate fails open).
-    local realEnergy = spec.energyPower and API.Power(spec.energyPower) or nil
-
     -- Expire a predicted MotE that was granted but never consumed.
     if P.mote and P.moteExpire and now >= P.moteExpire then P.mote = false end
 
@@ -598,9 +594,6 @@ local function BuildState(self, mode, enemies)
         maelstrom = P.maelstrom or 0,                  -- predicted (synced when readable)
         maelstromMax = P.maelstromMax or (spec and spec.maelstromMax) or 0,
         maelstromReadable = realMs ~= nil,
-        energy    = realEnergy,                         -- secondary resource (nil if none/secret)
-        energyMax = spec.energyPower and API.PowerMax(spec.energyPower) or nil,
-        energyReadable = realEnergy ~= nil,
         mote      = P.mote and true or false,
         skStacks  = P.skStacks or 0,
         fsActive  = fsActive,                          -- true/false/nil (real read)
@@ -716,17 +709,6 @@ local function ResourceCost(key, sid, S)
     return API.PowerCostAmount(sid)
 end
 
--- Advance the secondary-resource (Energy) look-ahead one pick: spend this cast's
--- energy cost, then add ~one GCD of regen (seeded; conservative). No-op unless the
--- spec declares energyPower and the value was readable. Keeps the queue from
--- recommending an energy spender (Tiger Palm) the player can't afford.
-local function ApplyEnergy(sim, sid)
-    if not (spec and spec.energyPower and sim.energy ~= nil) then return end
-    local cost = API.PowerCostOfType(sid, spec.energyPower)
-    local cap  = sim.energyMax or 100
-    sim.energy = math.max(0, math.min(cap, sim.energy - cost + (spec.energyRegen or 0)))
-end
-
 local function ApplyResourceDelta(sim, key, sid, S)
     if not (spec and spec.ResourceDelta and sim.resource ~= nil) then return end
     S.maelstrom = sim.resource
@@ -812,7 +794,6 @@ function Engine:Evaluate()
     local realMote, realSk = S.mote, S.skStacks   -- for the debug window (S is mutated below)
     local sim = {
         aura = {}, mote = S.mote, sk = S.skStacks, resource = S.maelstrom,
-        energy = S.energy, energyMax = S.energyMax,
         lastCastKey = S.lastCastKey, lastCastID = S.lastCastID,
     }
     S._sim = sim.aura
@@ -825,7 +806,6 @@ function Engine:Evaluate()
         if castKey and castSid then
             ApplyEffects(sim, castKey)
             ApplyResourceDelta(sim, castKey, castSid, S)
-            ApplyEnergy(sim, castSid)
             sim.lastCastKey, sim.lastCastID = castKey, castSid
             local rep, maxC = Repeatable(castSid)
             if maxC then
@@ -898,7 +878,6 @@ function Engine:Evaluate()
         picks[slot].flash = fcond and PRIO.Cond.Eval(fcond, S, pick.sid) or false
         ApplyEffects(sim, fkey)                             -- advance the look-ahead
         ApplyResourceDelta(sim, fkey, pick.sid, S)
-        ApplyEnergy(sim, pick.sid)                          -- spend + regen the Energy sim
         sim.lastCastKey, sim.lastCastID = fkey, pick.sid    -- "this slot cast" for the next
         if pick.maxC then                                   -- charge spell
             usedCharges[pick.sid] = (usedCharges[pick.sid] or 0) + 1

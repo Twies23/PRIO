@@ -289,23 +289,6 @@ function API.ChargeRechargeRemaining(spellID)
     return nil
 end
 
--- Cost of a SPECIFIC power type (e.g. Energy) for a spell, or 0. Static cost data,
--- not secret. Used to gate a secondary-resource spender (Tiger Palm's Energy) that
--- the spec's primary-resource (Chi) model doesn't cover.
-function API.PowerCostOfType(spellID, powerType)
-    if not (spellID and powerType and C_Spell and C_Spell.GetSpellPowerCost) then return 0 end
-    local ok, costs = pcall(C_Spell.GetSpellPowerCost, spellID)
-    if ok and type(costs) == "table" then
-        for _, c in ipairs(costs) do
-            if c and c.type == powerType then
-                local cost = SafeNum(c.cost)
-                if cost and cost > 0 then return cost end
-            end
-        end
-    end
-    return 0
-end
-
 -- For a CHARGE spell, returns maxCharges (>=1, static/readable) and currentCharges
 -- (may be nil/secret). For a non-charge spell, GetSpellCharges returns nil, so we
 -- return nil -- callers use that to tell "charge-limited" from "spammable filler".
@@ -546,64 +529,6 @@ function API.AuraStackCount(spellID)
     end)
     if ok and n then return n end
     if active == true then return 1 end       -- up, but Blizzard drew no number = 1 stack
-    return nil
-end
-
--- Live CHARGE COUNT from the Cooldown Viewer, secret-safe. Blizzard renders the
--- current charge count to a fontstring on the tracked cooldown item frame; we read
--- that clean string instead of the secret currentCharges. Requires the spell tracked
--- in the Cooldown Manager. Returns nil when not a charge spell / not tracked / no
--- number found.
---
--- The frame ALSO renders a recharge countdown ("40 sec"), so we can't just grab any
--- number. maxCharges is static and readable, so we accept only an integer in [0,max]
--- -- that rejects the recharge timer (40 > 2) and keeps the real charge count. We
--- scan named spots first, then every fontstring region on the frame (and its Cooldown
--- child) as a fallback, since the exact field name varies by client/template.
-function API.TrackedChargeCount(spellID)
-    local frame = trackedFrames[spellID]
-    if not frame then return nil end
-    local maxC = select(1, API.Charges(spellID))
-    if not maxC or maxC < 1 then return nil end   -- not a charge spell
-    local ok, n = pcall(function()
-        local seen = {}
-        local function tryFS(fs)
-            if type(fs) ~= "table" or not fs.GetText or seen[fs] then return nil end
-            seen[fs] = true
-            local ok2, txt = pcall(fs.GetText, fs)
-            if ok2 and type(txt) == "string" and txt:find("%d") then
-                local num = tonumber((txt:gsub("%D", "")))
-                if num and num >= 0 and num <= maxC then return num end
-            end
-            return nil
-        end
-        -- 1) Named spots that hold a charge/application count on known templates.
-        local named = {}
-        local cc = frame.ChargeCount or frame.Charges
-        if type(cc) == "table" then named[#named+1] = cc.Current; named[#named+1] = cc.Count; named[#named+1] = cc end
-        if type(frame.Applications) == "table" then
-            named[#named+1] = frame.Applications.Applications; named[#named+1] = frame.Applications
-        end
-        for _, fs in ipairs(named) do local v = tryFS(fs); if v then return v end end
-        -- 2) Fallback: scan every fontstring region on the frame and its Cooldown child,
-        --    bounded by maxCharges so the recharge timer can't be mistaken for a count.
-        local function scan(f)
-            if type(f) ~= "table" or not f.GetRegions then return nil end
-            local ok3, regions = pcall(function() return { f:GetRegions() } end)
-            if not ok3 then return nil end
-            for _, r in ipairs(regions) do
-                if type(r) == "table" and r.GetObjectType then
-                    local ot = pcall(r.GetObjectType, r) and r:GetObjectType() or nil
-                    if ot == "FontString" then local v = tryFS(r); if v then return v end end
-                end
-            end
-            return nil
-        end
-        local v = scan(frame); if v then return v end
-        if frame.Cooldown then v = scan(frame.Cooldown); if v then return v end end
-        return nil
-    end)
-    if ok and n then return n end
     return nil
 end
 

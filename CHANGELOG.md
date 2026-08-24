@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.22 (alpha)
+- **Cleanup.** Removed the dead Energy look-ahead model (Energy is secret; the clean "insufficient power" flag does the job) and the abandoned Cooldown-Manager charge-scraping code, and dropped the redundant "Energy" Debug row. No behavior change — the Tiger Palm Energy gate and Zenith charge tracking both stay.
+
+
 ## 0.2.21 (alpha)
 - **Tiger Palm is no longer recommended when you can't afford its Energy.** The Energy bar is secret, but the game's "insufficient power" flag reads clean in combat — PRIO now gates on that, so an Energy spender you literally can't cast is skipped in favor of one you can.
 - **Debug "Zenith charges" now shows a real count while recharging** (e.g. 1 / 2) instead of "?", labeled with its source (at max / usable / predicted) and the time to the next charge.
