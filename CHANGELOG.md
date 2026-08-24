@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.33 (alpha)
+- **Added Tigereye Brew (1261724) to Windwalker's buffs** — selectable in buff conditions, with a Debug row and a /prio setup tracking entry.
+
+
 ## 0.2.32 (alpha)
 - Added a live "Blackout Kick!" row to the Debug window.
 

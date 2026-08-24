@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.33", {
+        "Added Tigereye Brew (1261724) to Windwalker buffs (condition, Debug row, setup entry).",
+    } },
     { "0.2.32", {
         "Added a live \"Blackout Kick!\" row to the Debug window.",
     } },
