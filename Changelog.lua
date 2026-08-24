@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.31", {
+        "Added the \"Blackout Kick!\" proc (116768) to Windwalker buffs, selectable in buff conditions.",
+    } },
     { "0.2.30", {
         "New \"Energy near cap\" boolean condition (threshold 100) for avoid-capping lines; Debug flags NEAR CAP.",
     } },

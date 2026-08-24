@@ -32,6 +32,7 @@ local ID_UNBROKEN    = 1296624  -- Unbroken Rhythm
 local ID_COMBOBREAK  = 137284   -- Combo Breaker (free Blackout Kick)
 local ID_DANCECHIJI  = 325202   -- Dance of Chi-Ji (free Spinning Crane Kick)
 local ID_RUSHINGWIND = 1250554  -- "Rushing Wind Kick available!" proc buff
+local ID_BOKPROC     = 116768   -- "Blackout Kick!" (free/empowered Blackout Kick proc)
 -- Talent gates (readable via IsTalentSelected).
 local ID_OBSIDIAN    = 1249832  -- Obsidian Spiral (talent)
 local ID_AIRBORNE    = 1248833  -- Airborne Rhythm (Slicing Winds generates 1 Chi)
@@ -296,12 +297,15 @@ local spec = {
         ComboBreaker  = ID_COMBOBREAK,
         DanceOfChiJi  = ID_DANCECHIJI,
         RushingWindKick = ID_RUSHINGWIND,
+        BlackoutKickProc = ID_BOKPROC,   -- "Blackout Kick!" free-BoK proc
     },
     setup = {
         { kind = "trackedAura", label = "Dance of Chi-Ji tracked", spell = ID_DANCECHIJI,
           hint = "Track Dance of Chi-Ji so free Spinning Crane Kick procs are detected." },
         { kind = "trackedAura", label = "Combo Breaker tracked", spell = ID_COMBOBREAK,
           hint = "Track Combo Breaker so free Blackout Kick procs are detected." },
+        { kind = "trackedAura", label = "Blackout Kick! tracked", spell = ID_BOKPROC,
+          hint = "Track the \"Blackout Kick!\" proc so its buff condition evaluates." },
         { kind = "trackedAura", label = "Rushing Wind Kick tracked", spell = ID_RUSHINGWIND,
           hint = "Track the Rushing Wind Kick 'available' buff so its line only fires when the proc is up." },
         { kind = "trackedAura", label = "Unbroken Rhythm tracked", spell = ID_UNBROKEN,

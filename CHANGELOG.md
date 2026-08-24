@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.31 (alpha)
+- **Added the "Blackout Kick!" proc (116768) to Windwalker's buffs**, so it's selectable in buff conditions. Track it via /prio setup for the condition to evaluate.
+
+
 ## 0.2.30 (alpha)
 - **New "Energy near cap" condition** (and its inverse) — a simple boolean, true when predicted Energy is at/above the threshold (100 by default). Cleaner than a percentage for "Tiger Palm to avoid capping" lines. Debug flags NEAR CAP on the Energy row.
 
