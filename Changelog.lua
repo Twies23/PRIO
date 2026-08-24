@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.35", {
+        "Shado-Pan cleave + AoE default rebuilt to the tuned multi-target rotation. Reset Windwalker lists to default.",
+    } },
     { "0.2.34", {
         "Shado-Pan single-target default rebuilt to the tuned rotation. Reset Windwalker lists to default to pick it up.",
     } },

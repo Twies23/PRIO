@@ -63,6 +63,7 @@ local function chargesMin(n) return { type = "chargesMin", v = n } end       -- 
 local function cdReady(id)  return { type = "cdReady",  spell = id } end
 local function usable(id)   return { type = "usable",   spell = id } end
 local function auraRemainMax(id, s) return { type = "auraRemainMax", spell = id, v = s } end -- buff <= s sec left
+local energyNearCap = { type = "energyNearCap" }   -- predicted Energy at/above the near-cap threshold
 local comboOK = { type = "lastCastNot" }   -- Combo Strikes: not the previous ability
 
 -- "Not right before Invoke Xuen" -- approximates the guide's "Xuen 10s+ away" by
@@ -143,25 +144,21 @@ local shadopan_st = {
     { spell = "BlackoutKick" },                                                        -- 19: filler
 }
 
+-- Shado-Pan cleave + AoE share one list (the user's tuned multi-target rotation).
 local shadopan_aoe = {
-    { spell = "WhirlingDragonPunch" },
-    { spell = "StrikeOfTheWindlord" },
-    { spell = "ZenithStomp",  cond = chiMax(2) },
-    { spell = "TigerPalm",    cond = chiMax(2) },              -- build Chi for Fists of Fury
-    { spell = "FistsOfFury" },
-    { spell = "SpinningCraneKick", cond = buffUp(ID_UNBROKEN) }, -- 4pc / Unbroken Rhythm
-    { spell = "TigerPalm",    cond = tpBelowCap },             -- avoid capping energy outside Zenith
-    { spell = "RisingSunKick" },                               -- enables WDP
-    { spell = "RushingWindKick", cond = buffUp(ID_RUSHINGWIND) },
-    { spell = "SpinningCraneKick", cond = AND(buffUp(ID_ZENITH), enemiesMin(5)) }, -- Zenith, 5+
-    { spell = "BlackoutKick", cond = AND(talentYes(ID_OBSIDIAN), buffUp(ID_ZENITH), cdNotReady(107428)) },
-    { spell = "SpinningCraneKick" },                           -- main AoE spender
-    { spell = "SlicingWinds", cond = slicingWindsTalent },
-    { spell = "BlackoutKick", cond = buffUp(ID_COMBOBREAK) },  -- proc
-    { spell = "TigerPalm",    cond = tpBelowCap },             -- <5 Chi and no Zenith
-    { spell = "BlackoutKick", cond = talentYes(ID_SHADOWBOX) },-- Shadowboxing Treads
-    { spell = "RisingSunKick" },
-    { spell = "BlackoutKick", cond = comboOK },                -- filler
+    { spell = "Zenith",           cond = chargesMin(2) },                              -- 1: Zenith at 2 charges
+    { spell = "ZenithStomp",      cond = OR(chiMax(3), auraRemainMax(ID_ZENITH, 7)) }, -- 2: low Chi or Zenith ending
+    { spell = "TigerPalm",        cond = AND(cdReady(113656), chiMax(2)) },            -- 3: build Chi for Fists of Fury
+    { spell = "FistsOfFury" },                                                         -- 4: always
+    { spell = "SpinningCraneKick", cond = buffUp(ID_UNBROKEN) },                       -- 5: Unbroken Rhythm
+    { spell = "TigerPalm",        cond = AND(chiMax(3), buffUp(ID_BOKPROC), energyNearCap, buffDown(ID_ZENITH)) }, -- 6: avoid cap w/ BoK! proc, no Zenith
+    { spell = "RisingSunKick",    cond = AND(cdReady(152175), cdNotReady(113656)) },   -- 7: enable WDP while Fists on CD
+    { spell = "RushingWindKick",  cond = buffDown(ID_UNBROKEN) },                      -- 8: without Unbroken Rhythm
+    { spell = "SpinningCraneKick", cond = AND(buffUp(ID_ZENITH), enemiesMin(5)) },     -- 9: Zenith, 5+ targets
+    { spell = "BlackoutKick",     cond = buffUp(ID_BOKPROC) },                         -- 10: Blackout Kick! proc
+    { spell = "TigerPalm",        cond = chiMax(2) },                                  -- 11: build Chi
+    { spell = "BlackoutKick" },                                                        -- 12: filler
+    { spell = "RisingSunKick" },                                                       -- 13: filler
 }
 
 local heroLists = {

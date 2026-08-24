@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.35 (alpha)
+- **Shado-Pan cleave + AoE default rebuilt to the tuned multi-target rotation** (shared list; uses the new "Energy near cap" gate on the avoid-cap Tiger Palm). Reset your Windwalker lists to default to pick it up.
+
+
 ## 0.2.34 (alpha)
 - **Shado-Pan single-target default rebuilt to the tuned rotation** (Zenith at 2 charges, Zenith-Stomp on the closing Zenith window, Tiger Palm gated on Blackout Kick! stacks, etc.). Reset your Windwalker lists to default to pick it up.
 
