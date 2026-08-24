@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.28 (alpha)
+- **Energy prediction now scales with haste.** Windwalker's Energy regenerates faster with haste, so the flat 10/sec was reading a bit low; the estimate now uses 10/sec × (1 + haste) × Ascension, which tracks your real bar.
+
+
 ## 0.2.27 (alpha)
 - **Full Energy prediction (Windwalker).** Energy is secret even as a percent, so PRIO now dead-reckons it: a fixed 10/sec regen (+10% with Ascension) integrated against your real max, re-anchored to the usable-ability checkpoints, synced to the real value whenever it's readable, and dropped the moment you cast a spender. This tracks Energy all the way to your cap — so "Energy % ≥ N" avoid-capping lines work. Debug shows the predicted value, %, and checkpoint floor.
 

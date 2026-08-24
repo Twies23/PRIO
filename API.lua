@@ -386,6 +386,20 @@ function API.PowerMax(powerType)
     return SafeNum(mx)
 end
 
+-- Player haste as a percent (e.g. 14.3), readable (a character stat, not secret). Used
+-- to scale Energy regen -- Windwalker's Energy regenerates faster with haste.
+function API.Haste()
+    if GetHaste then
+        local ok, h = pcall(GetHaste)
+        if ok and type(h) == "number" and not IsSecret(h) then return h end
+    end
+    if UnitSpellHaste then
+        local ok, h = pcall(UnitSpellHaste, "player")
+        if ok and type(h) == "number" and not IsSecret(h) then return h end
+    end
+    return 0
+end
+
 -- Player power as a clean PERCENT (0-100), even when the raw amount is secret. WoW's
 -- UnitPowerPercent with the ScaleTo100 curve is the sanctioned "show a percentage, not
 -- the number" path (EllesmereUI uses it unguarded for its bar text), so unlike

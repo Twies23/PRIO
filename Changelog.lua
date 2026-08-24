@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.28", {
+        "Energy prediction now scales with haste (was reading a bit low at flat 10/sec).",
+    } },
     { "0.2.27", {
         "Full Energy prediction: fixed 10/sec regen (+Ascension) dead-reckoned to your real cap, anchored to checkpoints + casts.",
         "\"Energy % >=\" avoid-capping lines now work all the way to cap.",
