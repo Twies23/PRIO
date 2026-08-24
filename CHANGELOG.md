@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.14 (alpha)
+- **Windwalker: "Charges ≥ / ≤" now works for Zenith.** In-combat charge counts are hidden by the game, so the condition only evaluates for abilities PRIO actively predicts. Zenith is now charge-tracked (2 charges), so a rule like "Zenith if Charges ≥ 2" fires correctly. Its recharge time is learned automatically out of combat.
+
+
 ## 0.2.13 (alpha)
 - **Windwalker: Zenith is now a castable, pickable ability.** It was missing from the ability list, so you couldn't add it to your priorities — now you can slot it in via Options → Priorities. (Uses the Zenith buff ID; if `/prio spells` shows it wrong, let me know the correct cast ID.)
 

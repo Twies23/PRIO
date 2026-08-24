@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.14", {
+        "Windwalker: \"Charges >=\" now works for Zenith (charge-tracked, 2 charges).",
+    } },
     { "0.2.13", {
         "Windwalker: Zenith is now a castable, pickable ability you can add to your priorities.",
     } },

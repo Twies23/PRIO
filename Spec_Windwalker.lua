@@ -303,6 +303,14 @@ local spec = {
     maelstromMax = 6,   -- Chi cap (generic "resource" fields)
     maelstromGen = { TigerPalm = 2 },   -- Tiger Palm builds Chi
 
+    -- Zenith runs on 2 charges. In-combat charge counts are secret, so a "Charges >="
+    -- condition only evaluates for spells the engine predicts -- Zenith must be tracked
+    -- here or the condition always reads nil. `recharge` is a seed; the engine learns
+    -- the real (haste'd) recharge out of combat from the API.
+    chargeTrack = {
+        Zenith = { max = 2, recharge = 60 },
+    },
+
     ResourceCost = function(_, key, sid, S)
         return chiCost(key, S)
     end,
