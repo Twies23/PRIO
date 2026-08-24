@@ -527,41 +527,37 @@ function Options:OpenCondEditor(spec, mode, index, variant)
     editor.hint:SetText(
         ("|cff0cd29f\226\151\143|r pass   |cffe0685a\226\151\143|r fail   |cffe0a03a\226\151\143|r not readable (ignored)"))
 
-    -- Spell/aura options for cross-spell reference dropdowns: "Self", the spec's
-    -- cast list, and every aura/cooldown the Cooldown Viewer tracks at runtime.
-    local spellOpts = { { value = 0, text = "Self (this ability)" } }
-    local seen = {}
+    -- Target option lists, chosen per condition type so the dropdown only offers things
+    -- that actually work: ABILITIES for cooldown/usable/just-cast, BUFFS for has-buff/
+    -- stacks/pandemic, and only DURATION-tracked buffs for "buff time left".
+    local SELF = { value = 0, text = "Self (this ability)" }
+    local abilityOpts  = { SELF }
+    local buffOpts     = { SELF }
+    local durationOpts = { SELF }
+    local seenA, seenB = {}, {}
     for _, key in ipairs(spec.pickable or {}) do
         local s = spec.spells[key]
-        if s and not seen[s] then
-            seen[s] = true
-            spellOpts[#spellOpts + 1] = { value = s, text = API.SpellName(s), icon = API.SpellTexture(s) }
+        if s and not seenA[s] then
+            seenA[s] = true
+            abilityOpts[#abilityOpts + 1] = { value = s, text = API.SpellName(s), icon = API.SpellTexture(s) }
         end
     end
-    -- The spec's declared relevant auras (buffs/debuffs it reasons about), so they're
-    -- always selectable even when not talented / not currently tracked.
-    for _, s in pairs(spec.auras or {}) do
-        if s and not seen[s] then
-            seen[s] = true
-            spellOpts[#spellOpts + 1] = { value = s, text = API.SpellName(s) or ("#" .. s), icon = API.SpellTexture(s) }
+    -- Buffs the spec reasons about (always selectable even when untalented/untracked)...
+    local function addBuff(s)
+        if s and s ~= 0 and not seenB[s] then
+            seenB[s] = true
+            buffOpts[#buffOpts + 1] = { value = s, text = API.SpellName(s) or ("#" .. s), icon = API.SpellTexture(s) }
         end
     end
-    for _, o in ipairs(API.EnumerateTracked()) do
-        if not seen[o.value] then
-            seen[o.value] = true
-            spellOpts[#spellOpts + 1] = o
-        end
-    end
-    -- Also include every aura referenced by this spec's conditions (this entry + all
-    -- default lists), so build-specific buffs (Purging Flames, Lava Surge, ...) show
-    -- their name in the dropdown even when you're not talented into them / not tracked.
+    for _, s in pairs(spec.auras or {}) do addBuff(s) end
+    -- ...plus any buff referenced by a buff/duration condition in this spec's lists
+    -- (build-specific procs like Purging Flames), so their name shows in the dropdown.
     local function collectCond(c)
         if not c then return end
         if c.clauses then for _, cl in ipairs(c.clauses) do collectCond(cl) end
-        elseif c.spell and c.spell ~= 0 and not seen[c.spell] then
-            seen[c.spell] = true
-            spellOpts[#spellOpts + 1] =
-                { value = c.spell, text = API.SpellName(c.spell) or ("#" .. c.spell), icon = API.SpellTexture(c.spell) }
+        else
+            local m = c.type and Cond.TypeMeta(c.type)
+            if c.spell and (not m or m.target == "buff" or m.target == "duration") then addBuff(c.spell) end
         end
     end
     collectCond(cond)
@@ -577,6 +573,18 @@ function Options:OpenCondEditor(spec, mode, index, variant)
             local L = spec.priority and spec.priority[m]
             if L then for _, en in ipairs(L) do collectCond(en.cond) end end
         end
+    end
+    -- Duration list: only buffs the spec tracks a duration for (e.g. Zenith).
+    for _, d in pairs(spec.auraDurations or {}) do
+        if d.spell then
+            durationOpts[#durationOpts + 1] =
+                { value = d.spell, text = API.SpellName(d.spell) or ("#" .. d.spell), icon = API.SpellTexture(d.spell) }
+        end
+    end
+    local function optsFor(target)
+        if target == "ability" then return abilityOpts
+        elseif target == "duration" then return durationOpts end
+        return buffOpts
     end
     -- Talent options (for "Talent selected / not selected" clauses).
     local talentOpts = { { value = 0, text = "\226\128\148 pick talent \226\128\148" } }
@@ -615,7 +623,7 @@ function Options:OpenCondEditor(spec, mode, index, variant)
                 dot:SetTextColor(col[1], col[2], col[3])
             end
 
-            local typeDD = UI.Dropdown(rowf, 120, Cond.types,
+            local typeDD = UI.Dropdown(rowf, 120, Cond.TypesForSpec(spec),
                 function() return cl.type end,
                 function(v)
                     cl.type = v
@@ -631,7 +639,7 @@ function Options:OpenCondEditor(spec, mode, index, variant)
             -- stacks >= N). Render each control that applies, chaining left to right.
             local anchor = typeDD
             if meta and (meta.needsSpell or meta.needsTalent) then
-                local opts = meta.needsTalent and talentOpts or spellOpts
+                local opts = meta.needsTalent and talentOpts or optsFor(meta.target)
                 local ddW = meta.needsValue and 108 or 150
                 local dd = UI.Dropdown(rowf, ddW, opts,
                     function() return cl.spell or 0 end,
@@ -860,8 +868,20 @@ function Options:ShowPage(key)
     cursorY = 4
     Pages[key]()
     content:SetHeight(math.max(cursorY + 20, 360))
-    local maxScroll = math.max(0, content:GetHeight() - scroll:GetHeight())
-    scroll:SetVerticalScroll(samePage and math.min(prevScroll, maxScroll) or 0)
+    -- Restore scroll on an in-place refresh. Adding a row grows the content, and the
+    -- ScrollFrame recomputes its scroll RANGE a frame later -- so setting the offset now
+    -- can get clamped to the stale (smaller) range and snap to the top. Reassert on the
+    -- next frame once the range has updated.
+    if samePage then
+        local function restore()
+            local maxScroll = math.max(0, content:GetHeight() - scroll:GetHeight())
+            scroll:SetVerticalScroll(math.min(prevScroll, maxScroll))
+        end
+        restore()
+        C_Timer.After(0, restore)
+    else
+        scroll:SetVerticalScroll(0)
+    end
 end
 
 -- Rebuild the current page if the window is open (e.g. after an external change).

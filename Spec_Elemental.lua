@@ -41,6 +41,7 @@ local spec = {
     resource = MAELSTROM,
     moteTalent   = "Master of the Elements", -- gates moteUp/moteDown (not readable)
     moteTalentID = 16166,                    -- stable ID match (preferred over the name)
+    condTags = { ele = true },               -- offer MotE / SK stacks condition types
     usesPandemic = true,                     -- shows the pandemic setup item
     -- First-time setup checklist (see Setup.lua). Global checks (nameplates) are added
     -- automatically; these are the spec-specific ones.

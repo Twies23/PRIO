@@ -34,32 +34,46 @@ local Cond = {}
 PRIO.Cond = Cond
 
 -- Clause type metadata, in editor-dropdown order.
+-- `target` = which option list the spell dropdown draws from: "buff" (auras only),
+-- "ability" (castables only), "duration" (only auras with a tracked duration). `tag` =
+-- a spec-specific concept; the type only appears when the spec opts in via spec.condTags.
 Cond.types = {
-    { value = "buffActive",  text = "Has buff",       needsSpell = true },
-    { value = "buffMissing", text = "Missing buff",   needsSpell = true },
-    { value = "cdReady",     text = "Off cooldown",   needsSpell = true },
-    { value = "cdNotReady",  text = "On cooldown",    needsSpell = true },
+    { value = "buffActive",  text = "Has buff",       needsSpell = true, target = "buff" },
+    { value = "buffMissing", text = "Missing buff",   needsSpell = true, target = "buff" },
+    { value = "cdReady",     text = "Off cooldown",   needsSpell = true, target = "ability" },
+    { value = "cdNotReady",  text = "On cooldown",    needsSpell = true, target = "ability" },
     { value = "talentYes",   text = "Talent selected",     needsTalent = true },
     { value = "talentNo",    text = "Talent not selected", needsTalent = true },
-    { value = "lastCast",    text = "Just cast",       needsSpell = true },
-    { value = "lastCastNot", text = "Didn't just cast", needsSpell = true },
-    { value = "refreshable", text = "In pandemic (refreshable)", needsSpell = true },
-    { value = "moteUp",      text = "MotE up" },
-    { value = "moteDown",    text = "MotE down" },
-    { value = "skStacks",    text = "SK stacks \226\137\165", needsValue = true, min = 1, max = 4, def = 1 },
-    { value = "stacksMin",   text = "Buff stacks \226\137\165", needsSpell = true, needsValue = true, min = 1, max = 10, def = 2 },
-    { value = "stacksMax",   text = "Buff stacks \226\137\164", needsSpell = true, needsValue = true, min = 0, max = 10, def = 1 },
+    { value = "lastCast",    text = "Just cast",       needsSpell = true, target = "ability" },
+    { value = "lastCastNot", text = "Didn't just cast", needsSpell = true, target = "ability" },
+    { value = "refreshable", text = "In pandemic (refreshable)", needsSpell = true, target = "buff" },
+    { value = "moteUp",      text = "MotE up",   tag = "ele" },
+    { value = "moteDown",    text = "MotE down", tag = "ele" },
+    { value = "skStacks",    text = "SK stacks \226\137\165", needsValue = true, min = 1, max = 4, def = 1, tag = "ele" },
+    { value = "stacksMin",   text = "Buff stacks \226\137\165", needsSpell = true, needsValue = true, min = 1, max = 10, def = 2, target = "buff" },
+    { value = "stacksMax",   text = "Buff stacks \226\137\164", needsSpell = true, needsValue = true, min = 0, max = 10, def = 1, target = "buff" },
     { value = "chargesMin",  text = "Charges \226\137\165", needsValue = true, min = 1, max = 5, def = 2 },
     { value = "chargesMax",  text = "Charges \226\137\164", needsValue = true, min = 0, max = 5, def = 1 },
-    { value = "auraRemainMin", text = "Buff time left \226\137\165", needsSpell = true, needsValue = true, min = 0, max = 30, def = 3 },
-    { value = "auraRemainMax", text = "Buff time left \226\137\164", needsSpell = true, needsValue = true, min = 0, max = 30, def = 3 },
+    { value = "auraRemainMin", text = "Buff time left \226\137\165", needsSpell = true, needsValue = true, min = 0, max = 30, def = 3, target = "duration" },
+    { value = "auraRemainMax", text = "Buff time left \226\137\164", needsSpell = true, needsValue = true, min = 0, max = 30, def = 3, target = "duration" },
     { value = "resourceMin", text = "Resource \226\137\165", needsValue = true, min = 0, max = 12, def = 2 },
     { value = "resourceMax", text = "Resource \226\137\164", needsValue = true, min = 0, max = 12, def = 2 },
-    { value = "usable",      text = "Usable",       needsSpell = true },
-    { value = "notUsable",   text = "Not usable",   needsSpell = true },
+    { value = "usable",      text = "Usable",       needsSpell = true, target = "ability" },
+    { value = "notUsable",   text = "Not usable",   needsSpell = true, target = "ability" },
     { value = "enemiesMin",  text = "Enemies \226\137\165",   needsValue = true, min = 1, max = 10, def = 2 },
     { value = "enemiesMax",  text = "Enemies \226\137\164",   needsValue = true, min = 1, max = 10, def = 1 },
 }
+
+-- The condition types a spec should offer: generic ones always, tagged ones only when
+-- the spec opts in (spec.condTags[tag]). Keeps Shaman-only MotE/SK stacks off Monk, etc.
+function Cond.TypesForSpec(spec)
+    local tags = spec and spec.condTags
+    local out = {}
+    for _, m in ipairs(Cond.types) do
+        if not m.tag or (tags and tags[m.tag]) then out[#out + 1] = m end
+    end
+    return out
+end
 function Cond.TypeMeta(t)
     for _, m in ipairs(Cond.types) do if m.value == t then return m end end
 end

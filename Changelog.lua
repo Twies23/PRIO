@@ -11,6 +11,11 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.24", {
+        "Condition target dropdown filtered by type: buffs for buff checks, abilities for cooldown/usable, Zenith-only for buff time left.",
+        "Condition types filtered per spec -- Shaman-only MotE / SK stacks no longer show for Monk.",
+        "Adding an ability no longer jumps the list back to the top.",
+    } },
     { "0.2.23", {
         "New condition: \"Buff time left >= / <= N sec\". Zenith's window is timed from the cast (15s, +5s Drinking Horn Cover).",
         "Enables a real \"spend before Zenith ends\" rule; Debug shows live Zenith time left.",

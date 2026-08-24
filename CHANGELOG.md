@@ -1,5 +1,11 @@
 # PRIO Changelog
 
+## 0.2.24 (alpha)
+- **Condition editor only offers choices that work.** The target dropdown is now filtered by condition type: "Has buff / Missing buff / Buff stacks" list only buffs (not abilities), "Off/On cooldown / Usable / Just cast" list only abilities, and "Buff time left" lists only duration-tracked buffs (Zenith on Windwalker).
+- **Condition types are filtered per spec.** Shaman-only types (MotE up/down, SK stacks) no longer show for Monk or other specs that don't use them.
+- **Adding an ability no longer scrolls the priority list back to the top.** (The earlier fix missed the case where the list grows.)
+
+
 ## 0.2.23 (alpha)
 - **New condition: "Buff time left ≥ / ≤ N seconds"** — for gating on a buff window winding down. Buff durations are secret in combat, so for Windwalker's Zenith it's timed from the cast (15s, +5s with Drinking Horn Cover) and counted down. This makes a real "spend before Zenith ends" rule possible instead of the old buff-presence approximation. Debug shows a live "Zenith time left".
 
