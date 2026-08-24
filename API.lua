@@ -86,6 +86,22 @@ function API.IsKnown(spellID)
     return false
 end
 
+-- STRICT "is this spell talented/in your spellbook" -- no Cooldown-Viewer or override
+-- fallback. Use for stable decisions (hero-tree detection) that must NOT flip when an
+-- ability becomes tracked or temporarily granted mid-combat.
+function API.IsKnownStrict(spellID)
+    if not spellID then return false end
+    if IsPlayerSpell then
+        local ok, known = pcall(IsPlayerSpell, spellID)
+        if ok and known then return true end
+    end
+    if C_SpellBook and C_SpellBook.IsSpellKnown then
+        local ok, known = pcall(C_SpellBook.IsSpellKnown, spellID)
+        if ok and known then return true end
+    end
+    return false
+end
+
 -- Full usability read: usable(bool/nil), insufficientPower(bool/nil). nil = the
 -- value was secret/unreadable. Since our own Maelstrom reads secret in combat,
 -- this insufficientPower flag is how spender abilities get gated on resources.

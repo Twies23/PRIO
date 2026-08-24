@@ -179,10 +179,11 @@ local heroLists = {
     shadopan = { st = shadopan_st, cleave = shadopan_aoe, aoe = shadopan_aoe },
 }
 
--- Active hero: Celestial Conduit is the Conduit-of-the-Celestials signature; if the
--- player doesn't have it, treat them as Shado-Pan.
+-- Active hero: Invoke Xuen is a Conduit-of-the-Celestials ability (Shado-Pan doesn't
+-- have it), so it's the reliable signature. STRICT known check (spellbook/talent only)
+-- so it can't flip to Conduit just because Xuen became tracked / was summoned.
 local function activeHero()
-    if API and API.IsKnown and API.IsKnown(ID_CELESTIAL) then return "conduit" end
+    if API and API.IsKnownStrict and API.IsKnownStrict(ID_INVOKEXUEN) then return "conduit" end
     return "shadopan"
 end
 

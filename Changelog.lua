@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.44", {
+        "Hero detection keys on Invoke Xuen via a strict talent check -- reliable Conduit/Shado-Pan signal that won't flip mid-combat.",
+    } },
     { "0.2.43", {
         "Fixed Rushing Wind Kick recommended without its proc (Shado-Pan cleave/AoE); it now also requires the proc. Reset lists to default.",
     } },

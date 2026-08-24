@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.44 (alpha)
+- **Hero-tree detection now keys on Invoke Xuen** (a Conduit-of-the-Celestials ability) via a strict talent/spellbook check. Two fixes: it's a more reliable Conduit-vs-Shado-Pan signal than Celestial Conduit, and it no longer flips to Conduit mid-combat when an ability merely becomes tracked or is temporarily summoned.
+
+
 ## 0.2.43 (alpha)
 - **Fixed Rushing Wind Kick being recommended without its proc** in Shado-Pan cleave/AoE. That line was gated only on "no Unbroken Rhythm" (which now correctly passes when you're pre-4-piece); it now also requires the Rushing Wind Kick proc. Reset lists to default to pick it up.
 
