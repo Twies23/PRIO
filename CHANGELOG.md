@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.39 (alpha)
+- Reverted the Debug "Blackout Kick!" row to boolean (up/gone) — its stack count wasn't reading reliably.
+
+
 ## 0.2.38 (alpha)
 - Debug "Blackout Kick!" row now shows its stack count instead of just up/gone.
 
