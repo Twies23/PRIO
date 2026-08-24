@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.13", {
+        "Windwalker: Zenith is now a castable, pickable ability you can add to your priorities.",
+    } },
     { "0.2.12", {
         "Windwalker rebuilt to Icy Veins prios, split by hero (Shado-Pan / Conduit) with auto-select.",
         "Removed retired Storm, Earth, and Fire.",

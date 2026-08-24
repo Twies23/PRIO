@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.13 (alpha)
+- **Windwalker: Zenith is now a castable, pickable ability.** It was missing from the ability list, so you couldn't add it to your priorities — now you can slot it in via Options → Priorities. (Uses the Zenith buff ID; if `/prio spells` shows it wrong, let me know the correct cast ID.)
+
+
 ## 0.2.12 (alpha)
 - **Windwalker rebuilt to the current Icy Veins priorities, split by hero tree.** PRIO now keeps separate Shado-Pan and Conduit of the Celestials lists (ST + AoE) and auto-selects based on your hero talents (Celestial Conduit known = Conduit). Options → Priorities has a "Hero list to edit" switch so you can customize each independently.
 - **Removed the retired Storm, Earth, and Fire.**

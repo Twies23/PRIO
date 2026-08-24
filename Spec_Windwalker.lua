@@ -238,6 +238,7 @@ local spec = {
         WhirlingDragonPunch = 152175,
         StrikeOfTheWindlord = 392983,
         RushingWindKick    = 1250566,   -- 12.1
+        Zenith             = ID_ZENITH,  -- 12.1 Shado-Pan window (cast shares the buff ID; verify /prio spells)
         ZenithStomp        = 1272696,   -- 12.1
         TouchOfDeath       = ID_TOUCHOFDEATH,
         InvokeXuen         = 123904,
@@ -277,7 +278,7 @@ local spec = {
 
     pickable = {
         "TigerPalm", "BlackoutKick", "RisingSunKick", "FistsOfFury", "SpinningCraneKick",
-        "WhirlingDragonPunch", "StrikeOfTheWindlord", "RushingWindKick", "ZenithStomp",
+        "WhirlingDragonPunch", "StrikeOfTheWindlord", "RushingWindKick", "Zenith", "ZenithStomp",
         "TouchOfDeath", "InvokeXuen", "CelestialConduit", "SlicingWinds",
     },
 
