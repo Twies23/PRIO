@@ -11,6 +11,10 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.27", {
+        "Full Energy prediction: fixed 10/sec regen (+Ascension) dead-reckoned to your real cap, anchored to checkpoints + casts.",
+        "\"Energy % >=\" avoid-capping lines now work all the way to cap.",
+    } },
     { "0.2.26", {
         "Energy readable as a percent (secret-safe), so PRIO sees Energy to your real cap, not just to 60.",
         "New \"Energy % >= / <=\" condition for avoid-capping lines; look-ahead seeds from real Energy %.",

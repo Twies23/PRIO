@@ -43,6 +43,7 @@ local ID_TOUCHOFDEATH = 322109  -- Touch of Death (execute availability via Cool
 local ID_SLICINGWINDS = 1217413 -- Slicing Winds (talent)
 local ID_DRINKINGHORN = 391370  -- Drinking Horn Cover (talent: Zenith lasts +5s)
 local ID_INNERPEACE   = 397768  -- Inner Peace (talent: Tiger Palm energy cost -5)
+local ID_ASCENSION    = 115396  -- Ascension (talent: +1 Chi, +20 Energy, +10% Energy regen)
 
 -- Condition builders -----------------------------------------------------------
 local function buffUp(id)   return { type = "buffActive",  spell = id } end
@@ -230,6 +231,12 @@ local spec = {
     -- NOT a probe: Vivacious Vivification makes its cost/instant state vary.
     energyModel = {
         power = (Enum and Enum.PowerType and Enum.PowerType.Energy) or 3,
+        -- Energy regenerates at a FIXED 10/sec (1 per decisecond); Ascension adds +10%.
+        -- We dead-reckon from that rate, sync to the real value whenever it's readable
+        -- (out of combat), and re-anchor to the usable-flag checkpoints. Max comes from
+        -- the readable UnitPowerMax (so Ascension/Inner Peace bonuses are automatic).
+        regenPerSec = 10,
+        regenTalents = { [ID_ASCENSION] = 0.10 },
         probes = {
             { spell = 100780,  cost = 60, reduce = { [ID_INNERPEACE] = 5 } }, -- Tiger Palm
             { spell = 117952,  cost = 20 },  -- Crackling Jade Lightning

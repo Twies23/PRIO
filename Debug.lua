@@ -266,18 +266,17 @@ function Debug:Update()
                     set(id, "|cff5a6a76not up|r")
                 end
             elseif d.kind == "energyFloor" then
-                -- Energy: clean percent (UnitPowerPercent) * max when available -- tracks
-                -- all the way to cap; else the checkpoint floor (accurate only up to ~60).
+                -- Dead-reckoned Energy: fixed regen integrated to the readable max, anchored
+                -- to the usable-flag checkpoint floor (synced to the real value if readable).
                 local E = PRIO.Engine
-                local pct = E and E.EnergyPercent and E:EnergyPercent()
-                if pct then
-                    local est = E.EnergyEstimate and E:EnergyEstimate()
-                    set(id, ("|cff0cd29f%d%%|r%s  |cff5a6a76(read)|r"):format(pct,
-                        est and ("  |cff9fb0be~%d|r"):format(est) or ""))
+                local est = E and E.EnergyEstimate and E:EnergyEstimate()
+                local max = E and E.P and E.P.energyMax
+                local floor = E and E.EnergyFloor and E:EnergyFloor()
+                if est and max then
+                    set(id, ("|cff0cd29f%d|r / %d  |cff9fb0be%d%%|r  |cff5a6a76(predicted, \226\137\165%d)|r")
+                        :format(est, max, (est / max) * 100, floor or 0))
                 else
-                    local f = E and E.EnergyFloor and E:EnergyFloor()
-                    set(id, f and ("|cffe0a03a\226\137\165 %d|r  |cff5a6a76(checkpoint, %% secret)|r"):format(f)
-                        or "|cff5a6a76< 10 / unknown|r")
+                    set(id, "|cff5a6a76unknown|r")
                 end
             elseif d.kind == "usableProbe" then
                 -- Diagnostic: is "insufficient power" readable? (Energy is secret; this

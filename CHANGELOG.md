@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.27 (alpha)
+- **Full Energy prediction (Windwalker).** Energy is secret even as a percent, so PRIO now dead-reckons it: a fixed 10/sec regen (+10% with Ascension) integrated against your real max, re-anchored to the usable-ability checkpoints, synced to the real value whenever it's readable, and dropped the moment you cast a spender. This tracks Energy all the way to your cap — so "Energy % ≥ N" avoid-capping lines work. Debug shows the predicted value, %, and checkpoint floor.
+
+
 ## 0.2.26 (alpha)
 - **Energy is now readable as a percentage** (via the game's secret-safe percent path — the same one EllesmereUI's bars use), so PRIO can see Energy all the way to your real cap, not just up to Tiger Palm's cost. The look-ahead now seeds from your actual Energy %, and there's a new **"Energy % ≥ / ≤"** condition for "Tiger Palm to avoid capping" lines. Debug shows live Energy %.
 

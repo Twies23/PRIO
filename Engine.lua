@@ -212,21 +212,44 @@ function Engine:EnergyFloor()
     return floor
 end
 
--- Player Energy as a clean percent (0-100), or nil. The near-cap signal.
-function Engine:EnergyPercent()
+-- Dead-reckon predicted Energy. The bar is secret in combat, so we integrate the fixed
+-- regen (10/sec, +Ascension) against the readable max, re-anchor UP to the usable-flag
+-- checkpoint floor, and -- whenever the real value IS readable (some clients out of
+-- combat) -- sync to it exactly. Spends are subtracted on cast (UNIT_SPELLCAST_SUCCEEDED).
+function Engine:UpdateEnergy(now)
     local m = spec and spec.energyModel
-    return m and m.power and API.PowerPercent(m.power) or nil
+    if not (m and m.power) then return end
+    local P = self.P
+    local max = API.PowerMax(m.power) or 100
+    P.energyMax = max
+    local real = API.Power(m.power)                 -- clean number if readable, else nil
+    if real ~= nil then
+        P.energyEst, P.energyEstTime = math.min(max, real), now
+        return
+    end
+    local rate = m.regenPerSec or 10
+    if m.regenTalents then
+        for tid, frac in pairs(m.regenTalents) do if API.IsKnown(tid) then rate = rate * (1 + frac) end end
+    end
+    local dt = now - (P.energyEstTime or now); if dt < 0 then dt = 0 end
+    P.energyEstTime = now
+    P.energyEst = math.min(max, (P.energyEst or max) + rate * dt)
+    local floor = self:EnergyFloor()                -- usable => Energy >= that cost
+    if floor and P.energyEst < floor then P.energyEst = floor end
 end
 
--- Best absolute Energy estimate: the clean percent * readable max (exact enough, and
--- tracks all the way to cap), else the checkpoint floor (accurate only up to ~60).
+-- Best absolute Energy estimate (the dead-reckoned prediction).
 function Engine:EnergyEstimate()
-    local m = spec and spec.energyModel
-    if m and m.power then
-        local pct, max = API.PowerPercent(m.power), API.PowerMax(m.power)
-        if pct and max then return (pct / 100) * max end
-    end
-    return self:EnergyFloor()
+    if not (spec and spec.energyModel) then return nil end
+    return self.P and self.P.energyEst
+end
+
+-- Predicted Energy as a percent (0-100), or nil. The near-cap signal.
+function Engine:EnergyPercent()
+    local est = self:EnergyEstimate()
+    local max = self.P and self.P.energyMax
+    if est and max and max > 0 then return (est / max) * 100 end
+    return nil
 end
 
 -- Remaining seconds on a buff, for "buff remaining <= / >= N" conditions. Prefers the
@@ -250,10 +273,9 @@ local function Assumed(sid, S)
     return a and a > (S.now or GetTime())
 end
 
--- Player Energy percent for energy% conditions (clean even when the bar is secret).
+-- Player Energy percent for energy% conditions (the dead-reckoned prediction).
 local function EnergyPct()
-    local m = spec and spec.energyModel
-    return m and m.power and API.PowerPercent(m.power) or nil
+    return Engine:EnergyPercent()
 end
 
 local function EvalClause(cl, S, selfSid)
@@ -388,7 +410,7 @@ function Engine:OnSpecChanged()
     local id = API.GetSpecID()
     spec = id and PRIO.specs and PRIO.specs[id] or nil
     wipe(idToKey)
-    self.P = { fsExpire = 0, mote = false, skStacks = 0, maelstrom = 0, charges = {}, assumeActive = {}, auraExpire = {} }
+    self.P = { fsExpire = 0, mote = false, skStacks = 0, maelstrom = 0, charges = {}, assumeActive = {}, auraExpire = {}, energyEst = nil, energyEstTime = nil }
     if not spec then return end
     if spec.chargeTrack then
         for key, cfg in pairs(spec.chargeTrack) do
@@ -546,6 +568,12 @@ PRIO:On("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
     end
     if spec.OnCast then
         pcall(spec.OnCast, Engine.P, key, GetTime())
+    end
+    -- Spend Energy from the predicted pool the instant we cast a spender (before the
+    -- next tick's regen integration), so the estimate drops immediately.
+    local em = spec.energyModel and spec.energyModel.costs and spec.energyModel.costs[key]
+    if em and Engine.P.energyEst then
+        Engine.P.energyEst = math.max(0, Engine.P.energyEst - (EnergyCostOf(em) or 0))
     end
     -- Seed a predicted buff-duration timer (Zenith): fixed window, secret in combat, so
     -- we time it from the cast. Duration = base + any talented extensions that are known.
@@ -902,6 +930,7 @@ function Engine:Evaluate()
     local db       = PRIO.db
     local want     = 1 + (db.numQueue or 3)
     self:UpdateCharges(S.now)
+    self:UpdateEnergy(S.now)
 
     -- Simple, predictable model: walk the list top-to-bottom, take the first entry
     -- that evaluates true as the pick, then EXCLUDE that row and walk again for the
