@@ -16,3 +16,4 @@ ignore:
   - .gitignore
   - .pkgmeta
   - branding
+  - tests
