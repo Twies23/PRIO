@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.32", {
+        "Added a live \"Blackout Kick!\" row to the Debug window.",
+    } },
     { "0.2.31", {
         "Added the \"Blackout Kick!\" proc (116768) to Windwalker buffs, selectable in buff conditions.",
     } },

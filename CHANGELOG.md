@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.32 (alpha)
+- Added a live "Blackout Kick!" row to the Debug window.
+
+
 ## 0.2.31 (alpha)
 - **Added the "Blackout Kick!" proc (116768) to Windwalker's buffs**, so it's selectable in buff conditions. Track it via /prio setup for the condition to evaluate.
 
