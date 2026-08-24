@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.45", {
+        "Conduit cleave + AoE default rebuilt to the tuned list (now shared); Blackout Kick! / Dance procs spent aggressively so they don't overcap. Reset lists to default.",
+    } },
     { "0.2.44", {
         "Hero detection keys on Invoke Xuen via a strict talent check -- reliable Conduit/Shado-Pan signal that won't flip mid-combat.",
     } },

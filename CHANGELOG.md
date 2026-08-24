@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.45 (alpha)
+- **Conduit cleave + AoE default rebuilt to the tuned list** (they now share it — cleave was falling back to the single-target list). Because Blackout Kick! and Dance of Chi-Ji stacks aren't readable, their proc dumps sit high so they're spent aggressively and never overcap. Reset Windwalker lists to default to pick it up.
+
+
 ## 0.2.44 (alpha)
 - **Hero-tree detection now keys on Invoke Xuen** (a Conduit-of-the-Celestials ability) via a strict talent/spellbook check. Two fixes: it's a more reliable Conduit-vs-Shado-Pan signal than Celestial Conduit, and it no longer flips to Conduit mid-combat when an ability merely becomes tracked or is temporarily summoned.
 

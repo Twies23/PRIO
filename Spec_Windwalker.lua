@@ -113,24 +113,33 @@ local conduit_st = {
     { spell = "BlackoutKick" },                                                        -- 23: filler
 }
 
+-- Conduit cleave + AoE share one list (the user's tuned multi-target rotation).
+-- Since Blackout Kick! and Dance of Chi-Ji STACKS aren't readable, their proc dumps
+-- (lines 10-11) sit high so they're spent aggressively and never overcap.
 local conduit_aoe = {
-    { spell = "WhirlingDragonPunch", cond = xuenAway },
-    { spell = "StrikeOfTheWindlord", cond = xuenAway },
-    { spell = "ZenithStomp",  cond = chiMax(2) },
-    { spell = "TigerPalm",    cond = chiMax(2) },              -- build Chi for Fists of Fury
-    { spell = "FistsOfFury" },
-    { spell = "SpinningCraneKick", cond = buffUp(ID_UNBROKEN) }, -- 4pc / Unbroken Rhythm
-    { spell = "RisingSunKick" },                               -- enables WDP
-    { spell = "RushingWindKick", cond = buffUp(ID_RUSHINGWIND) },
-    { spell = "SpinningCraneKick", cond = AND(buffUp(ID_ZENITH), enemiesMin(5)) }, -- Zenith, 5+
-    { spell = "BlackoutKick", cond = AND(talentYes(ID_OBSIDIAN), buffUp(ID_ZENITH), cdNotReady(107428)) },
-    { spell = "SpinningCraneKick" },                           -- main AoE spender
-    { spell = "SlicingWinds", cond = slicingWindsTalent },
-    { spell = "BlackoutKick", cond = buffUp(ID_COMBOBREAK) },  -- proc
-    { spell = "TigerPalm",    cond = tpBelowCap },             -- <5 Chi and no Zenith
-    { spell = "BlackoutKick", cond = talentYes(ID_SHADOWBOX) },-- Shadowboxing Treads
-    { spell = "TigerPalm",    cond = comboOK },                -- filler
-    { spell = "BlackoutKick", cond = comboOK },                -- filler
+    { spell = "InvokeXuen",       cond = cdReady(ID_ZENITH) },                          -- 1: sync with Zenith
+    { spell = "Zenith",           cond = chargesMin(2) },                               -- 2: at 2 charges
+    { spell = "FistsOfFury",      cond = auraRemainMax(ID_HEARTJADE, 1) },              -- 3: before HoJS falls off
+    { spell = "WhirlingDragonPunch", cond = xuenAway },                                 -- 4: Xuen > 10s
+    { spell = "StrikeOfTheWindlord", cond = xuenAway },                                 -- 5: Xuen > 10s
+    { spell = "CelestialConduit", cond = buffDown(ID_HEARTJADE) },                      -- 6: build HoJS
+    { spell = "ZenithStomp",      cond = OR(chiMax(3), auraRemainMax(ID_HEARTJADE, 5)) }, -- 7
+    { spell = "TigerPalm",        cond = AND(cdReady(113656), chiMax(3)) },             -- 8: build Chi for FoF
+    { spell = "FistsOfFury" },                                                          -- 9: always
+    { spell = "SpinningCraneKick", cond = buffUp(ID_DANCECHIJI) },                      -- 10: dump Dance proc
+    { spell = "BlackoutKick",     cond = buffUp(ID_BOKPROC) },                          -- 11: dump BoK! proc
+    { spell = "SpinningCraneKick", cond = buffUp(ID_UNBROKEN) },                        -- 12: Unbroken Rhythm
+    { spell = "TigerPalm",        cond = AND(chiMax(2), energyNearCap, buffDown(ID_ZENITH)) }, -- 13: avoid cap
+    { spell = "RisingSunKick",    cond = buffUp(ID_HEARTJADE) },                        -- 14: HoJS active
+    { spell = "SpinningCraneKick", cond = AND(buffUp(ID_ZENITH), enemiesMin(5)) },      -- 15: Zenith, 5+
+    { spell = "RisingSunKick",    cond = buffUp(ID_ZENITH) },                           -- 16: during Zenith
+    { spell = "BlackoutKick",     cond = AND(talentYes(ID_OBSIDIAN), buffUp(ID_ZENITH), cdNotReady(107428)) }, -- 17
+    { spell = "SpinningCraneKick", cond = OR(chiMin(3), cdNotReady(113656)) },          -- 18: AoE spender
+    { spell = "SlicingWinds",     cond = slicingWindsTalent },                          -- 19
+    { spell = "TigerPalm",        cond = AND(chiMax(4), buffDown(ID_ZENITH)) },         -- 20: filler, no overcap
+    { spell = "BlackoutKick",     cond = talentYes(ID_SHADOWBOX) },                     -- 21: Shadowboxing Treads
+    { spell = "RisingSunKick" },                                                        -- 22: filler
+    { spell = "BlackoutKick" },                                                         -- 23: filler
 }
 
 -- SHADO-PAN ---------------------------------------------------------------------
@@ -175,7 +184,7 @@ local shadopan_aoe = {
 }
 
 local heroLists = {
-    conduit  = { st = conduit_st,  aoe = conduit_aoe },
+    conduit  = { st = conduit_st,  cleave = conduit_aoe,  aoe = conduit_aoe },
     shadopan = { st = shadopan_st, cleave = shadopan_aoe, aoe = shadopan_aoe },
 }
 
