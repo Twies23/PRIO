@@ -247,6 +247,10 @@ function Debug:Update()
                 local cc = P.charges and P.charges[d.key]
                 local maxC = spec.chargeTrack and spec.chargeTrack[d.key] and spec.chargeTrack[d.key].max
                 set(id, cc and (tostring(cc.cur) .. " / " .. (maxC or "?")) or "-")
+            elseif d.kind == "usableProbe" then
+                -- Diagnostic: is "insufficient power" readable? (Energy is secret; this
+                -- tells us whether the usability flag still exposes castability.)
+                set(id, "|cff9fb0be" .. tostring(API.UsableDebug and API.UsableDebug(d.spell) or "?") .. "|r")
             elseif d.kind == "chargesLive" then
                 -- Live charge count read from the Cooldown Manager (what a "Charges >="
                 -- condition evaluates). Requires the spell tracked in the Cooldown Manager.

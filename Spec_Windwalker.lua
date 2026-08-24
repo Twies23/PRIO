@@ -330,6 +330,7 @@ local spec = {
         { label = "Rushing Wind Kick", kind = "buff", spell = ID_RUSHINGWIND },
         { label = "Touch of Death", kind = "buff", spell = ID_TOUCHOFDEATH },
         { label = "Zenith charges", kind = "chargesLive", spell = ID_ZENITH },
+        { label = "Tiger Palm usable", kind = "usableProbe", spell = 100780 },
         { label = "Fists of Fury",  kind = "cd",   spell = 113656 },
     },
     economy = {

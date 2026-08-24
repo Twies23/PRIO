@@ -121,6 +121,24 @@ function API.IsUsable(spellID)
     return true  -- fail open
 end
 
+-- Diagnostic: what C_Spell.IsSpellUsable actually exposes for a spell, so we can
+-- tell in the Debug window whether "not enough Energy" is a READABLE signal (it
+-- would let us gate Tiger Palm) or secret like the Energy bar itself.
+function API.UsableDebug(spellID)
+    if not (spellID and C_Spell and C_Spell.IsSpellUsable) then return "no api" end
+    local ok, a, b = pcall(C_Spell.IsSpellUsable, spellID)
+    if not ok then return "err" end
+    local function show(v)
+        if v == nil then return "nil" end
+        if IsSecret(v) then return "secret" end
+        return tostring(v)
+    end
+    if type(a) == "table" then
+        return ("usable=%s noPower=%s"):format(show(a.isUsable), show(a.insufficientPower))
+    end
+    return ("usable=%s noPower=%s"):format(show(a), show(b))
+end
+
 --------------------------------------------------------------------------------
 -- Cooldown: the reliable clean-boolean readiness test.
 --   ready = not (isActive and not isOnGCD)
@@ -459,38 +477,56 @@ end
 
 -- Live CHARGE COUNT from the Cooldown Viewer, secret-safe. Blizzard renders the
 -- current charge count to a fontstring on the tracked cooldown item frame; we read
--- that clean string instead of the secret currentCharges. Requires the spell to be
--- tracked in the Cooldown Manager. no frame -> nil; tracked but no number drawn ->
--- nil (caller falls back). The count fontstring lives in different spots by frame
--- template, so we try the known ones inside one pcall.
+-- that clean string instead of the secret currentCharges. Requires the spell tracked
+-- in the Cooldown Manager. Returns nil when not a charge spell / not tracked / no
+-- number found.
+--
+-- The frame ALSO renders a recharge countdown ("40 sec"), so we can't just grab any
+-- number. maxCharges is static and readable, so we accept only an integer in [0,max]
+-- -- that rejects the recharge timer (40 > 2) and keeps the real charge count. We
+-- scan named spots first, then every fontstring region on the frame (and its Cooldown
+-- child) as a fallback, since the exact field name varies by client/template.
 function API.TrackedChargeCount(spellID)
     local frame = trackedFrames[spellID]
     if not frame then return nil end
+    local maxC = select(1, API.Charges(spellID))
+    if not maxC or maxC < 1 then return nil end   -- not a charge spell
     local ok, n = pcall(function()
-        local spots = {}
+        local seen = {}
+        local function tryFS(fs)
+            if type(fs) ~= "table" or not fs.GetText or seen[fs] then return nil end
+            seen[fs] = true
+            local ok2, txt = pcall(fs.GetText, fs)
+            if ok2 and type(txt) == "string" and txt:find("%d") then
+                local num = tonumber((txt:gsub("%D", "")))
+                if num and num >= 0 and num <= maxC then return num end
+            end
+            return nil
+        end
+        -- 1) Named spots that hold a charge/application count on known templates.
+        local named = {}
         local cc = frame.ChargeCount or frame.Charges
-        if type(cc) == "table" then
-            spots[#spots + 1] = cc.Current
-            spots[#spots + 1] = cc.Count
-            spots[#spots + 1] = cc
+        if type(cc) == "table" then named[#named+1] = cc.Current; named[#named+1] = cc.Count; named[#named+1] = cc end
+        if type(frame.Applications) == "table" then
+            named[#named+1] = frame.Applications.Applications; named[#named+1] = frame.Applications
         end
-        if frame.Applications then
-            spots[#spots + 1] = frame.Applications.Applications
-            spots[#spots + 1] = frame.Applications
-        end
-        if frame.Cooldown and frame.Cooldown.ChargeCount then
-            spots[#spots + 1] = frame.Cooldown.ChargeCount.Current
-            spots[#spots + 1] = frame.Cooldown.ChargeCount
-        end
-        for _, fs in ipairs(spots) do
-            if type(fs) == "table" and fs.GetText then
-                local txt = fs:GetText()
-                if type(txt) == "string" and txt ~= "" then
-                    local num = tonumber((txt:gsub("%D", "")))
-                    if num then return num end
+        for _, fs in ipairs(named) do local v = tryFS(fs); if v then return v end end
+        -- 2) Fallback: scan every fontstring region on the frame and its Cooldown child,
+        --    bounded by maxCharges so the recharge timer can't be mistaken for a count.
+        local function scan(f)
+            if type(f) ~= "table" or not f.GetRegions then return nil end
+            local ok3, regions = pcall(function() return { f:GetRegions() } end)
+            if not ok3 then return nil end
+            for _, r in ipairs(regions) do
+                if type(r) == "table" and r.GetObjectType then
+                    local ot = pcall(r.GetObjectType, r) and r:GetObjectType() or nil
+                    if ot == "FontString" then local v = tryFS(r); if v then return v end end
                 end
             end
+            return nil
         end
+        local v = scan(frame); if v then return v end
+        if frame.Cooldown then v = scan(frame.Cooldown); if v then return v end end
         return nil
     end)
     if ok and n then return n end

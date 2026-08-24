@@ -1,5 +1,10 @@
 # PRIO Changelog
 
+## 0.2.18 (alpha)
+- **Zenith charge tracking fixed.** The charge reader was picking up the recharge timer instead of the count; it now only accepts a number within the real max charges, so "Zenith charges" reads correctly in the Debug window (and the Charges ≥ condition with it). Zenith must be in your Cooldown Manager.
+- **Diagnostic: "Tiger Palm usable" row** added to the Debug window. Energy is a fully secret value (unreadable even out of combat), so PRIO can't gate on Energy directly — this row shows whether the game's usability flag still exposes "not enough Energy", which would give us another way in.
+
+
 ## 0.2.17 (alpha)
 - **The priority list no longer jumps to the top when you add, move, or remove a row.** It keeps your scroll position.
 - **Windwalker: Tiger Palm won't be recommended when you can't afford its Energy.** The engine now reads your Energy and predicts it across the look-ahead queue, so it stops suggesting an Energy spender you can't cast and recommends a button you can.
