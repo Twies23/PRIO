@@ -58,6 +58,11 @@ local function chiMin(n) return { type = "resourceMin", v = n } end   -- Chi >= 
 local function chiMax(n) return { type = "resourceMax", v = n } end   -- Chi <= n (low Chi)
 local function enemiesMin(n) return { type = "enemiesMin", v = n } end
 local function stacksMin(id, n) return { type = "stacksMin", spell = id, v = n } end
+local function stacksMax(id, n) return { type = "stacksMax", spell = id, v = n } end
+local function chargesMin(n) return { type = "chargesMin", v = n } end       -- self charges >= n
+local function cdReady(id)  return { type = "cdReady",  spell = id } end
+local function usable(id)   return { type = "usable",   spell = id } end
+local function auraRemainMax(id, s) return { type = "auraRemainMax", spell = id, v = s } end -- buff <= s sec left
 local comboOK = { type = "lastCastNot" }   -- Combo Strikes: not the previous ability
 
 -- "Not right before Invoke Xuen" -- approximates the guide's "Xuen 10s+ away" by
@@ -115,27 +120,27 @@ local conduit_aoe = {
 }
 
 -- SHADO-PAN ---------------------------------------------------------------------
+-- Shado-Pan single target -- the user's tuned list (matches the in-game sim rotation).
 local shadopan_st = {
-    { spell = "WhirlingDragonPunch" },                         -- grace period / top CD
-    { spell = "ZenithStomp",  cond = chiMax(2) },              -- low Chi (or Zenith ending)
-    { spell = "TigerPalm",    cond = tpBelowCap },             -- avoid capping energy outside Zenith
-    { spell = "FistsOfFury" },
-    { spell = "WhirlingDragonPunch" },
-    { spell = "StrikeOfTheWindlord" },
-    { spell = "TigerPalm",    cond = chiMax(2) },              -- build Chi for Fists of Fury
-    { spell = "RushingWindKick", cond = buffUp(ID_RUSHINGWIND) },
-    { spell = "SpinningCraneKick", cond = AND(buffUp(ID_DANCECHIJI), buffUp(ID_UNBROKEN)) }, -- Dance + Unbroken
-    { spell = "RisingSunKick" },
-    { spell = "BlackoutKick", cond = comboBreaker2 },          -- 2x Combo Breaker
-    { spell = "BlackoutKick", cond = bokZenith },              -- Zenith + Combo Breaker / Obsidian
-    { spell = "SpinningCraneKick", cond = sckZenith },         -- Zenith spend (>4 Chi or Dance)
-    { spell = "TouchOfDeath", cond = touchOfDeathUp },
-    { spell = "TigerPalm",    cond = chiMax(1) },              -- less than 2 Chi
-    { spell = "BlackoutKick", cond = buffUp(ID_COMBOBREAK) },  -- proc
-    { spell = "SpinningCraneKick", cond = buffUp(ID_DANCECHIJI) }, -- free proc
-    { spell = "SlicingWinds", cond = slicingWindsTalent },
-    { spell = "TigerPalm",    cond = comboOK },                -- filler
-    { spell = "BlackoutKick", cond = comboOK },                -- filler
+    { spell = "Zenith",           cond = chargesMin(2) },                              -- 1: Zenith at 2 charges
+    { spell = "WhirlingDragonPunch" },                                                 -- 2: always
+    { spell = "ZenithStomp",      cond = AND(chiMax(2), auraRemainMax(ID_ZENITH, 5)) },-- 3: low Chi + Zenith ending
+    { spell = "TigerPalm",        cond = AND(chiMax(4), cdReady(100780), stacksMax(ID_BOKPROC, 1)) }, -- 4: build Chi, not overcapping BoK!
+    { spell = "FistsOfFury" },                                                         -- 5: always
+    { spell = "StrikeOfTheWindlord" },                                                 -- 6: always (talent-gated)
+    { spell = "BlackoutKick",     cond = chiMax(3) },                                  -- 7: spend at low Chi
+    { spell = "RushingWindKick",  cond = buffUp(ID_RUSHINGWIND) },                     -- 8: proc
+    { spell = "SpinningCraneKick", cond = AND(buffUp(ID_DANCECHIJI), buffUp(ID_UNBROKEN)) }, -- 9: Dance + Unbroken
+    { spell = "RisingSunKick" },                                                       -- 10: always
+    { spell = "BlackoutKick",     cond = buffUp(ID_BOKPROC) },                         -- 11: Blackout Kick! proc
+    { spell = "BlackoutKick",     cond = buffUp(ID_ZENITH) },                          -- 12: during Zenith
+    { spell = "SpinningCraneKick", cond = AND(buffUp(ID_ZENITH), chiMin(5)) },         -- 13: Zenith spend, 5+ Chi
+    { spell = "SpinningCraneKick", cond = AND(buffUp(ID_ZENITH), buffUp(ID_DANCECHIJI)) }, -- 14: Zenith + Dance
+    { spell = "TouchOfDeath",     cond = usable(ID_TOUCHOFDEATH) },                    -- 15: execute
+    { spell = "SpinningCraneKick", cond = buffUp(ID_DANCECHIJI) },                     -- 16: free proc
+    { spell = "SlicingWinds",     cond = slicingWindsTalent },                         -- 17: on CD (talent)
+    { spell = "TigerPalm",        cond = chiMax(4) },                                  -- 18: filler / avoid cap
+    { spell = "BlackoutKick" },                                                        -- 19: filler
 }
 
 local shadopan_aoe = {

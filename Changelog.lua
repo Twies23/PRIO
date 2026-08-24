@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.34", {
+        "Shado-Pan single-target default rebuilt to the tuned rotation. Reset Windwalker lists to default to pick it up.",
+    } },
     { "0.2.33", {
         "Added Tigereye Brew (1261724) to Windwalker buffs (condition, Debug row, setup entry).",
     } },

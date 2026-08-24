@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.34 (alpha)
+- **Shado-Pan single-target default rebuilt to the tuned rotation** (Zenith at 2 charges, Zenith-Stomp on the closing Zenith window, Tiger Palm gated on Blackout Kick! stacks, etc.). Reset your Windwalker lists to default to pick it up.
+
+
 ## 0.2.33 (alpha)
 - **Added Tigereye Brew (1261724) to Windwalker's buffs** — selectable in buff conditions, with a Debug row and a /prio setup tracking entry.
 
