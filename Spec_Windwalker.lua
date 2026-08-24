@@ -166,7 +166,7 @@ local shadopan_aoe = {
     { spell = "SpinningCraneKick", cond = buffUp(ID_UNBROKEN) },                       -- 5: Unbroken Rhythm
     { spell = "TigerPalm",        cond = AND(chiMax(3), buffUp(ID_BOKPROC), energyNearCap, buffDown(ID_ZENITH)) }, -- 6: avoid cap w/ BoK! proc, no Zenith
     { spell = "RisingSunKick",    cond = AND(cdReady(152175), cdNotReady(113656)) },   -- 7: enable WDP while Fists on CD
-    { spell = "RushingWindKick",  cond = buffDown(ID_UNBROKEN) },                      -- 8: without Unbroken Rhythm
+    { spell = "RushingWindKick",  cond = AND(buffUp(ID_RUSHINGWIND), buffDown(ID_UNBROKEN)) }, -- 8: proc, without Unbroken Rhythm
     { spell = "SpinningCraneKick", cond = AND(buffUp(ID_ZENITH), enemiesMin(5)) },     -- 9: Zenith, 5+ targets
     { spell = "BlackoutKick",     cond = buffUp(ID_BOKPROC) },                         -- 10: Blackout Kick! proc
     { spell = "TigerPalm",        cond = chiMax(2) },                                  -- 11: build Chi
