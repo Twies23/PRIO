@@ -88,29 +88,29 @@ local slicingWindsTalent = talentYes(ID_SLICINGWINDS)
 -- Single target -- the user's tuned list. (Bloodlust RSK line intentionally omitted
 -- until a lust buff is chosen to track.)
 local conduit_st = {
-    { spell = "WhirlingDragonPunch", cond = xuenAway },                                -- 1: WDP grace, Xuen > 10s
-    { spell = "ZenithStomp",      cond = OR(chiMax(2), auraRemainMax(ID_ZENITH, 5)) }, -- 2: low Chi or Zenith ending
+    { spell = "WhirlingDragonPunch", cond = xuenAway },                                -- 1: WDP, Xuen > 10s
+    { spell = "ZenithStomp",      cond = OR(chiMax(3), auraRemainMax(ID_ZENITH, 8)) }, -- 2: low Chi or Zenith ending
     { spell = "FistsOfFury",      cond = auraRemainMax(ID_HEARTJADE, 1) },             -- 3: dump before HoJS falls off
-    { spell = "TigerPalm",        cond = AND(chiMax(3), stacksMax(ID_BOKPROC, 1), energyNearCap, buffDown(ID_ZENITH)) }, -- 4
-    { spell = "CelestialConduit" },                                                    -- 5: burst
+    { spell = "TigerPalm",        cond = AND(chiMax(3), buffDown(ID_BOKPROC), energyNearCap, buffDown(ID_ZENITH)) }, -- 4
+    { spell = "CelestialConduit", cond = buffDown(ID_HEARTJADE) },                     -- 5: build HoJS
     { spell = "InvokeXuen" },                                                          -- 6: burst
     { spell = "FistsOfFury" },                                                         -- 7: always
     { spell = "WhirlingDragonPunch", cond = xuenAway },                                -- 8: Xuen > 10s
     { spell = "BlackoutKick",     cond = chiMax(2) },                                  -- 9: not enough Chi for FoF
     { spell = "RushingWindKick",  cond = buffUp(ID_RUSHINGWIND) },                     -- 10: proc
     { spell = "SpinningCraneKick", cond = AND(buffUp(ID_DANCECHIJI), buffUp(ID_UNBROKEN)) }, -- 11: Dance + Unbroken
+    { spell = "RisingSunKick",    cond = buffDown(ID_DANCECHIJI) },                    -- 12: no Dance
     { spell = "SpinningCraneKick", cond = buffUp(ID_UNBROKEN) },                       -- 13: Unbroken Rhythm
-    { spell = "RisingSunKick" },                                                       -- 14: always
-    { spell = "BlackoutKick",     cond = stacksMin(ID_BOKPROC, 2) },                   -- 15: 2x BoK!
-    { spell = "BlackoutKick",     cond = OR(buffUp(ID_BOKPROC), buffUp(ID_ZENITH)) },  -- 16: BoK! or Zenith
-    { spell = "SpinningCraneKick", cond = AND(buffUp(ID_ZENITH), buffUp(ID_DANCECHIJI)) }, -- 17: Zenith + Dance
-    { spell = "TouchOfDeath",     cond = usable(ID_TOUCHOFDEATH) },                    -- 18: execute
-    { spell = "TigerPalm",        cond = chiMax(2) },                                  -- 19: build when starved
-    { spell = "BlackoutKick",     cond = stacksMin(ID_BOKPROC, 1) },                   -- 20: 1x BoK!
-    { spell = "SpinningCraneKick", cond = buffUp(ID_DANCECHIJI) },                     -- 21: Dance proc
-    { spell = "SlicingWinds" },                                                        -- 22: on CD (talent)
-    { spell = "TigerPalm",        cond = chiMax(4) },                                  -- 23: filler, no overcap
-    { spell = "BlackoutKick" },                                                        -- 24: filler
+    { spell = "BlackoutKick",     cond = buffUp(ID_BOKPROC) },                         -- 14: BoK! proc
+    { spell = "BlackoutKick",     cond = OR(buffUp(ID_BOKPROC), buffUp(ID_ZENITH)) },  -- 15: BoK! or Zenith
+    { spell = "RisingSunKick" },                                                       -- 16: always
+    { spell = "BlackoutKick",     cond = OR(buffUp(ID_BOKPROC), buffUp(ID_ZENITH)) },  -- 17: BoK! or Zenith
+    { spell = "SpinningCraneKick", cond = AND(buffUp(ID_ZENITH), buffUp(ID_DANCECHIJI)) }, -- 18: Zenith + Dance
+    { spell = "TouchOfDeath",     cond = usable(ID_TOUCHOFDEATH) },                    -- 19: execute
+    { spell = "SpinningCraneKick", cond = buffUp(ID_DANCECHIJI) },                     -- 20: Dance proc
+    { spell = "SlicingWinds" },                                                        -- 21: on CD (talent)
+    { spell = "TigerPalm",        cond = chiMax(4) },                                  -- 22: filler, no overcap
+    { spell = "BlackoutKick" },                                                        -- 23: filler
 }
 
 local conduit_aoe = {

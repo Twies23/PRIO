@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.40 (alpha)
+- **Conduit single-target default updated to the refined list** — Blackout Kick! stack checks replaced with the boolean proc, plus the tuned ordering. Reset your Windwalker lists to default to pick it up.
+
+
 ## 0.2.39 (alpha)
 - Reverted the Debug "Blackout Kick!" row to boolean (up/gone) — its stack count wasn't reading reliably.
 

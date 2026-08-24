@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.40", {
+        "Conduit single-target default updated to the refined list (BoK! stacks -> boolean proc). Reset lists to default.",
+    } },
     { "0.2.39", {
         "Reverted Debug \"Blackout Kick!\" to boolean -- its stack count wasn't reading reliably.",
     } },
