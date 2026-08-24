@@ -626,14 +626,21 @@ PRIO:On("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
     -- we time it from the cast. Duration = base + any talented extensions that are known.
     local ad = spec.auraDurations and spec.auraDurations[key]
     if ad then
-        local dur = ad.base or 0
-        if ad.extend then
-            for tid, sec in pairs(ad.extend) do
-                if API.IsKnown(tid) or API.IsTalentSelected(tid) then dur = dur + sec end
+        local grants = ad.spell and { ad } or ad   -- single entry or a list of grants
+        Engine.P.auraExpire = Engine.P.auraExpire or {}
+        for _, g in ipairs(grants) do
+            if not g.requires or API.IsKnown(g.requires) or API.IsTalentSelected(g.requires) then
+                local dur = g.base or 0
+                if g.extend then
+                    for tid, sec in pairs(g.extend) do
+                        if API.IsKnown(tid) or API.IsTalentSelected(tid) then dur = dur + sec end
+                    end
+                end
+                local asid = g.spell or spellID
+                -- max: a fresh grant refreshes UP; a shorter overlapping grant never shortens.
+                Engine.P.auraExpire[asid] = math.max(Engine.P.auraExpire[asid] or 0, GetTime() + dur)
             end
         end
-        Engine.P.auraExpire = Engine.P.auraExpire or {}
-        Engine.P.auraExpire[ad.spell or spellID] = GetTime() + dur
     end
     -- Seed a predicted cooldown timer (Invoke Xuen) so "cooldown > N" reads in combat.
     local ct = spec.cooldownTrack and spec.cooldownTrack[key]

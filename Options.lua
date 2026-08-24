@@ -574,11 +574,16 @@ function Options:OpenCondEditor(spec, mode, index, variant)
             if L then for _, en in ipairs(L) do collectCond(en.cond) end end
         end
     end
-    -- Duration list: only buffs the spec tracks a duration for (e.g. Zenith).
-    for _, d in pairs(spec.auraDurations or {}) do
-        if d.spell then
-            durationOpts[#durationOpts + 1] =
-                { value = d.spell, text = API.SpellName(d.spell) or ("#" .. d.spell), icon = API.SpellTexture(d.spell) }
+    -- Duration list: only buffs the spec tracks a duration for (e.g. Zenith, HoJS).
+    local seenD = {}
+    for _, entry in pairs(spec.auraDurations or {}) do
+        local grants = entry.spell and { entry } or entry
+        for _, g in ipairs(grants) do
+            if g.spell and not seenD[g.spell] then
+                seenD[g.spell] = true
+                durationOpts[#durationOpts + 1] =
+                    { value = g.spell, text = API.SpellName(g.spell) or ("#" .. g.spell), icon = API.SpellTexture(g.spell) }
+            end
         end
     end
     local function optsFor(target)

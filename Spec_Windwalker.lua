@@ -42,6 +42,7 @@ local ID_SHADOWBOX   = 392982   -- Shadowboxing Treads (talent)
 local ID_CELESTIAL   = 443028   -- Celestial Conduit (Conduit hero signature)
 local ID_INVOKEXUEN  = 123904   -- Invoke Xuen (burst-window gate)
 local ID_XUENSBOND   = 392986   -- Xuen's Bond (talent: Invoke Xuen cooldown -30s)
+local ID_YULONS      = 1262667  -- Yu'lon's Avatar (talent: Zenith grants a 4s Heart of the Jade Serpent)
 local ID_TOUCHOFDEATH = 322109  -- Touch of Death (execute availability via Cooldown Viewer)
 local ID_SLICINGWINDS = 1217413 -- Slicing Winds (talent)
 local ID_DRINKINGHORN = 391370  -- Drinking Horn Cover (talent: Zenith lasts +5s)
@@ -84,23 +85,32 @@ local touchOfDeathUp = buffUp(ID_TOUCHOFDEATH)
 local slicingWindsTalent = talentYes(ID_SLICINGWINDS)
 
 -- CONDUIT of the Celestials -----------------------------------------------------
+-- Single target -- the user's tuned list. (Bloodlust RSK line intentionally omitted
+-- until a lust buff is chosen to track.)
 local conduit_st = {
-    { spell = "WhirlingDragonPunch", cond = xuenAway },        -- hold for after Xuen
-    { spell = "StrikeOfTheWindlord", cond = xuenAway },        -- hold for after Xuen
-    { spell = "CelestialConduit", cond = buffDown(ID_HEARTJADE) }, -- build the buff
-    { spell = "ZenithStomp",  cond = chiMax(2) },              -- generate when low on Chi
-    { spell = "TigerPalm",    cond = chiMax(2) },              -- build Chi for Fists of Fury
-    { spell = "FistsOfFury" },                                 -- Chi spender CD
-    { spell = "RushingWindKick", cond = buffUp(ID_RUSHINGWIND) }, -- only when the proc is up
-    { spell = "SpinningCraneKick", cond = buffUp(ID_UNBROKEN) }, -- Unbroken Rhythm empowered
-    { spell = "RisingSunKick" },                               -- Chi spender CD
-    { spell = "BlackoutKick", cond = bokProc },                -- proc / Zenith Obsidian
-    { spell = "SpinningCraneKick", cond = sckZenith },         -- Zenith spend (>4 Chi or Dance)
-    { spell = "TigerPalm",    cond = chiMax(1) },              -- less than 2 Chi
-    { spell = "SpinningCraneKick", cond = buffUp(ID_DANCECHIJI) }, -- free proc
-    { spell = "SlicingWinds", cond = slicingWindsTalent },     -- on CD
-    { spell = "TigerPalm",    cond = comboOK },                -- filler (without overcapping Chi)
-    { spell = "BlackoutKick", cond = comboOK },                -- filler
+    { spell = "WhirlingDragonPunch", cond = xuenAway },                                -- 1: WDP grace, Xuen > 10s
+    { spell = "ZenithStomp",      cond = OR(chiMax(2), auraRemainMax(ID_ZENITH, 5)) }, -- 2: low Chi or Zenith ending
+    { spell = "FistsOfFury",      cond = auraRemainMax(ID_HEARTJADE, 1) },             -- 3: dump before HoJS falls off
+    { spell = "TigerPalm",        cond = AND(chiMax(3), stacksMax(ID_BOKPROC, 1), energyNearCap, buffDown(ID_ZENITH)) }, -- 4
+    { spell = "CelestialConduit" },                                                    -- 5: burst
+    { spell = "InvokeXuen" },                                                          -- 6: burst
+    { spell = "FistsOfFury" },                                                         -- 7: always
+    { spell = "WhirlingDragonPunch", cond = xuenAway },                                -- 8: Xuen > 10s
+    { spell = "BlackoutKick",     cond = chiMax(2) },                                  -- 9: not enough Chi for FoF
+    { spell = "RushingWindKick",  cond = buffUp(ID_RUSHINGWIND) },                     -- 10: proc
+    { spell = "SpinningCraneKick", cond = AND(buffUp(ID_DANCECHIJI), buffUp(ID_UNBROKEN)) }, -- 11: Dance + Unbroken
+    { spell = "SpinningCraneKick", cond = buffUp(ID_UNBROKEN) },                       -- 13: Unbroken Rhythm
+    { spell = "RisingSunKick" },                                                       -- 14: always
+    { spell = "BlackoutKick",     cond = stacksMin(ID_BOKPROC, 2) },                   -- 15: 2x BoK!
+    { spell = "BlackoutKick",     cond = OR(buffUp(ID_BOKPROC), buffUp(ID_ZENITH)) },  -- 16: BoK! or Zenith
+    { spell = "SpinningCraneKick", cond = AND(buffUp(ID_ZENITH), buffUp(ID_DANCECHIJI)) }, -- 17: Zenith + Dance
+    { spell = "TouchOfDeath",     cond = usable(ID_TOUCHOFDEATH) },                    -- 18: execute
+    { spell = "TigerPalm",        cond = chiMax(2) },                                  -- 19: build when starved
+    { spell = "BlackoutKick",     cond = stacksMin(ID_BOKPROC, 1) },                   -- 20: 1x BoK!
+    { spell = "SpinningCraneKick", cond = buffUp(ID_DANCECHIJI) },                     -- 21: Dance proc
+    { spell = "SlicingWinds" },                                                        -- 22: on CD (talent)
+    { spell = "TigerPalm",        cond = chiMax(4) },                                  -- 23: filler, no overcap
+    { spell = "BlackoutKick" },                                                        -- 24: filler
 }
 
 local conduit_aoe = {
@@ -265,8 +275,17 @@ local spec = {
     -- +5s with Drinking Horn Cover. We seed a predicted timer when Zenith is cast and
     -- count it down, so a "Zenith remaining <= N" condition can gate the spend-before-it-
     -- ends lines. Keyed by cast key; `spell` is the buff whose remaining it drives.
+    -- Buff-duration prediction. A cast can grant several timed auras -- Zenith grants its
+    -- 15s window (+5s Drinking Horn) AND, with Yu'lon's Avatar, a 4s Heart of the Jade
+    -- Serpent; Strike of the Windlord / Whirling Dragon Punch grant a 6s HoJS. `requires`
+    -- gates a grant on a talent. Drives "Zenith ending" and "HoJS < 1s" lines.
     auraDurations = {
-        Zenith = { spell = ID_ZENITH, base = 15, extend = { [ID_DRINKINGHORN] = 5 } },
+        Zenith = {
+            { spell = ID_ZENITH,    base = 15, extend = { [ID_DRINKINGHORN] = 5 } },
+            { spell = ID_HEARTJADE, base = 4,  requires = ID_YULONS },
+        },
+        StrikeOfTheWindlord = { { spell = ID_HEARTJADE, base = 6 } },
+        WhirlingDragonPunch = { { spell = ID_HEARTJADE, base = 6 } },
     },
 
     -- Cooldown prediction: remaining cooldown is secret in combat, so we seed a timer
@@ -400,6 +419,7 @@ local spec = {
         { label = "Touch of Death", kind = "buff", spell = ID_TOUCHOFDEATH },
         { label = "Zenith charges", kind = "chargeClean", spell = ID_ZENITH },
         { label = "Zenith time left", kind = "auraRemain", spell = ID_ZENITH },
+        { label = "HoJS time left",   kind = "auraRemain", spell = ID_HEARTJADE },
         { label = "Energy (est.)", kind = "energyFloor" },
         { label = "Tiger Palm usable", kind = "usableProbe", spell = 100780 },
         { label = "Fists of Fury",  kind = "cd",   spell = 113656 },

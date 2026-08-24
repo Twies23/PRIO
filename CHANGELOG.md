@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.37 (alpha)
+- **Conduit of the Celestials single-target default built to the tuned list.** Includes a real "Fists of Fury before Heart of the Jade Serpent falls off" line: HoJS is now duration-modeled (6s from Strike/Whirling Dragon Punch, 4s from Zenith with Yu'lon's Avatar). A cast can now grant several timed buffs. (The Bloodlust RSK line is intentionally omitted for now.) Reset your Windwalker lists to default to pick it up.
+
+
 ## 0.2.36 (alpha)
 - **New "Cooldown ≥ / ≤ N" condition, with Invoke Xuen cooldown prediction.** Cooldown-remaining is secret in combat, so PRIO seeds a timer when Xuen is cast (120s, −30s with Xuen's Bond) and counts it down, anchored to the real off-cooldown flag. This drives the Conduit "Whirling Dragon Punch / Strike of the Windlord if Xuen is more than 10s away" lines. Debug shows Invoke Xuen CD.
 

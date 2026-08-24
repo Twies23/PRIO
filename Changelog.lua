@@ -11,6 +11,10 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.37", {
+        "Conduit single-target default built to the tuned list, with Heart of the Jade Serpent duration modeled (FoF before it falls off).",
+        "A cast can now grant multiple timed buffs (Zenith grants its window + HoJS with Yu'lon's Avatar). Reset lists to default.",
+    } },
     { "0.2.36", {
         "New \"Cooldown >= / <= N\" condition with Invoke Xuen cooldown prediction (120s, -30s Xuen's Bond).",
         "Drives the Conduit \"WDP / Strike of the Windlord if Xuen > 10s away\" lines; Debug shows Invoke Xuen CD.",
