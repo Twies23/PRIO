@@ -11,6 +11,11 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.25", {
+        "Windwalker Energy checkpoint model: usable abilities imply an Energy floor, spent across the look-ahead.",
+        "Combo Strikes is a hard rule -- never recommends the same ability twice in a row.",
+        "Queue walks the list with full state carried forward instead of relaxing rules to fill slots.",
+    } },
     { "0.2.24", {
         "Condition target dropdown filtered by type: buffs for buff checks, abilities for cooldown/usable, Zenith-only for buff time left.",
         "Condition types filtered per spec -- Shaman-only MotE / SK stacks no longer show for Monk.",

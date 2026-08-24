@@ -1,5 +1,11 @@
 # PRIO Changelog
 
+## 0.2.25 (alpha)
+- **Energy checkpoint model (Windwalker).** Energy is unreadable, but an ability's usable flag flips on at its Energy cost — so "Crackling Jade Lightning / Paralysis usable" means Energy ≥ 20, "Tiger Palm usable" means ≥ 60 (55 with Inner Peace), etc. PRIO takes the highest such threshold as a floor on your Energy and spends it across the look-ahead, so it won't queue a Tiger Palm you can't afford. Debug shows the estimate.
+- **Combo Strikes is now a hard rule for Monk** — PRIO never recommends the same ability twice in a row (it won't be relaxed to fill a slot).
+- **The queue no longer papers over gaps by breaking rules.** It walks the priority list with full state carried forward (Chi/Energy spent + generated, buffs, cooldowns, last cast) so a lower line becomes the next pick — instead of ever suggesting an ability whose condition is false.
+
+
 ## 0.2.24 (alpha)
 - **Condition editor only offers choices that work.** The target dropdown is now filtered by condition type: "Has buff / Missing buff / Buff stacks" list only buffs (not abilities), "Off/On cooldown / Usable / Just cast" list only abilities, and "Buff time left" lists only duration-tracked buffs (Zenith on Windwalker).
 - **Condition types are filtered per spec.** Shaman-only types (MotE up/down, SK stacks) no longer show for Monk or other specs that don't use them.

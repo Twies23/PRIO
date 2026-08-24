@@ -182,6 +182,32 @@ local function ChargeCount(sid)
     return Engine:EffectiveCharges(sid)
 end
 
+-- Talent-adjusted Energy cost from a spec entry ({cost,...} probe or {base,...} spender).
+local function EnergyCostOf(entry)
+    if not entry then return nil end
+    local cost = entry.base or entry.cost or 0
+    if entry.reduce then
+        for tid, amt in pairs(entry.reduce) do if API.IsKnown(tid) then cost = cost - amt end end
+    end
+    return cost
+end
+
+-- CHECKPOINT estimate of current Energy: the highest cost among energy-gated probe
+-- abilities that are currently USABLE (clean flag) -- "usable" means Energy >= that
+-- cost, so the max gives a safe floor. nil when the spec has no model / nothing clean.
+function Engine:EnergyFloor()
+    local m = spec and spec.energyModel
+    if not (m and m.probes) then return nil end
+    local floor
+    for _, p in ipairs(m.probes) do
+        if API.UsableClean(p.spell) == true then
+            local cost = EnergyCostOf(p)
+            if cost and (not floor or cost > floor) then floor = cost end
+        end
+    end
+    return floor
+end
+
 -- Remaining seconds on a buff, for "buff remaining <= / >= N" conditions. Prefers the
 -- CLEAN expirationTime read (out of combat); in combat that's secret, so falls back to
 -- the cast-seeded predicted timer (spec.auraDurations). nil = not up / unknown.
@@ -762,6 +788,14 @@ local function ResourceCost(key, sid, S)
     return API.PowerCostAmount(sid)
 end
 
+-- Spend an Energy spender's cost from the look-ahead floor (no regen -- conservative).
+local function ApplyEnergy(sim, key)
+    if sim.energy == nil then return end
+    local em = spec and spec.energyModel and spec.energyModel.costs and spec.energyModel.costs[key]
+    local cost = EnergyCostOf(em)
+    if cost then sim.energy = math.max(0, sim.energy - cost) end
+end
+
 local function ApplyResourceDelta(sim, key, sid, S)
     if not (spec and spec.ResourceDelta and sim.resource ~= nil) then return end
     S.maelstrom = sim.resource
@@ -847,6 +881,7 @@ function Engine:Evaluate()
     local realMote, realSk = S.mote, S.skStacks   -- for the debug window (S is mutated below)
     local sim = {
         aura = {}, mote = S.mote, sk = S.skStacks, resource = S.maelstrom,
+        energy = self:EnergyFloor(),   -- checkpoint floor; spent (no regen) as we pick
         lastCastKey = S.lastCastKey, lastCastID = S.lastCastID,
     }
     S._sim = sim.aura
@@ -859,6 +894,7 @@ function Engine:Evaluate()
         if castKey and castSid then
             ApplyEffects(sim, castKey)
             ApplyResourceDelta(sim, castKey, castSid, S)
+            ApplyEnergy(sim, castKey)
             sim.lastCastKey, sim.lastCastID = castKey, castSid
             local rep, maxC = Repeatable(castSid)
             if maxC then
@@ -869,24 +905,25 @@ function Engine:Evaluate()
         end
     end
 
-    -- Test one list row as a candidate at a given RELAX level. relax 0 is the strict
-    -- pass (unchanged behaviour). Higher levels progressively drop soft gates so the
-    -- queue never goes blank: 1 = ignore Combo Strikes (allow repeating last cast),
-    -- 2 = also ignore the row's condition. Hard gates (known, charges, dup, cooldown,
-    -- usable, resource affordability) are ALWAYS enforced -- we never suggest a button
-    -- that can't actually be pressed.
-    local function tryCandidate(i, relax)
+    -- Test one list row as a candidate. STRICT only -- every gate (known, charges, dup,
+    -- Combo Strikes, cooldown, usable, Chi/Energy affordability, and the row's own
+    -- condition) is enforced. There is no "relax" pass: a well-formed list is meant to be
+    -- self-sustaining because the look-ahead carries all state forward (Chi/Energy spent
+    -- and generated, buffs consumed/granted, charges/cooldowns used, last cast), so a
+    -- lower-priority row becomes valid for the next slot. If the walk ever finds nothing,
+    -- that's a context-propagation gap to fix -- not something to paper over by casting
+    -- an ability whose condition is false or that breaks Combo Strikes.
+    local function tryCandidate(i)
         local e   = list[i]
         local sid = self:EntrySpellID(e)
         if not (sid and not e.off and API.IsKnown(sid)) then return nil end
         local rep, maxC = Repeatable(sid)
         if maxC and (usedCharges[sid] or 0) >= maxC then return nil end   -- charges spent
         if usedSpell[sid] and not rep and not maxC then return nil end    -- single-use, already picked
-        -- Combo Strikes (Windwalker mastery): never cast the same ability twice in a
-        -- row -- soft gate, relaxed only as a last resort.
-        local comboBlocked = spec.comboStrikes and sim.lastCastKey
-                             and idToKey[sid] == sim.lastCastKey
-        if comboBlocked and relax < 1 then return nil end
+        -- Combo Strikes (Windwalker mastery): never cast the same ability twice in a row.
+        if spec.comboStrikes and sim.lastCastKey and idToKey[sid] == sim.lastCastKey then
+            return nil
+        end
 
         local ready = e.ignoreCD or API.IsReady(sid)
         -- Primary-resource (Chi) gate, only when readable (secret combat fails open).
@@ -894,16 +931,17 @@ function Engine:Evaluate()
             local cost = ResourceCost(idToKey[sid], sid, S)
             if cost and S.maelstrom < cost then ready = false end
         end
-        -- Insufficient-power gate: the Energy bar is secret, but IsSpellUsable's
-        -- "insufficient power" flag reads clean in combat -- so skip an energy spender
-        -- (Tiger Palm) the player literally can't afford right now. Clean-only: a secret
-        -- flag fails open. Live read: exact for the primary; a fine approximation for the
-        -- near queue (energy barely moves in 1-2 GCDs, and Combo Strikes/relax still fill).
-        if ready and API.InsufficientPower and API.InsufficientPower(sid) == true then
-            ready = false
+        -- Energy checkpoint gate: the bar is secret, but sim.energy is a floor inferred
+        -- from which abilities are usable, spent as we pick. Skip an Energy spender we
+        -- can't afford. At slot 1 this equals the live usable flag; in the queue it stops
+        -- a second Tiger Palm the first one's spend put out of reach.
+        if ready and sim.energy ~= nil then
+            local em = spec.energyModel and spec.energyModel.costs and spec.energyModel.costs[idToKey[sid]]
+            local ecost = EnergyCostOf(em)
+            if ecost and sim.energy < ecost then ready = false end
         end
         if not (ready and API.IsUsable(sid)) then return nil end          -- hard: castable now
-        if relax < 2 and not PRIO.Cond.Eval(e.cond, S, sid) then return nil end
+        if not PRIO.Cond.Eval(e.cond, S, sid) then return nil end
         return { sid = sid, i = i, rep = rep, maxC = maxC }
     end
 
@@ -914,14 +952,11 @@ function Engine:Evaluate()
         S.lastCastKey = sim.lastCastKey
         S.lastCastID  = sim.lastCastID
         local pick
-        for relax = 0, 2 do                     -- strict, then progressively relaxed
-            for i = 1, #list do
-                if not usedRow[i] then
-                    pick = tryCandidate(i, relax)
-                    if pick then break end
-                end
+        for i = 1, #list do
+            if not usedRow[i] then
+                pick = tryCandidate(i)
+                if pick then break end
             end
-            if pick then break end
         end
         if not pick then break end
         picks[slot] = Entry(pick.sid)
@@ -931,6 +966,7 @@ function Engine:Evaluate()
         picks[slot].flash = fcond and PRIO.Cond.Eval(fcond, S, pick.sid) or false
         ApplyEffects(sim, fkey)                             -- advance the look-ahead
         ApplyResourceDelta(sim, fkey, pick.sid, S)
+        ApplyEnergy(sim, fkey)                              -- spend the Energy floor
         sim.lastCastKey, sim.lastCastID = fkey, pick.sid    -- "this slot cast" for the next
         if pick.maxC then                                   -- charge spell
             usedCharges[pick.sid] = (usedCharges[pick.sid] or 0) + 1

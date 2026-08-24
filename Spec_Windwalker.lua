@@ -42,6 +42,7 @@ local ID_INVOKEXUEN  = 123904   -- Invoke Xuen (burst-window gate)
 local ID_TOUCHOFDEATH = 322109  -- Touch of Death (execute availability via Cooldown Viewer)
 local ID_SLICINGWINDS = 1217413 -- Slicing Winds (talent)
 local ID_DRINKINGHORN = 391370  -- Drinking Horn Cover (talent: Zenith lasts +5s)
+local ID_INNERPEACE   = 397768  -- Inner Peace (talent: Tiger Palm energy cost -5)
 
 -- Condition builders -----------------------------------------------------------
 local function buffUp(id)   return { type = "buffActive",  spell = id } end
@@ -220,8 +221,26 @@ local spec = {
     specID   = 269,
     resource = CHI,
     resourceLabel = "Chi",
-    -- Tiger Palm costs Energy (secret bar), but the engine gates it on the clean
-    -- "insufficient power" flag from IsSpellUsable -- no Energy model needed.
+    -- ENERGY (secret bar) -- CHECKPOINT model. We can't read Energy, but an ability's
+    -- clean "usable" flag flips on at its Energy cost, so "X is usable" => Energy >= X's
+    -- cost. The highest such cost among currently-usable probes is a safe FLOOR on our
+    -- Energy. The look-ahead seeds from that floor and subtracts each spender's cost (no
+    -- regen assumed -- conservative), so it won't queue a Tiger Palm you can't afford.
+    -- Costs shift with talents (Inner Peace cuts Tiger Palm by 5). Vivify is deliberately
+    -- NOT a probe: Vivacious Vivification makes its cost/instant state vary.
+    energyModel = {
+        probes = {
+            { spell = 100780,  cost = 60, reduce = { [ID_INNERPEACE] = 5 } }, -- Tiger Palm
+            { spell = 117952,  cost = 20 },  -- Crackling Jade Lightning
+            { spell = 115078,  cost = 20 },  -- Paralysis
+            { spell = 218164,  cost = 10 },  -- Detox
+        },
+        -- Look-ahead spend: Tiger Palm is the only Energy spender in the rotation
+        -- (everything else costs Chi).
+        costs = {
+            TigerPalm = { base = 60, reduce = { [ID_INNERPEACE] = 5 } },
+        },
+    },
 
     -- Zenith's buff duration is SECRET in combat, but it's a fixed window: 15s base,
     -- +5s with Drinking Horn Cover. We seed a predicted timer when Zenith is cast and
@@ -345,6 +364,7 @@ local spec = {
         { label = "Touch of Death", kind = "buff", spell = ID_TOUCHOFDEATH },
         { label = "Zenith charges", kind = "chargeClean", spell = ID_ZENITH },
         { label = "Zenith time left", kind = "auraRemain", spell = ID_ZENITH },
+        { label = "Energy (est.)", kind = "energyFloor" },
         { label = "Tiger Palm usable", kind = "usableProbe", spell = 100780 },
         { label = "Fists of Fury",  kind = "cd",   spell = 113656 },
     },

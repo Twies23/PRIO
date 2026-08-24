@@ -265,6 +265,15 @@ function Debug:Update()
                 else
                     set(id, "|cff5a6a76not up|r")
                 end
+            elseif d.kind == "energyFloor" then
+                -- Checkpoint Energy estimate: floor inferred from which probe abilities
+                -- are usable (usable => Energy >= that cost). The queue's Energy gate.
+                local f = PRIO.Engine and PRIO.Engine.EnergyFloor and PRIO.Engine:EnergyFloor()
+                if f then
+                    set(id, ("|cff0cd29f\226\137\165 %d|r  |cff5a6a76(checkpoint)|r"):format(f))
+                else
+                    set(id, "|cff5a6a76< 10 / unknown|r")
+                end
             elseif d.kind == "usableProbe" then
                 -- Diagnostic: is "insufficient power" readable? (Energy is secret; this
                 -- tells us whether the usability flag still exposes castability.)
