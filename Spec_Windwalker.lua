@@ -41,6 +41,7 @@ local ID_CELESTIAL   = 443028   -- Celestial Conduit (Conduit hero signature)
 local ID_INVOKEXUEN  = 123904   -- Invoke Xuen (burst-window gate)
 local ID_TOUCHOFDEATH = 322109  -- Touch of Death (execute availability via Cooldown Viewer)
 local ID_SLICINGWINDS = 1217413 -- Slicing Winds (talent)
+local ID_DRINKINGHORN = 391370  -- Drinking Horn Cover (talent: Zenith lasts +5s)
 
 -- Condition builders -----------------------------------------------------------
 local function buffUp(id)   return { type = "buffActive",  spell = id } end
@@ -221,6 +222,14 @@ local spec = {
     resourceLabel = "Chi",
     -- Tiger Palm costs Energy (secret bar), but the engine gates it on the clean
     -- "insufficient power" flag from IsSpellUsable -- no Energy model needed.
+
+    -- Zenith's buff duration is SECRET in combat, but it's a fixed window: 15s base,
+    -- +5s with Drinking Horn Cover. We seed a predicted timer when Zenith is cast and
+    -- count it down, so a "Zenith remaining <= N" condition can gate the spend-before-it-
+    -- ends lines. Keyed by cast key; `spell` is the buff whose remaining it drives.
+    auraDurations = {
+        Zenith = { spell = ID_ZENITH, base = 15, extend = { [ID_DRINKINGHORN] = 5 } },
+    },
     cleaveAt = 2,   -- Shado-Pan uses the AoE priority for cleave as well
     aoeAt    = 3,
     comboStrikes = true,   -- mastery: engine never queues the same ability twice in a row
@@ -335,6 +344,7 @@ local spec = {
         { label = "Rushing Wind Kick", kind = "buff", spell = ID_RUSHINGWIND },
         { label = "Touch of Death", kind = "buff", spell = ID_TOUCHOFDEATH },
         { label = "Zenith charges", kind = "chargeClean", spell = ID_ZENITH },
+        { label = "Zenith time left", kind = "auraRemain", spell = ID_ZENITH },
         { label = "Tiger Palm usable", kind = "usableProbe", spell = 100780 },
         { label = "Fists of Fury",  kind = "cd",   spell = 113656 },
     },

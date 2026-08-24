@@ -255,6 +255,16 @@ function Debug:Update()
                         set(id, ("|cffe0a03a? / %d|r  |cff5a6a76(recharging)|r%s"):format(maxC, tail))
                     end
                 end
+            elseif d.kind == "auraRemain" then
+                -- Predicted buff time-left (Zenith): clean expirationTime out of combat,
+                -- cast-seeded timer in combat. What a "Buff time left <=" condition uses.
+                local r = PRIO.Engine and PRIO.Engine.AuraRemaining
+                    and PRIO.Engine:AuraRemaining(d.spell)
+                if r and r > 0 then
+                    set(id, ("|cff0cd29f%.1fs|r  |cff5a6a76left|r"):format(r))
+                else
+                    set(id, "|cff5a6a76not up|r")
+                end
             elseif d.kind == "usableProbe" then
                 -- Diagnostic: is "insufficient power" readable? (Energy is secret; this
                 -- tells us whether the usability flag still exposes castability.)

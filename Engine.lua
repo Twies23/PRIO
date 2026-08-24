@@ -51,6 +51,8 @@ Cond.types = {
     { value = "stacksMax",   text = "Buff stacks \226\137\164", needsSpell = true, needsValue = true, min = 0, max = 10, def = 1 },
     { value = "chargesMin",  text = "Charges \226\137\165", needsValue = true, min = 1, max = 5, def = 2 },
     { value = "chargesMax",  text = "Charges \226\137\164", needsValue = true, min = 0, max = 5, def = 1 },
+    { value = "auraRemainMin", text = "Buff time left \226\137\165", needsSpell = true, needsValue = true, min = 0, max = 30, def = 3 },
+    { value = "auraRemainMax", text = "Buff time left \226\137\164", needsSpell = true, needsValue = true, min = 0, max = 30, def = 3 },
     { value = "resourceMin", text = "Resource \226\137\165", needsValue = true, min = 0, max = 12, def = 2 },
     { value = "resourceMax", text = "Resource \226\137\164", needsValue = true, min = 0, max = 12, def = 2 },
     { value = "usable",      text = "Usable",       needsSpell = true },
@@ -83,6 +85,8 @@ function Cond.ClauseLabel(cl, selfSid)
     elseif t == "stacksMax" then return name .. " \226\137\164 " .. (cl.v or 1) .. " stk"
     elseif t == "chargesMin" then return name .. " \226\137\165 " .. (cl.v or 1) .. " chg"
     elseif t == "chargesMax" then return name .. " \226\137\164 " .. (cl.v or 1) .. " chg"
+    elseif t == "auraRemainMin" then return name .. " \226\137\165 " .. (cl.v or 0) .. "s left"
+    elseif t == "auraRemainMax" then return name .. " \226\137\164 " .. (cl.v or 0) .. "s left"
     elseif t == "resourceMin" then return (spec and spec.resourceLabel or "resource") .. " \226\137\165 " .. (cl.v or 0)
     elseif t == "resourceMax" then return (spec and spec.resourceLabel or "resource") .. " \226\137\164 " .. (cl.v or 0)
     elseif t == "usable" then return name .. " usable"
@@ -164,6 +168,20 @@ local function ChargeCount(sid)
     return Engine:EffectiveCharges(sid)
 end
 
+-- Remaining seconds on a buff, for "buff remaining <= / >= N" conditions. Prefers the
+-- CLEAN expirationTime read (out of combat); in combat that's secret, so falls back to
+-- the cast-seeded predicted timer (spec.auraDurations). nil = not up / unknown.
+function Engine:AuraRemaining(sid)
+    local r = API.AuraRemaining and API.AuraRemaining(sid)
+    if r ~= nil then return r end
+    local e = self.P and self.P.auraExpire and self.P.auraExpire[sid]
+    if e then
+        local rem = e - GetTime()
+        if rem > 0 then return rem end
+    end
+    return nil
+end
+
 -- Was this aura just applied by our own cast (short assume window)? Covers the tick
 -- or two before the Cooldown Viewer read catches up.
 local function Assumed(sid, S)
@@ -204,6 +222,10 @@ local function EvalClause(cl, S, selfSid)
     elseif t == "stacksMax" then return (API.AuraStackCount(sid) or 0) <= (cl.v or 1)
     elseif t == "chargesMin" then return (ChargeCount(sid) or 0) >= (cl.v or 1)
     elseif t == "chargesMax" then return (ChargeCount(sid) or 0) <= (cl.v or 1)
+    -- Buff time-left (Zenith ending): predicted from the cast, since remaining is secret
+    -- in combat. nil (buff not up / unknown) -> the threshold is not met.
+    elseif t == "auraRemainMin" then local r = Engine:AuraRemaining(sid); return r ~= nil and r >= (cl.v or 0)
+    elseif t == "auraRemainMax" then local r = Engine:AuraRemaining(sid); return r ~= nil and r <= (cl.v or 0)
     -- Resource threshold on the spec's own power (Chi/Holy Power/... read clean;
     -- secret bars use the predicted value). S.maelstrom is the spec resource amount.
     elseif t == "resourceMin" then return (S.maelstrom or 0) >= (cl.v or 0)
@@ -260,6 +282,10 @@ function Cond.ClauseStatus(cl, S, selfSid)
         local c = ChargeCount(sid); if c == nil then return "open" end
         local ok = (t == "chargesMin") and (c >= (cl.v or 1)) or (c <= (cl.v or 1))
         return ok and "pass" or "fail"
+    elseif t == "auraRemainMin" or t == "auraRemainMax" then
+        local r = Engine:AuraRemaining(sid); if r == nil then return "fail" end
+        local ok = (t == "auraRemainMin") and (r >= (cl.v or 0)) or (r <= (cl.v or 0))
+        return ok and "pass" or "fail"
     elseif t == "resourceMin" or t == "resourceMax" then
         local v = S and S.maelstrom; if v == nil then return "open" end
         local ok = (t == "resourceMin") and (v >= (cl.v or 0)) or (v <= (cl.v or 0))
@@ -288,7 +314,7 @@ function Engine:OnSpecChanged()
     local id = API.GetSpecID()
     spec = id and PRIO.specs and PRIO.specs[id] or nil
     wipe(idToKey)
-    self.P = { fsExpire = 0, mote = false, skStacks = 0, maelstrom = 0, charges = {}, assumeActive = {} }
+    self.P = { fsExpire = 0, mote = false, skStacks = 0, maelstrom = 0, charges = {}, assumeActive = {}, auraExpire = {} }
     if not spec then return end
     if spec.chargeTrack then
         for key, cfg in pairs(spec.chargeTrack) do
@@ -447,6 +473,19 @@ PRIO:On("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
     if spec.OnCast then
         pcall(spec.OnCast, Engine.P, key, GetTime())
     end
+    -- Seed a predicted buff-duration timer (Zenith): fixed window, secret in combat, so
+    -- we time it from the cast. Duration = base + any talented extensions that are known.
+    local ad = spec.auraDurations and spec.auraDurations[key]
+    if ad then
+        local dur = ad.base or 0
+        if ad.extend then
+            for tid, sec in pairs(ad.extend) do
+                if API.IsKnown(tid) or API.IsTalentSelected(tid) then dur = dur + sec end
+            end
+        end
+        Engine.P.auraExpire = Engine.P.auraExpire or {}
+        Engine.P.auraExpire[ad.spell or spellID] = GetTime() + dur
+    end
     -- Assume a just-applied aura is up briefly, since the Cooldown Viewer read can lag
     -- a tick or two after you apply it (e.g. Flame Shock via Voltaic Blaze). The short
     -- window means a genuine immune/miss corrects itself once it expires.
@@ -463,7 +502,7 @@ PRIO:On("PLAYER_REGEN_ENABLED", function()
     -- Combat ended: clear volatile procs; Maelstrom and charges keep syncing from
     -- the real values now that they're readable again.
     local P = Engine.P
-    if P then P.fsExpire = 0; P.mote = false; P.skStacks = 0 end
+    if P then P.fsExpire = 0; P.mote = false; P.skStacks = 0; if P.auraExpire then wipe(P.auraExpire) end end
     Engine.openerActive = false
 end)
 

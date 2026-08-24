@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.23 (alpha)
+- **New condition: "Buff time left ≥ / ≤ N seconds"** — for gating on a buff window winding down. Buff durations are secret in combat, so for Windwalker's Zenith it's timed from the cast (15s, +5s with Drinking Horn Cover) and counted down. This makes a real "spend before Zenith ends" rule possible instead of the old buff-presence approximation. Debug shows a live "Zenith time left".
+
+
 ## 0.2.22 (alpha)
 - **Cleanup.** Removed the dead Energy look-ahead model (Energy is secret; the clean "insufficient power" flag does the job) and the abandoned Cooldown-Manager charge-scraping code, and dropped the redundant "Energy" Debug row. No behavior change — the Tiger Palm Energy gate and Zenith charge tracking both stay.
 

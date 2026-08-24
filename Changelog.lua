@@ -11,6 +11,10 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.23", {
+        "New condition: \"Buff time left >= / <= N sec\". Zenith's window is timed from the cast (15s, +5s Drinking Horn Cover).",
+        "Enables a real \"spend before Zenith ends\" rule; Debug shows live Zenith time left.",
+    } },
     { "0.2.22", {
         "Cleanup: removed the dead Energy model + charge-scraping code and the redundant Energy Debug row (no behavior change).",
     } },
