@@ -11,6 +11,12 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.17", {
+        "Priority list keeps its scroll position when you add / move / remove a row.",
+        "Windwalker: Tiger Palm isn't recommended when you can't afford its Energy (Energy now modeled).",
+        "The queue never runs out early -- it always fills Now + Next with a castable ability.",
+        "Debug: added live Energy + Zenith charges; fixed the Economy section overlapping.",
+    } },
     { "0.2.16", {
         "\"Charges >=\" is now a number picker (counts the line's own ability), not an ability picker.",
         "Fixed conditions needing both a spell and a number (e.g. Buff stacks >=) -- both controls now show.",

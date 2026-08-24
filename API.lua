@@ -197,6 +197,23 @@ function API.PowerCostAmount(spellID)
     return nil
 end
 
+-- Cost of a SPECIFIC power type (e.g. Energy) for a spell, or 0. Static cost data,
+-- not secret. Used to gate a secondary-resource spender (Tiger Palm's Energy) that
+-- the spec's primary-resource (Chi) model doesn't cover.
+function API.PowerCostOfType(spellID, powerType)
+    if not (spellID and powerType and C_Spell and C_Spell.GetSpellPowerCost) then return 0 end
+    local ok, costs = pcall(C_Spell.GetSpellPowerCost, spellID)
+    if ok and type(costs) == "table" then
+        for _, c in ipairs(costs) do
+            if c and c.type == powerType then
+                local cost = SafeNum(c.cost)
+                if cost and cost > 0 then return cost end
+            end
+        end
+    end
+    return 0
+end
+
 -- For a CHARGE spell, returns maxCharges (>=1, static/readable) and currentCharges
 -- (may be nil/secret). For a non-charge spell, GetSpellCharges returns nil, so we
 -- return nil -- callers use that to tell "charge-limited" from "spammable filler".

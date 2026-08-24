@@ -219,6 +219,12 @@ local spec = {
     specID   = 269,
     resource = CHI,
     resourceLabel = "Chi",
+    -- Secondary resource: Tiger Palm costs Energy (Chi is the primary/tracked bar).
+    -- The engine reads it cleanly from the player's own power and won't recommend an
+    -- Energy spender you can't afford. energyRegen ~= one GCD of base regen (seed;
+    -- conservative so the look-ahead doesn't assume a second Tiger Palm too early).
+    energyPower = (Enum and Enum.PowerType and Enum.PowerType.Energy) or 3,
+    energyRegen = 12,
     cleaveAt = 2,   -- Shado-Pan uses the AoE priority for cleave as well
     aoeAt    = 3,
     comboStrikes = true,   -- mastery: engine never queues the same ability twice in a row
@@ -323,6 +329,7 @@ local spec = {
         { label = "Dance of Chi-Ji", kind = "buff", spell = ID_DANCECHIJI },
         { label = "Rushing Wind Kick", kind = "buff", spell = ID_RUSHINGWIND },
         { label = "Touch of Death", kind = "buff", spell = ID_TOUCHOFDEATH },
+        { label = "Zenith charges", kind = "chargesLive", spell = ID_ZENITH },
         { label = "Fists of Fury",  kind = "cd",   spell = 113656 },
     },
     economy = {

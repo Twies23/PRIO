@@ -560,6 +560,10 @@ local function BuildState(self, mode, enemies)
     local realMax = spec.resource and API.PowerMax(spec.resource) or nil
     if realMax ~= nil then P.maelstromMax = realMax end
 
+    -- Secondary resource (Windwalker Energy). Read cleanly from the player's own power;
+    -- nil when the spec declares none or the value is secret (-> gate fails open).
+    local realEnergy = spec.energyPower and API.Power(spec.energyPower) or nil
+
     -- Expire a predicted MotE that was granted but never consumed.
     if P.mote and P.moteExpire and now >= P.moteExpire then P.mote = false end
 
@@ -581,6 +585,9 @@ local function BuildState(self, mode, enemies)
         maelstrom = P.maelstrom or 0,                  -- predicted (synced when readable)
         maelstromMax = P.maelstromMax or (spec and spec.maelstromMax) or 0,
         maelstromReadable = realMs ~= nil,
+        energy    = realEnergy,                         -- secondary resource (nil if none/secret)
+        energyMax = spec.energyPower and API.PowerMax(spec.energyPower) or nil,
+        energyReadable = realEnergy ~= nil,
         mote      = P.mote and true or false,
         skStacks  = P.skStacks or 0,
         fsActive  = fsActive,                          -- true/false/nil (real read)
@@ -696,6 +703,17 @@ local function ResourceCost(key, sid, S)
     return API.PowerCostAmount(sid)
 end
 
+-- Advance the secondary-resource (Energy) look-ahead one pick: spend this cast's
+-- energy cost, then add ~one GCD of regen (seeded; conservative). No-op unless the
+-- spec declares energyPower and the value was readable. Keeps the queue from
+-- recommending an energy spender (Tiger Palm) the player can't afford.
+local function ApplyEnergy(sim, sid)
+    if not (spec and spec.energyPower and sim.energy ~= nil) then return end
+    local cost = API.PowerCostOfType(sid, spec.energyPower)
+    local cap  = sim.energyMax or 100
+    sim.energy = math.max(0, math.min(cap, sim.energy - cost + (spec.energyRegen or 0)))
+end
+
 local function ApplyResourceDelta(sim, key, sid, S)
     if not (spec and spec.ResourceDelta and sim.resource ~= nil) then return end
     S.maelstrom = sim.resource
@@ -781,6 +799,7 @@ function Engine:Evaluate()
     local realMote, realSk = S.mote, S.skStacks   -- for the debug window (S is mutated below)
     local sim = {
         aura = {}, mote = S.mote, sk = S.skStacks, resource = S.maelstrom,
+        energy = S.energy, energyMax = S.energyMax,
         lastCastKey = S.lastCastKey, lastCastID = S.lastCastID,
     }
     S._sim = sim.aura
@@ -793,6 +812,7 @@ function Engine:Evaluate()
         if castKey and castSid then
             ApplyEffects(sim, castKey)
             ApplyResourceDelta(sim, castKey, castSid, S)
+            ApplyEnergy(sim, castSid)
             sim.lastCastKey, sim.lastCastID = castKey, castSid
             local rep, maxC = Repeatable(castSid)
             if maxC then
@@ -803,6 +823,42 @@ function Engine:Evaluate()
         end
     end
 
+    -- Test one list row as a candidate at a given RELAX level. relax 0 is the strict
+    -- pass (unchanged behaviour). Higher levels progressively drop soft gates so the
+    -- queue never goes blank: 1 = ignore Combo Strikes (allow repeating last cast),
+    -- 2 = also ignore the row's condition. Hard gates (known, charges, dup, cooldown,
+    -- usable, resource affordability) are ALWAYS enforced -- we never suggest a button
+    -- that can't actually be pressed.
+    local function tryCandidate(i, relax)
+        local e   = list[i]
+        local sid = self:EntrySpellID(e)
+        if not (sid and not e.off and API.IsKnown(sid)) then return nil end
+        local rep, maxC = Repeatable(sid)
+        if maxC and (usedCharges[sid] or 0) >= maxC then return nil end   -- charges spent
+        if usedSpell[sid] and not rep and not maxC then return nil end    -- single-use, already picked
+        -- Combo Strikes (Windwalker mastery): never cast the same ability twice in a
+        -- row -- soft gate, relaxed only as a last resort.
+        local comboBlocked = spec.comboStrikes and sim.lastCastKey
+                             and idToKey[sid] == sim.lastCastKey
+        if comboBlocked and relax < 1 then return nil end
+
+        local ready = e.ignoreCD or API.IsReady(sid)
+        -- Primary-resource (Chi) gate, only when readable (secret combat fails open).
+        if ready and S.maelstromReadable and (API.HasPowerCost(sid) or spec.ResourceCost) then
+            local cost = ResourceCost(idToKey[sid], sid, S)
+            if cost and S.maelstrom < cost then ready = false end
+        end
+        -- Secondary-resource (Energy) gate: skip an energy spender (Tiger Palm) the
+        -- player can't afford. Secret-safe -- only applies when Energy is readable.
+        if ready and spec.energyPower and S.energyReadable and sim.energy ~= nil then
+            local ecost = API.PowerCostOfType(sid, spec.energyPower)
+            if ecost > 0 and sim.energy < ecost then ready = false end
+        end
+        if not (ready and API.IsUsable(sid)) then return nil end          -- hard: castable now
+        if relax < 2 and not PRIO.Cond.Eval(e.cond, S, sid) then return nil end
+        return { sid = sid, i = i, rep = rep, maxC = maxC }
+    end
+
     for slot = 1, want do
         S.mote        = sim.mote and true or false
         S.skStacks    = sim.sk or 0
@@ -810,37 +866,14 @@ function Engine:Evaluate()
         S.lastCastKey = sim.lastCastKey
         S.lastCastID  = sim.lastCastID
         local pick
-        for i = 1, #list do
-            if not usedRow[i] then
-                local e   = list[i]
-                local sid = self:EntrySpellID(e)
-                if sid and not e.off and API.IsKnown(sid) then
-                    local rep, maxC = Repeatable(sid)
-                    local chargeOK = not (maxC and (usedCharges[sid] or 0) >= maxC)
-                    -- A single-use spell listed in multiple rows (like SimC's
-                    -- repeated earthquake/elemental_blast lines) fires only once.
-                    local dupBlocked = usedSpell[sid] and not rep and not maxC
-                    -- Combo Strikes (Windwalker mastery): never cast the same ability
-                    -- twice in a row -- skip a candidate equal to the previous cast.
-                    -- The safety net below still prevents ever going blank.
-                    local comboBlocked = spec.comboStrikes and sim.lastCastKey
-                                         and idToKey[sid] == sim.lastCastKey
-                    if chargeOK and not dupBlocked and not comboBlocked then
-                        local ready = e.ignoreCD or API.IsReady(sid)
-                        -- Spender gate ONLY when Maelstrom is readable (out of combat).
-                        -- In secret combat we can't trust the value, so never let it
-                        -- freeze a spender -- fail open and let it fire.
-                        if ready and S.maelstromReadable and (API.HasPowerCost(sid) or spec.ResourceCost) then
-                            local cost = ResourceCost(idToKey[sid], sid, S)
-                            if cost and S.maelstrom < cost then ready = false end
-                        end
-                        if ready and API.IsUsable(sid) and PRIO.Cond.Eval(e.cond, S, sid) then
-                            pick = { sid = sid, i = i, rep = rep, maxC = maxC }
-                            break
-                        end
-                    end
+        for relax = 0, 2 do                     -- strict, then progressively relaxed
+            for i = 1, #list do
+                if not usedRow[i] then
+                    pick = tryCandidate(i, relax)
+                    if pick then break end
                 end
             end
+            if pick then break end
         end
         if not pick then break end
         picks[slot] = Entry(pick.sid)
@@ -850,6 +883,7 @@ function Engine:Evaluate()
         picks[slot].flash = fcond and PRIO.Cond.Eval(fcond, S, pick.sid) or false
         ApplyEffects(sim, fkey)                             -- advance the look-ahead
         ApplyResourceDelta(sim, fkey, pick.sid, S)
+        ApplyEnergy(sim, pick.sid)                          -- spend + regen the Energy sim
         sim.lastCastKey, sim.lastCastID = fkey, pick.sid    -- "this slot cast" for the next
         if pick.maxC then                                   -- charge spell
             usedCharges[pick.sid] = (usedCharges[pick.sid] or 0) + 1

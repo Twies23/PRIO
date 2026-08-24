@@ -1,5 +1,12 @@
 # PRIO Changelog
 
+## 0.2.17 (alpha)
+- **The priority list no longer jumps to the top when you add, move, or remove a row.** It keeps your scroll position.
+- **Windwalker: Tiger Palm won't be recommended when you can't afford its Energy.** The engine now reads your Energy and predicts it across the look-ahead queue, so it stops suggesting an Energy spender you can't cast and recommends a button you can.
+- **The queue no longer runs out early.** If the strict priority can't fill a slot, PRIO relaxes soft rules (Combo Strikes, then the row's condition) but still only ever suggests a castable ability — so you always get a full Now + Next set.
+- **Debug window: added live Energy and Zenith charges** (the values the new gates read), and **fixed the Economy section overlapping** the rows below it.
+
+
 ## 0.2.16 (alpha)
 - **"Charges ≥ / ≤" is now a number picker, not an ability picker.** It counts the charges of the line's own ability, so you just set the number (e.g. Zenith → Charges ≥ 2).
 - **Fixed conditions that need both a spell and a number** (e.g. "Buff stacks ≥ N"): the editor now shows both the buff picker and the number stepper. Previously only the buff picker appeared and the number couldn't be set.

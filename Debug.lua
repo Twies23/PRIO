@@ -38,6 +38,15 @@ local function acquire(kind, parent)
         f.line:SetPoint("LEFT", f.text, "RIGHT", 8, 0)
         f.line:SetPoint("RIGHT", f, "RIGHT", 0, 0)
         f.line:SetPoint("TOP", f.text, "CENTER", 0, 0); f.line:SetHeight(1)
+    elseif kind == "wide" then
+        -- Full-width label + wrapping value beneath it, for long list text (the
+        -- Economy generators/spenders) that would otherwise wrap into the next row.
+        f = CreateFrame("Frame", nil, parent)
+        f:SetSize(258, 40)
+        f.label = UI.Font(f, 12, C.muted); f.label:SetPoint("TOPLEFT", 0, 0)
+        f.value = UI.Font(f, 11.5, C.faint)
+        f.value:SetPoint("TOPLEFT", 0, -16); f.value:SetWidth(250)
+        f.value:SetJustifyH("LEFT"); f.value:SetWordWrap(true)
     else -- "row"
         f = CreateFrame("Frame", nil, parent)
         f:SetSize(258, 22)
@@ -75,6 +84,17 @@ function Debug:Rebuild(spec)
         rows[id] = r.value
         y = y + 24
     end
+    -- Full-width wrapping block (static text set at build time), self-sizing so it
+    -- never overlaps the following row.
+    local function wide(id, label, text)
+        local r = acquire("wide", body)
+        r:ClearAllPoints(); r:SetPoint("TOPLEFT", 20, -y)
+        r.label:SetText(label)
+        r.value:SetText(text or "")
+        local h = 18 + math.max(14, r.value:GetStringHeight() + 4)
+        r:SetHeight(h)
+        y = y + h + 6
+    end
 
     head("Context")
     row("spec", "Spec", "read")
@@ -86,6 +106,7 @@ function Debug:Rebuild(spec)
     row("enemies", "Enemies", "read")
     row("plates", "Nameplates", "read")
     row("resource", (spec and spec.resourceLabel) or "Resource", "read")
+    if spec and spec.energyPower then row("energy", "Energy", "read") end
     row("casting", "Casting", "read")
 
     if spec and spec.debug and #spec.debug > 0 then
@@ -97,8 +118,8 @@ function Debug:Rebuild(spec)
 
     if spec and spec.economy then
         head("Economy")
-        row("gen", "Generators", "read")
-        row("spend", "Spenders", "read")
+        wide("gen", "Generators", "|cff9fb0be" .. table.concat(spec.economy.gen or {}, ", ") .. "|r")
+        wide("spend", "Spenders", "|cff9fb0be" .. table.concat(spec.economy.spend or {}, ", ") .. "|r")
     end
 
     head("Output")
@@ -188,6 +209,17 @@ function Debug:Update()
         set("resource", "|cffe0a03asecret/nil|r")
     end
 
+    -- Secondary resource (Energy): the value the queue's energy gate reads.
+    if spec and spec.energyPower and rows["energy"] then
+        local e  = API.Power(spec.energyPower)
+        local em = API.PowerMax(spec.energyPower)
+        if e ~= nil then
+            set("energy", ("|cff0cd29f%d|r%s  |cff5a6a76(read)|r"):format(e, em and (" / " .. em) or ""))
+        else
+            set("energy", "|cffe0a03asecret/nil|r  |cff5a6a76(gate off)|r")
+        end
+    end
+
     -- Live cast detection (drives the advance-while-casting behavior).
     local ck, csid, cname = nil, nil, nil
     if PRIO.Engine and PRIO.Engine.InFlightCast then ck, csid, cname = PRIO.Engine:InFlightCast() end
@@ -215,6 +247,15 @@ function Debug:Update()
                 local cc = P.charges and P.charges[d.key]
                 local maxC = spec.chargeTrack and spec.chargeTrack[d.key] and spec.chargeTrack[d.key].max
                 set(id, cc and (tostring(cc.cur) .. " / " .. (maxC or "?")) or "-")
+            elseif d.kind == "chargesLive" then
+                -- Live charge count read from the Cooldown Manager (what a "Charges >="
+                -- condition evaluates). Requires the spell tracked in the Cooldown Manager.
+                local n = API.TrackedChargeCount and API.TrackedChargeCount(d.spell)
+                if n ~= nil then
+                    set(id, ("|cff0cd29f%d|r  |cff5a6a76(tracked)|r"):format(n))
+                else
+                    set(id, "|cffe0a03auntracked|r")
+                end
             elseif d.kind == "mote" then
                 if PRIO.Engine and PRIO.Engine.hasMote == false then
                     set(id, "|cff5a6a76n/a (no talent)|r")
@@ -259,10 +300,7 @@ function Debug:Update()
         end
     end
 
-    if spec and spec.economy then
-        set("gen", "|cff9fb0be" .. table.concat(spec.economy.gen or {}, ", ") .. "|r")
-        set("spend", "|cff9fb0be" .. table.concat(spec.economy.spend or {}, ", ") .. "|r")
-    end
+    -- Economy generators/spenders are static per-spec text, set once at Rebuild.
 
     local result = PRIO.Engine and PRIO.Engine:Evaluate()
     if result then

@@ -836,6 +836,11 @@ local PAGE_META = {
 }
 
 function Options:ShowPage(key)
+    -- Preserve the scroll position when re-rendering the SAME page (adding/moving/
+    -- removing a priority row rebuilds the page -- don't yank the user back to the top).
+    -- Reset to the top only when switching to a different page.
+    local samePage = (key == currentPage)
+    local prevScroll = (samePage and scroll) and scroll:GetVerticalScroll() or 0
     currentPage = key
     -- clear old content (hide; new widgets overlay at the same positions)
     if picker then picker:Hide() end
@@ -855,7 +860,8 @@ function Options:ShowPage(key)
     cursorY = 4
     Pages[key]()
     content:SetHeight(math.max(cursorY + 20, 360))
-    scroll:SetVerticalScroll(0)
+    local maxScroll = math.max(0, content:GetHeight() - scroll:GetHeight())
+    scroll:SetVerticalScroll(samePage and math.min(prevScroll, maxScroll) or 0)
 end
 
 -- Rebuild the current page if the window is open (e.g. after an external change).
