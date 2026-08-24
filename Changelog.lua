@@ -11,6 +11,10 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.16", {
+        "\"Charges >=\" is now a number picker (counts the line's own ability), not an ability picker.",
+        "Fixed conditions needing both a spell and a number (e.g. Buff stacks >=) -- both controls now show.",
+    } },
     { "0.2.15", {
         "\"Charges >=\" now reads the real charge count from the Cooldown Manager (secret-safe, exact).",
         "Track Zenith in the Cooldown Manager (see /prio setup) for its Charges condition.",

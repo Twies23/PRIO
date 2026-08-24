@@ -627,21 +627,23 @@ function Options:OpenCondEditor(spec, mode, index, variant)
             typeDD:SetPoint("LEFT", 16, 0)
 
             local meta = Cond.TypeMeta(cl.type)
-            if meta and meta.needsSpell then
-                local spDD = UI.Dropdown(rowf, 150, spellOpts,
+            -- A condition may need a spell/talent picker AND a value stepper (e.g. Buff
+            -- stacks >= N). Render each control that applies, chaining left to right.
+            local anchor = typeDD
+            if meta and (meta.needsSpell or meta.needsTalent) then
+                local opts = meta.needsTalent and talentOpts or spellOpts
+                local ddW = meta.needsValue and 108 or 150
+                local dd = UI.Dropdown(rowf, ddW, opts,
                     function() return cl.spell or 0 end,
                     function(v) cl.spell = (v ~= 0) and v or nil; editorChanged() end)
-                spDD:SetPoint("LEFT", typeDD, "RIGHT", 6, 0)
-            elseif meta and meta.needsTalent then
-                local tDD = UI.Dropdown(rowf, 150, talentOpts,
-                    function() return cl.spell or 0 end,
-                    function(v) cl.spell = (v ~= 0) and v or nil; editorChanged() end)
-                tDD:SetPoint("LEFT", typeDD, "RIGHT", 6, 0)
-            elseif meta and meta.needsValue then
+                dd:SetPoint("LEFT", anchor, "RIGHT", 6, 0)
+                anchor = dd
+            end
+            if meta and meta.needsValue then
                 local st = UI.Stepper(rowf, 74, meta.min or 1, meta.max or 10,
                     function() return cl.v or meta.def or 1 end,
                     function(v) cl.v = v; editorChanged() end)
-                st:SetPoint("LEFT", typeDD, "RIGHT", 6, 0)
+                st:SetPoint("LEFT", anchor, "RIGHT", 6, 0)
             end
 
             local rm = IconButton(rowf, "\195\151", true, function()

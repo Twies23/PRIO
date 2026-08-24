@@ -1,5 +1,10 @@
 # PRIO Changelog
 
+## 0.2.16 (alpha)
+- **"Charges ≥ / ≤" is now a number picker, not an ability picker.** It counts the charges of the line's own ability, so you just set the number (e.g. Zenith → Charges ≥ 2).
+- **Fixed conditions that need both a spell and a number** (e.g. "Buff stacks ≥ N"): the editor now shows both the buff picker and the number stepper. Previously only the buff picker appeared and the number couldn't be set.
+
+
 ## 0.2.15 (alpha)
 - **"Charges ≥ / ≤" now reads live charges straight from the Cooldown Manager.** Instead of predicting charges with a hardcoded recharge (the old 0.2.14 approach), PRIO now reads the real charge count Blizzard renders on the tracked cooldown frame — secret-safe and exact, for any charge ability you track. Track Zenith in the Cooldown Manager (see /prio setup) and a "Zenith if Charges ≥ 2" rule just works.
 
