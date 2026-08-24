@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.38", {
+        "Debug \"Blackout Kick!\" row shows its stack count instead of up/gone.",
+    } },
     { "0.2.37", {
         "Conduit single-target default built to the tuned list, with Heart of the Jade Serpent duration modeled (FoF before it falls off).",
         "A cast can now grant multiple timed buffs (Zenith grants its window + HoJS with Yu'lon's Avatar). Reset lists to default.",

@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.38 (alpha)
+- Debug "Blackout Kick!" row now shows its stack count instead of just up/gone.
+
+
 ## 0.2.37 (alpha)
 - **Conduit of the Celestials single-target default built to the tuned list.** Includes a real "Fists of Fury before Heart of the Jade Serpent falls off" line: HoJS is now duration-modeled (6s from Strike/Whirling Dragon Punch, 4s from Zenith with Yu'lon's Avatar). A cast can now grant several timed buffs. (The Bloodlust RSK line is intentionally omitted for now.) Reset your Windwalker lists to default to pick it up.
 

@@ -412,7 +412,7 @@ local spec = {
         { label = "Zenith",         kind = "buff", spell = ID_ZENITH },
         { label = "Unbroken Rhythm", kind = "buff", spell = ID_UNBROKEN },
         { label = "Combo Breaker",  kind = "buff", spell = ID_COMBOBREAK },
-        { label = "Blackout Kick!", kind = "buff", spell = ID_BOKPROC },
+        { label = "Blackout Kick!", kind = "stacks", spell = ID_BOKPROC },
         { label = "Tigereye Brew",  kind = "buff", spell = ID_TIGEREYE },
         { label = "Dance of Chi-Ji", kind = "buff", spell = ID_DANCECHIJI },
         { label = "Rushing Wind Kick", kind = "buff", spell = ID_RUSHINGWIND },
