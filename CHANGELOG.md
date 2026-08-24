@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.41 (alpha)
+- **"Missing buff" now passes for an untracked/unhad buff** (fixing a logic hole). If a buff can't be read — e.g. Unbroken Rhythm without the 4-piece — "Has buff" fails and "Missing buff" passes, consistently treating it as not up. Previously both failed, which broke "cast X if missing Y" lines for buffs you don't have.
+
+
 ## 0.2.40 (alpha)
 - **Conduit single-target default updated to the refined list** — Blackout Kick! stack checks replaced with the boolean proc, plus the tuned ordering. Reset your Windwalker lists to default to pick it up.
 

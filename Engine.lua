@@ -327,7 +327,10 @@ local function EvalClause(cl, S, selfSid)
     elseif t == "buffMissing" then
         if S._sim and S._sim[sid] ~= nil then return not S._sim[sid] end
         if Assumed(sid, S) then return false end             -- just applied -> not missing
-        if not API.IsTracked(sid) then return false end      -- untracked -> can't confirm -> fail
+        -- Untracked/unreadable -> assume the buff is NOT up, so it IS missing (pass).
+        -- Symmetric with "Has buff" (which fails when untracked): a buff you can't have
+        -- (no 4pc / talent) reads as missing, which is correct.
+        if not API.IsTracked(sid) then return true end
         local a = API.IsAuraActive(sid); return a == false or a == nil
     elseif t == "cdReady" then return API.IsReady(sid) and true or false
     elseif t == "cdNotReady" then return not API.IsReady(sid)
@@ -399,7 +402,7 @@ function Cond.ClauseStatus(cl, S, selfSid)
         local a = API.IsAuraActive(sid); if a == nil then return "open" end
         return a and "pass" or "fail"
     elseif t == "buffMissing" then
-        if not API.IsTracked(sid) then return "fail" end
+        if not API.IsTracked(sid) then return "pass" end     -- untracked -> assume missing
         local a = API.IsAuraActive(sid); if a == nil then return "open" end
         return (a == false) and "pass" or "fail"
     elseif t == "refreshable" then

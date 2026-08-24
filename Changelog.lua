@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.41", {
+        "\"Missing buff\" now passes for an untracked/unhad buff (e.g. Unbroken Rhythm without the 4pc); symmetric with \"Has buff\".",
+    } },
     { "0.2.40", {
         "Conduit single-target default updated to the refined list (BoK! stacks -> boolean proc). Reset lists to default.",
     } },
