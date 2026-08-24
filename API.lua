@@ -386,6 +386,19 @@ function API.PowerMax(powerType)
     return SafeNum(mx)
 end
 
+-- Player power as a clean PERCENT (0-100), even when the raw amount is secret. WoW's
+-- UnitPowerPercent with the ScaleTo100 curve is the sanctioned "show a percentage, not
+-- the number" path (EllesmereUI uses it unguarded for its bar text), so unlike
+-- UnitPower it reads clean in combat. Returns nil if unavailable/secret. Lets us tell
+-- "Energy near cap" (avoid-capping lines) without ever reading the secret Energy value.
+function API.PowerPercent(powerType)
+    if not (UnitPowerPercent and powerType) then return nil end
+    local scale = (CurveConstants and CurveConstants.ScaleTo100) or nil
+    local ok, pct = pcall(UnitPowerPercent, "player", powerType, true, scale)
+    if ok and type(pct) == "number" and not IsSecret(pct) then return pct end
+    return nil
+end
+
 --------------------------------------------------------------------------------
 -- Enemy count: hostile nameplates that are in combat. Best-effort (bounded by
 -- nameplate visibility). Great for ST/Cleave/AoE mode switching.

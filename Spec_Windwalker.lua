@@ -229,6 +229,7 @@ local spec = {
     -- Costs shift with talents (Inner Peace cuts Tiger Palm by 5). Vivify is deliberately
     -- NOT a probe: Vivacious Vivification makes its cost/instant state vary.
     energyModel = {
+        power = (Enum and Enum.PowerType and Enum.PowerType.Energy) or 3,
         probes = {
             { spell = 100780,  cost = 60, reduce = { [ID_INNERPEACE] = 5 } }, -- Tiger Palm
             { spell = 117952,  cost = 20 },  -- Crackling Jade Lightning
@@ -252,6 +253,7 @@ local spec = {
     cleaveAt = 2,   -- Shado-Pan uses the AoE priority for cleave as well
     aoeAt    = 3,
     comboStrikes = true,   -- mastery: engine never queues the same ability twice in a row
+    condTags = { energy = true },   -- offer the "Energy %" condition (avoid-capping lines)
     activeHero = activeHero,   -- exposed for the Debug window
     priorityByVariant = heroLists,
     priorityVariants = {

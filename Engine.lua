@@ -62,6 +62,8 @@ Cond.types = {
     { value = "notUsable",   text = "Not usable",   needsSpell = true, target = "ability" },
     { value = "enemiesMin",  text = "Enemies \226\137\165",   needsValue = true, min = 1, max = 10, def = 2 },
     { value = "enemiesMax",  text = "Enemies \226\137\164",   needsValue = true, min = 1, max = 10, def = 1 },
+    { value = "energyPctMin", text = "Energy % \226\137\165", needsValue = true, min = 0, max = 100, def = 80, tag = "energy" },
+    { value = "energyPctMax", text = "Energy % \226\137\164", needsValue = true, min = 0, max = 100, def = 20, tag = "energy" },
 }
 
 -- The condition types a spec should offer: generic ones always, tagged ones only when
@@ -103,6 +105,8 @@ function Cond.ClauseLabel(cl, selfSid)
     elseif t == "auraRemainMax" then return name .. " \226\137\164 " .. (cl.v or 0) .. "s left"
     elseif t == "resourceMin" then return (spec and spec.resourceLabel or "resource") .. " \226\137\165 " .. (cl.v or 0)
     elseif t == "resourceMax" then return (spec and spec.resourceLabel or "resource") .. " \226\137\164 " .. (cl.v or 0)
+    elseif t == "energyPctMin" then return "Energy \226\137\165 " .. (cl.v or 0) .. "%"
+    elseif t == "energyPctMax" then return "Energy \226\137\164 " .. (cl.v or 0) .. "%"
     elseif t == "usable" then return name .. " usable"
     elseif t == "notUsable" then return name .. " unusable"
     elseif t == "moteUp" then return "MotE up"
@@ -208,6 +212,23 @@ function Engine:EnergyFloor()
     return floor
 end
 
+-- Player Energy as a clean percent (0-100), or nil. The near-cap signal.
+function Engine:EnergyPercent()
+    local m = spec and spec.energyModel
+    return m and m.power and API.PowerPercent(m.power) or nil
+end
+
+-- Best absolute Energy estimate: the clean percent * readable max (exact enough, and
+-- tracks all the way to cap), else the checkpoint floor (accurate only up to ~60).
+function Engine:EnergyEstimate()
+    local m = spec and spec.energyModel
+    if m and m.power then
+        local pct, max = API.PowerPercent(m.power), API.PowerMax(m.power)
+        if pct and max then return (pct / 100) * max end
+    end
+    return self:EnergyFloor()
+end
+
 -- Remaining seconds on a buff, for "buff remaining <= / >= N" conditions. Prefers the
 -- CLEAN expirationTime read (out of combat); in combat that's secret, so falls back to
 -- the cast-seeded predicted timer (spec.auraDurations). nil = not up / unknown.
@@ -227,6 +248,12 @@ end
 local function Assumed(sid, S)
     local a = Engine.P and Engine.P.assumeActive and Engine.P.assumeActive[sid]
     return a and a > (S.now or GetTime())
+end
+
+-- Player Energy percent for energy% conditions (clean even when the bar is secret).
+local function EnergyPct()
+    local m = spec and spec.energyModel
+    return m and m.power and API.PowerPercent(m.power) or nil
 end
 
 local function EvalClause(cl, S, selfSid)
@@ -270,6 +297,9 @@ local function EvalClause(cl, S, selfSid)
     -- secret bars use the predicted value). S.maelstrom is the spec resource amount.
     elseif t == "resourceMin" then return (S.maelstrom or 0) >= (cl.v or 0)
     elseif t == "resourceMax" then return (S.maelstrom or 0) <= (cl.v or 0)
+    -- Energy percent (secret-safe via UnitPowerPercent). Unknown -> threshold not met.
+    elseif t == "energyPctMin" then local p = EnergyPct(); return p ~= nil and p >= (cl.v or 0)
+    elseif t == "energyPctMax" then local p = EnergyPct(); return p ~= nil and p <= (cl.v or 0)
     elseif t == "usable" then return API.IsUsable(sid) and true or false
     elseif t == "notUsable" then return not API.IsUsable(sid)
     -- MotE is predicted, not readable. Gate on the talent so these are correct on
@@ -329,6 +359,10 @@ function Cond.ClauseStatus(cl, S, selfSid)
     elseif t == "resourceMin" or t == "resourceMax" then
         local v = S and S.maelstrom; if v == nil then return "open" end
         local ok = (t == "resourceMin") and (v >= (cl.v or 0)) or (v <= (cl.v or 0))
+        return ok and "pass" or "fail"
+    elseif t == "energyPctMin" or t == "energyPctMax" then
+        local p = EnergyPct(); if p == nil then return "open" end
+        local ok = (t == "energyPctMin") and (p >= (cl.v or 0)) or (p <= (cl.v or 0))
         return ok and "pass" or "fail"
     elseif t == "usable" or t == "notUsable" then
         local u = API.IsUsable(sid); if u == nil then return "open" end
@@ -881,7 +915,7 @@ function Engine:Evaluate()
     local realMote, realSk = S.mote, S.skStacks   -- for the debug window (S is mutated below)
     local sim = {
         aura = {}, mote = S.mote, sk = S.skStacks, resource = S.maelstrom,
-        energy = self:EnergyFloor(),   -- checkpoint floor; spent (no regen) as we pick
+        energy = self:EnergyEstimate(),   -- % * max (tracks to cap) or checkpoint floor; spent as we pick
         lastCastKey = S.lastCastKey, lastCastID = S.lastCastID,
     }
     S._sim = sim.aura

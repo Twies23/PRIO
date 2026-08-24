@@ -11,6 +11,10 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.26", {
+        "Energy readable as a percent (secret-safe), so PRIO sees Energy to your real cap, not just to 60.",
+        "New \"Energy % >= / <=\" condition for avoid-capping lines; look-ahead seeds from real Energy %.",
+    } },
     { "0.2.25", {
         "Windwalker Energy checkpoint model: usable abilities imply an Energy floor, spent across the look-ahead.",
         "Combo Strikes is a hard rule -- never recommends the same ability twice in a row.",

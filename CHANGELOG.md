@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.26 (alpha)
+- **Energy is now readable as a percentage** (via the game's secret-safe percent path — the same one EllesmereUI's bars use), so PRIO can see Energy all the way to your real cap, not just up to Tiger Palm's cost. The look-ahead now seeds from your actual Energy %, and there's a new **"Energy % ≥ / ≤"** condition for "Tiger Palm to avoid capping" lines. Debug shows live Energy %.
+
+
 ## 0.2.25 (alpha)
 - **Energy checkpoint model (Windwalker).** Energy is unreadable, but an ability's usable flag flips on at its Energy cost — so "Crackling Jade Lightning / Paralysis usable" means Energy ≥ 20, "Tiger Palm usable" means ≥ 60 (55 with Inner Peace), etc. PRIO takes the highest such threshold as a floor on your Energy and spends it across the look-ahead, so it won't queue a Tiger Palm you can't afford. Debug shows the estimate.
 - **Combo Strikes is now a hard rule for Monk** — PRIO never recommends the same ability twice in a row (it won't be relaxed to fill a slot).
