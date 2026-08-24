@@ -338,7 +338,7 @@ local spec = {
         { label = "Dance of Chi-Ji", kind = "buff", spell = ID_DANCECHIJI },
         { label = "Rushing Wind Kick", kind = "buff", spell = ID_RUSHINGWIND },
         { label = "Touch of Death", kind = "buff", spell = ID_TOUCHOFDEATH },
-        { label = "Zenith charges", kind = "charges", key = "Zenith" },
+        { label = "Zenith charges", kind = "chargeClean", spell = ID_ZENITH },
         { label = "Tiger Palm usable", kind = "usableProbe", spell = 100780 },
         { label = "Fists of Fury",  kind = "cd",   spell = 113656 },
     },

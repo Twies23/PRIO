@@ -247,6 +247,20 @@ function Debug:Update()
                 local cc = P.charges and P.charges[d.key]
                 local maxC = spec.chargeTrack and spec.chargeTrack[d.key] and spec.chargeTrack[d.key].max
                 set(id, cc and (tostring(cc.cur) .. " / " .. (maxC or "?")) or "-")
+            elseif d.kind == "chargeClean" then
+                -- Secret-safe clean charge read (maxCharges + isActive + usable), the
+                -- value the Charges condition uses. Shows the derived count and source.
+                local maxC, cur, belowMax = API.ChargeState and API.ChargeState(d.spell)
+                if not maxC then
+                    set(id, "|cff5a6a76not a charge spell|r")
+                elseif cur ~= nil then
+                    local src = (belowMax == false) and "at max" or "usable"
+                    local rem = API.ChargeRechargeRemaining and API.ChargeRechargeRemaining(d.spell)
+                    local tail = (rem and rem > 0) and ("  |cff5a6a76next %.0fs|r"):format(rem) or ""
+                    set(id, ("|cff0cd29f%d|r / %d  |cff5a6a76(%s)|r%s"):format(cur, maxC, src, tail))
+                else
+                    set(id, ("|cffe0a03a? / %d|r  |cff5a6a76(recharging, count secret)|r"):format(maxC))
+                end
             elseif d.kind == "usableProbe" then
                 -- Diagnostic: is "insufficient power" readable? (Energy is secret; this
                 -- tells us whether the usability flag still exposes castability.)

@@ -139,6 +139,18 @@ function API.UsableDebug(spellID)
     return ("usable=%s noPower=%s"):format(show(a), show(b))
 end
 
+-- Strict usable read: true/false when clean, nil when secret/unknown. Unlike
+-- API.IsUsable (which fails OPEN to true), this never guesses -- used to pin a charge
+-- spell's low count (castable => >=1 charge) only when the flag is genuinely readable.
+function API.UsableClean(spellID)
+    if not (spellID and C_Spell and C_Spell.IsSpellUsable) then return nil end
+    local ok, usable = pcall(C_Spell.IsSpellUsable, spellID)
+    if not ok then return nil end
+    if type(usable) == "table" then usable = usable.isUsable end
+    if usable == nil or IsSecret(usable) then return nil end
+    return usable and true or false
+end
+
 --------------------------------------------------------------------------------
 -- Cooldown: the reliable clean-boolean readiness test.
 --   ready = not (isActive and not isOnGCD)
@@ -211,6 +223,53 @@ function API.PowerCostAmount(spellID)
             local cost = SafeNum(c and c.cost)
             if cost and cost > 0 then return cost end
         end
+    end
+    return nil
+end
+
+-- Secret-safe charge state, the way EllesmereUI's Cooldown Manager reads it.
+-- GetSpellCharges().isActive is a CLEAN boolean (the recharge-active flag): it is
+-- false ONLY at max charges, and stays readable while currentCharges is secret.
+-- Returns: maxCharges (clean/static, nil if not a charge spell),
+--          current (EXACT count when derivable without a secret, else nil),
+--          belowMax (true = definitely recharging/below max, false = at max, nil = unknown).
+-- At max we know the count exactly (= maxCharges) without ever touching the secret
+-- currentCharges. Out of combat currentCharges is clean, so we use it directly.
+function API.ChargeState(spellID)
+    if not (spellID and C_Spell and C_Spell.GetSpellCharges) then return nil end
+    local ok, ch = pcall(C_Spell.GetSpellCharges, spellID)
+    if not ok or type(ch) ~= "table" then return nil end
+    local maxC = SafeNum(ch.maxCharges)
+    if not maxC or maxC < 1 then return nil end          -- not a charge spell
+    local cur = SafeNum(ch.currentCharges)               -- clean out of combat; nil if secret
+    if cur ~= nil then return maxC, cur, cur < maxC end
+    local active = ch.isActive
+    if active == nil or IsSecret(active) then return maxC, nil, nil end
+    if not active then return maxC, maxC, false end      -- at max: exact, secret-free
+    -- Recharging (below max). Combine with a CLEAN usable read to pin the low end:
+    -- castable => at least 1 charge in hand; not castable => 0. For a 2-charge spell
+    -- that resolves the exact count (0 or 1) with no secret. For 3+ charges it only
+    -- bounds the low end, so we leave the middle to prediction.
+    local usable = API.UsableClean and API.UsableClean(spellID)
+    if usable == true then
+        if maxC == 2 then return maxC, 1, true end       -- below max & castable => exactly 1
+        return maxC, nil, true                           -- 3+ charges: >=1 but ambiguous
+    elseif usable == false then
+        return maxC, 0, true                             -- can't cast => 0 charges
+    end
+    return maxC, nil, true                               -- usable secret/unknown -> prediction fills
+end
+
+-- Clean seconds until the next charge returns, via the duration OBJECT's method
+-- (the object answers a readable number even when the raw start/duration are secret --
+-- the same handle EllesmereUI drives its recharge bars with). nil if not recharging /
+-- not available.
+function API.ChargeRechargeRemaining(spellID)
+    if not (spellID and C_Spell and C_Spell.GetSpellChargeDuration) then return nil end
+    local ok, dur = pcall(C_Spell.GetSpellChargeDuration, spellID)
+    if ok and dur and dur.GetRemainingDuration then
+        local rok, rem = pcall(dur.GetRemainingDuration, dur)
+        if rok then return SafeNum(rem) end
     end
     return nil
 end

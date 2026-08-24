@@ -141,14 +141,22 @@ end
 -- Current charges of a spell: predicted for spec-tracked charge spells, else the
 -- readable count. nil when the spell has no charges / can't tell.
 local function ChargeCount(sid)
-    -- Spec-predicted charges are authoritative for charge-tracked spells (Lava Burst,
-    -- Zenith): current charges are secret in combat and the Cooldown Manager frame
-    -- renders the recharge timer, so prediction (synced OOC, modelled in combat) is the
-    -- reliable source. Fall back to the tracked-frame read, then the raw (OOC) read.
+    -- Secret-safe clean read first (EllesmereUI's method): GetSpellCharges().isActive is
+    -- false ONLY at max, so at max we know the exact count, and "below max" is a clean
+    -- fact even while currentCharges is secret. This nails the common case (a 2-charge
+    -- spell at max, e.g. Zenith >= 2) with zero guessing.
+    local maxC, cleanCur, belowMax = nil, nil, nil
+    if API.ChargeState then maxC, cleanCur, belowMax = API.ChargeState(sid) end
+    if cleanCur ~= nil then return cleanCur end
+    -- Otherwise fall back to the spec prediction (Lava Burst / mid-charge counts),
+    -- anchored by the clean signal: if we KNOW it's below max, clamp the prediction so
+    -- it can't wrongly report full.
     local pc = Engine:PredictedCharges(sid)
-    if pc ~= nil then return pc end
-    local tc = API.TrackedChargeCount and API.TrackedChargeCount(sid)
-    if tc ~= nil then return tc end
+    if pc ~= nil then
+        if belowMax and maxC then pc = math.min(pc, maxC - 1) end
+        return pc
+    end
+    if maxC and belowMax == false then return maxC end
     local _, cur = API.Charges(sid)
     return cur
 end

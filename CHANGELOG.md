@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.20 (alpha)
+- **Charges are now read EXACTLY and secret-safely, not just predicted.** Using the same technique as EllesmereUI's Cooldown Manager: the game's charge "recharge-active" flag is readable and is false only at max charges, and combining it with the spell's usable state pins the exact count (a 2-charge spell like Zenith resolves cleanly to 0 / 1 / 2). Prediction is now only a fallback for the middle counts of 3+ charge spells, and it's clamped by the real "below max" signal so it can never report full when it isn't. So "Zenith if Charges ≥ 2" is now exact. The Debug "Zenith charges" row shows the count, its source, and the time to the next charge.
+
+
 ## 0.2.19 (alpha)
 - **Zenith charge tracking now uses prediction (the same method as Lava Burst), which actually works.** Reading the Cooldown Manager frame was unreliable (it renders the recharge timer, not a clean count). PRIO now syncs Zenith's charges to the real value out of combat and models them in combat (spend on cast, recharge on a timer), so "Zenith charges" and the Charges ≥ condition read correctly.
 
