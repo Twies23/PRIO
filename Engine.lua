@@ -232,6 +232,7 @@ function Engine:UpdateEnergy(now)
         for tid, frac in pairs(m.regenTalents) do if API.IsKnown(tid) then rate = rate * (1 + frac) end end
     end
     if m.hasteScaled then rate = rate * (1 + (API.Haste() or 0) / 100) end
+    rate = rate * (m.regenBias or 1)   -- lean the estimate high so we spend before capping
     local dt = now - (P.energyEstTime or now); if dt < 0 then dt = 0 end
     P.energyEstTime = now
     P.energyEst = math.min(max, (P.energyEst or max) + rate * dt)

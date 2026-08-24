@@ -238,6 +238,7 @@ local spec = {
         regenPerSec = 10,
         regenTalents = { [ID_ASCENSION] = 0.10 },
         hasteScaled = true,   -- Energy regen scales with haste
+        regenBias   = 1.10,   -- +10% conservative: predict a bit high so we dump before capping
 
         probes = {
             { spell = 100780,  cost = 60, reduce = { [ID_INNERPEACE] = 5 } }, -- Tiger Palm

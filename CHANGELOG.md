@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.29 (alpha)
+- **Energy prediction leans slightly conservative (+10%)** so it errs on the high side — you'll dump Tiger Palm a touch early rather than risk wasting regen at cap.
+
+
 ## 0.2.28 (alpha)
 - **Energy prediction now scales with haste.** Windwalker's Energy regenerates faster with haste, so the flat 10/sec was reading a bit low; the estimate now uses 10/sec × (1 + haste) × Ascension, which tracks your real bar.
 

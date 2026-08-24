@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.29", {
+        "Energy prediction leans +10% conservative so you dump before capping rather than after.",
+    } },
     { "0.2.28", {
         "Energy prediction now scales with haste (was reading a bit low at flat 10/sec).",
     } },
