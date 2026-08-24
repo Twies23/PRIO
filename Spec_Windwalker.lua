@@ -269,6 +269,8 @@ local spec = {
           hint = "Track Heart of the Jade Serpent so Celestial Conduit timing reads right." },
         { kind = "trackedAura", label = "Touch of Death tracked", spell = ID_TOUCHOFDEATH,
           hint = "Track Touch of Death so execute availability is read from the Cooldown Manager." },
+        { kind = "trackedAura", label = "Zenith tracked (for Charges)", spell = ID_ZENITH,
+          hint = "Track Zenith in the Cooldown Manager so its charge count reads cleanly for a \"Charges >=\" condition." },
     },
 
     openerReady = { "InvokeXuen" },
@@ -302,14 +304,6 @@ local spec = {
 
     maelstromMax = 6,   -- Chi cap (generic "resource" fields)
     maelstromGen = { TigerPalm = 2 },   -- Tiger Palm builds Chi
-
-    -- Zenith runs on 2 charges. In-combat charge counts are secret, so a "Charges >="
-    -- condition only evaluates for spells the engine predicts -- Zenith must be tracked
-    -- here or the condition always reads nil. `recharge` is a seed; the engine learns
-    -- the real (haste'd) recharge out of combat from the API.
-    chargeTrack = {
-        Zenith = { max = 2, recharge = 60 },
-    },
 
     ResourceCost = function(_, key, sid, S)
         return chiCost(key, S)

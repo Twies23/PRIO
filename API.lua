@@ -440,6 +440,46 @@ function API.AuraStackCount(spellID)
     return nil
 end
 
+-- Live CHARGE COUNT from the Cooldown Viewer, secret-safe. Blizzard renders the
+-- current charge count to a fontstring on the tracked cooldown item frame; we read
+-- that clean string instead of the secret currentCharges. Requires the spell to be
+-- tracked in the Cooldown Manager. no frame -> nil; tracked but no number drawn ->
+-- nil (caller falls back). The count fontstring lives in different spots by frame
+-- template, so we try the known ones inside one pcall.
+function API.TrackedChargeCount(spellID)
+    local frame = trackedFrames[spellID]
+    if not frame then return nil end
+    local ok, n = pcall(function()
+        local spots = {}
+        local cc = frame.ChargeCount or frame.Charges
+        if type(cc) == "table" then
+            spots[#spots + 1] = cc.Current
+            spots[#spots + 1] = cc.Count
+            spots[#spots + 1] = cc
+        end
+        if frame.Applications then
+            spots[#spots + 1] = frame.Applications.Applications
+            spots[#spots + 1] = frame.Applications
+        end
+        if frame.Cooldown and frame.Cooldown.ChargeCount then
+            spots[#spots + 1] = frame.Cooldown.ChargeCount.Current
+            spots[#spots + 1] = frame.Cooldown.ChargeCount
+        end
+        for _, fs in ipairs(spots) do
+            if type(fs) == "table" and fs.GetText then
+                local txt = fs:GetText()
+                if type(txt) == "string" and txt ~= "" then
+                    local num = tonumber((txt:gsub("%D", "")))
+                    if num then return num end
+                end
+            end
+        end
+        return nil
+    end)
+    if ok and n then return n end
+    return nil
+end
+
 -- Pandemic / "is refreshable" read, secret-safe. Blizzard's Cooldown Viewer computes
 -- the pandemic window (the last ~30% where refreshing doesn't clip) and, while the
 -- aura is inside it, shows a PandemicIcon on the item frame. We read that already-

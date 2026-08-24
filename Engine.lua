@@ -141,6 +141,10 @@ end
 -- Current charges of a spell: predicted for spec-tracked charge spells, else the
 -- readable count. nil when the spell has no charges / can't tell.
 local function ChargeCount(sid)
+    -- Prefer the clean count rendered by the Cooldown Manager (secret-safe) for any
+    -- tracked spell; fall back to spec charge prediction, then the raw (OOC-only) read.
+    local tc = API.TrackedChargeCount and API.TrackedChargeCount(sid)
+    if tc ~= nil then return tc end
     local pc = Engine:PredictedCharges(sid)
     if pc ~= nil then return pc end
     local _, cur = API.Charges(sid)

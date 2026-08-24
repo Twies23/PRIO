@@ -11,6 +11,10 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.15", {
+        "\"Charges >=\" now reads the real charge count from the Cooldown Manager (secret-safe, exact).",
+        "Track Zenith in the Cooldown Manager (see /prio setup) for its Charges condition.",
+    } },
     { "0.2.14", {
         "Windwalker: \"Charges >=\" now works for Zenith (charge-tracked, 2 charges).",
     } },

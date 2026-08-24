@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.15 (alpha)
+- **"Charges ≥ / ≤" now reads live charges straight from the Cooldown Manager.** Instead of predicting charges with a hardcoded recharge (the old 0.2.14 approach), PRIO now reads the real charge count Blizzard renders on the tracked cooldown frame — secret-safe and exact, for any charge ability you track. Track Zenith in the Cooldown Manager (see /prio setup) and a "Zenith if Charges ≥ 2" rule just works.
+
+
 ## 0.2.14 (alpha)
 - **Windwalker: "Charges ≥ / ≤" now works for Zenith.** In-combat charge counts are hidden by the game, so the condition only evaluates for abilities PRIO actively predicts. Zenith is now charge-tracked (2 charges), so a rule like "Zenith if Charges ≥ 2" fires correctly. Its recharge time is learned automatically out of combat.
 
