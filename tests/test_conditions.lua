@@ -4,6 +4,28 @@
 --------------------------------------------------------------------------------
 
 local ZENITH, UNBROKEN, BOKPROC, HEARTJADE, XUEN = 1249625, 1296624, 116768, 443294, 123904
+local BOK, TIGERPALM, OBSIDIAN = 100784, 100780, 1249832
+
+-- Chi model: Obsidian Spiral flips Blackout Kick from a 1-Chi spender to a +1 builder,
+-- and it must be resilient to the talent being on or off.
+test("chi: Blackout Kick costs 1 / delta -1 without Obsidian Spiral", function()
+    H.reset()
+    local S = {}
+    eq(H.spec.ResourceCost(H.spec, "BlackoutKick", BOK, S), 1, "BoK costs 1 Chi")
+    eq(H.spec.ResourceDelta(H.spec, "BlackoutKick", BOK, S), -1, "BoK nets -1 Chi")
+end)
+test("chi: Obsidian Spiral -> Blackout Kick costs 0 / delta +1 (builder)", function()
+    H.reset()
+    H.S.talents[OBSIDIAN] = true
+    local S = {}
+    eq(H.spec.ResourceCost(H.spec, "BlackoutKick", BOK, S), 0, "BoK free with Obsidian")
+    eq(H.spec.ResourceDelta(H.spec, "BlackoutKick", BOK, S), 1, "BoK builds +1 with Obsidian")
+end)
+test("chi: Tiger Palm always builds +2", function()
+    H.reset()
+    eq(H.spec.ResourceDelta(H.spec, "TigerPalm", TIGERPALM, {}), 2)
+end)
+
 
 -- Has buff -------------------------------------------------------------------
 test("buffActive: tracked & active -> pass", function()

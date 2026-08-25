@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.46 (alpha)
+- **Chi prediction now handles Obsidian Spiral correctly.** With that talent, Blackout Kick generates a Chi instead of costing one, so it's modeled as a +1 builder (always, not just during Zenith) and is castable at 0 Chi. Talent-gated, so it's inert unless you spec it — meaning the aggressive Blackout Kick! dumps help pool Chi for Fists of Fury once you're in Obsidian Spiral.
+
+
 ## 0.2.45 (alpha)
 - **Conduit cleave + AoE default rebuilt to the tuned list** (they now share it — cleave was falling back to the single-target list). Because Blackout Kick! and Dance of Chi-Ji stacks aren't readable, their proc dumps sit high so they're spent aggressively and never overcap. Reset Windwalker lists to default to pick it up.
 

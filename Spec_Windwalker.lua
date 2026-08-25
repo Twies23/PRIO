@@ -215,6 +215,9 @@ end
 
 local function chiCost(key, S)
     local cost = BASE_CHI_COST[key] or 0
+    -- Obsidian Spiral: Blackout Kick GENERATES a Chi instead of consuming one, so it
+    -- never costs Chi (always castable). Gated on the talent -> inert unless specced.
+    if key == "BlackoutKick" and talentSelected(ID_OBSIDIAN) then return 0 end
     if key == "BlackoutKick" and (auraUp(S, ID_COMBOBREAK) or auraUp(S, ID_ZENITH)) then
         cost = 0
     elseif key == "SpinningCraneKick" and auraUp(S, ID_DANCECHIJI) then
@@ -226,6 +229,9 @@ local function chiCost(key, S)
 end
 
 local function chiDelta(key, S)
+    -- Obsidian Spiral flips Blackout Kick to a builder: net +1 Chi, always (not just
+    -- during Zenith). Talent-gated, so this only applies if you spec into it.
+    if key == "BlackoutKick" and talentSelected(ID_OBSIDIAN) then return 1 end
     local delta = -chiCost(key, S)
     if key == "TigerPalm" or key == "ZenithStomp" then
         delta = delta + 2
@@ -233,9 +239,6 @@ local function chiDelta(key, S)
         delta = delta + 1
     elseif key == "BlackoutKick" then
         if auraUp(S, ID_COMBOBREAK) and talentSelected(ID_ENERGYBURST) then
-            delta = delta + 1
-        end
-        if auraUp(S, ID_ZENITH) and talentSelected(ID_OBSIDIAN) then
             delta = delta + 1
         end
     end

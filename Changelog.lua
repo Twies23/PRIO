@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.46", {
+        "Chi prediction handles Obsidian Spiral: Blackout Kick becomes a +1 Chi builder (talent-gated), castable at 0 Chi.",
+    } },
     { "0.2.45", {
         "Conduit cleave + AoE default rebuilt to the tuned list (now shared); Blackout Kick! / Dance procs spent aggressively so they don't overcap. Reset lists to default.",
     } },
