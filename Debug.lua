@@ -441,6 +441,12 @@ function RotationDebug:Rebuild(spec)
         for i, b in ipairs(rd.buffs or {}) do
             row("b" .. i, b.label or "?")
         end
+        if rd.glows and #rd.glows > 0 then
+            head("Proc glows  (overlay)")
+            for i, g in ipairs(rd.glows) do
+                row("g" .. i, g.label or "?")
+            end
+        end
     end
 
     rLayoutH = y + 20
@@ -513,6 +519,15 @@ function RotationDebug:Update()
     for i, b in ipairs(rd.buffs or {}) do
         local ok, res = pcall(function() return buffText(b.spell) end)
         set("b" .. i, ok and res or "|cffe0685aerr|r")
+    end
+    for i, g in ipairs(rd.glows or {}) do
+        local ok, res = pcall(function()
+            local v = API.SpellGlowing and API.SpellGlowing(g.spell)
+            if v == true then return "|cff0cd29fGLOWING|r" end
+            if v == false then return "|cff5a6a76off|r" end
+            return "|cffe0a03asecret/na|r"
+        end)
+        set("g" .. i, ok and res or "|cffe0685aerr|r")
     end
 end
 

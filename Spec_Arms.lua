@@ -293,6 +293,14 @@ local spec = {
             { label = "Imminent Demise",        spell = ID_IMMINENT },
             { label = "Executioner's Precision", spell = ID_EXECPREC },
         },
+        -- Proc-glow probes: testing whether the button glow is a readable stand-in for a
+        -- stack count we can't read. Bladestorm glows at 3 Imminent Demise; Execute glows
+        -- on a Sudden Death proc; Mortal Strike may glow with Executioner's Precision.
+        glows = {
+            { label = "Bladestorm (ImmDemise 3?)", spell = 227847 },
+            { label = "Execute (Sudden Death?)",   spell = 163201 },
+            { label = "Mortal Strike (Exec Prec?)", spell = 12294 },
+        },
     },
 }
 

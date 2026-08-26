@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.53", {
+        "Rotation Debug now shows proc-glow (spell overlay) state for Bladestorm / Execute / Mortal Strike -- testing whether the button glow is a readable stand-in for stack counts we can't read directly.",
+    } },
     { "0.2.52", {
         "Fixed the Rotation Debug stack-source tag (appl/cdm/appl-secret/assumed) never showing -- a Lua multi-return bug dropped it. Now visible so we can tell if stacks read exactly.",
     } },

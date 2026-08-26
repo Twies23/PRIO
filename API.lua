@@ -545,6 +545,23 @@ end
 -- draws the number when it's > 1, so: no frame -> nil; not active -> 0; active with a
 -- number -> that number; active without a number -> 1. Requires the buff to be tracked
 -- in the Cooldown Manager.
+-- Spell activation overlay ("proc glow"): true when Blizzard is glowing the spell's
+-- button (e.g. Bladestorm lights up at 3 Imminent Demise, Execute at a Sudden Death
+-- proc). This is a DIFFERENT signal than the aura stack count, so it can be readable
+-- even when stacks are secret. Returns true/false, or nil if the API is missing.
+-- Guarded for secret values like everything else.
+function API.SpellGlowing(spellID)
+    if not spellID then return nil end
+    -- Modern namespaced API first, then the classic global.
+    local fn = (C_SpellActivationOverlay and C_SpellActivationOverlay.IsSpellOverlayed)
+        or IsSpellOverlayed
+    if not fn then return nil end
+    local ok, glowing = pcall(fn, spellID)
+    if not ok then return nil end
+    if glowing == nil or IsSecret(glowing) then return nil end
+    return glowing and true or false
+end
+
 function API.AuraStackCount(spellID)
     local frame = trackedFrames[spellID]
     if not frame then return nil end

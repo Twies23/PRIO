@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.53 (alpha)
+- **Rotation Debug: new "Proc glows" section.** Shows the spell-activation-overlay (button glow) state for Bladestorm, Execute, and Mortal Strike. This is a different signal than the aura stack count, so it may be readable even when stacks are secret — we're testing whether "Bladestorm is glowing" can stand in for "Imminent Demise at 3 stacks," and likewise for Sudden Death / Executioner's Precision. Each row shows GLOWING / off / secret-na.
+
+
 ## 0.2.52 (alpha)
 - **Fixed the Rotation Debug stack-source tag never appearing.** The `appl`/`cdm`/`appl-secret`/`assumed` tag added last version was silently dropped by a Lua multiple-return gotcha (`X and f()` keeps only the first value), so active buffs showed a bare `×N` with no source. It now renders, so you can see at a glance whether a stack count read exactly (`appl`), came from the Cooldown Viewer (`cdm`), or had to be assumed.
 
