@@ -98,6 +98,11 @@ function API.IsTracked(id) return truthy(S.tracked, id, false) end
 function API.IsReady(id) return truthy(S.ready, id, true) end
 function API.IsUsable(id) return truthy(S.usable, id, true) end
 function API.UsableClean(id) local v = S.usableClean[id]; if v == nil then return nil end; return v and true or false end
+function API.UsableOrNoPower(id)
+    local v = S.usableNoPower and S.usableNoPower[id]
+    if v ~= nil then return v and true or false end
+    return truthy(S.usable, id, true)   -- default: mirror IsUsable
+end
 function API.IsTalentSelected(id) return truthy(S.talents, id, false) end
 function API.IsTalentSelectedByName() return false end
 function API.IsAuraActive(id) return S.auras[id] end   -- true/false/nil

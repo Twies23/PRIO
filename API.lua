@@ -182,6 +182,24 @@ function API.UsableClean(spellID)
     return usable and true or false
 end
 
+-- "Should we still recommend this?" -- true if usable, OR if the ONLY thing stopping it
+-- is insufficient power (Energy regens, so you'll press it in a moment). A genuinely
+-- unusable spell (out of range, no target, wrong form) still returns false. This lets a
+-- spender show at low Energy instead of collapsing to the cheapest builder -- no Energy
+-- model, just the game's own insufficient-power flag as the indicator.
+function API.UsableOrNoPower(spellID)
+    if not (spellID and C_Spell and C_Spell.IsSpellUsable) then return true end
+    local ok, a, b = pcall(C_Spell.IsSpellUsable, spellID)
+    if not ok then return true end
+    local usable, noPower = a, b
+    if type(a) == "table" then usable, noPower = a.isUsable, a.insufficientPower end
+    if usable == nil or IsSecret(usable) then return true end   -- unreadable -> recommend (fail open)
+    if usable then return true end
+    -- Not usable: allow it only if it's (or might be) just a power shortfall.
+    if noPower == nil or IsSecret(noPower) then return true end  -- can't tell why -> fail open
+    return noPower and true or false
+end
+
 --------------------------------------------------------------------------------
 -- Cooldown: the reliable clean-boolean readiness test.
 --   ready = not (isActive and not isOnGCD)

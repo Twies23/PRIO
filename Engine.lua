@@ -1413,7 +1413,10 @@ function Engine:Evaluate()
         if not ready then return nil end                                  -- hard: cooldown/resource
         -- Usability is a hard gate normally, but during a channel it's false for
         -- everything -- so skip it then and predict the post-channel action.
-        if not castingNow and not API.IsUsable(sid) then return nil end
+        -- Usability is a hard gate, BUT "unusable only because of insufficient power"
+        -- (low Energy) stays recommendable -- you'll press it the instant Energy ticks up,
+        -- so a spender shows instead of collapsing to the cheapest builder.
+        if not castingNow and not API.UsableOrNoPower(sid) then return nil end
         if not PRIO.Cond.Eval(e.cond, S, sid) then return nil end
         return { sid = sid, i = i, rep = rep, maxC = maxC }
     end

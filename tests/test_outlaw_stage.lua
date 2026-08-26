@@ -128,4 +128,19 @@ test("outlaw look-ahead: builders build toward a finisher in the queue", functio
            "next is a finisher (Between the Eyes / Dispatch) once combo points reach 6")
 end)
 
+test("outlaw: a spender blocked only by low energy still shows (no collapse to Sinister Strike)", function()
+    setOutlaw()
+    H.S.power[COMBO] = 6                                   -- at 6 combo points -> finisher
+    H.S.auras[ROLLBONES] = true                            -- a roll is active (no reroll)
+    H.S.ready[315341] = false                              -- Between the Eyes on CD -> Dispatch is the finisher
+    H.S.ready[271877] = false                              -- Blade Rush on CD (higher "always" line)
+    -- Dispatch reads unusable via IsUsable (low energy) but is "usable if it weren't for power"
+    H.S.usable = { [2098] = false }
+    H.S.usableNoPower = { [2098] = true }
+    H.rebind()
+    local r = H.Engine:Evaluate()
+    eq(r and r.primary and r.primary.name, "Spell2098",
+       "Dispatch (blocked only by energy) is recommended, not the fallback Sinister Strike")
+end)
+
 H.reset(); H.rebind()   -- restore Windwalker for later suites

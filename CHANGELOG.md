@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.3.26
+- **Low energy no longer collapses to Sinister Strike.** When a spender (a finisher, or an empowered Pistol Shot) is unusable *only* because you're short on energy, PRIO now keeps recommending it — you'll press it the instant energy ticks up — instead of falling back to the cheapest builder. It uses the game's own "insufficient power" flag as the cue, so there's no energy modeling; abilities that are genuinely unusable (out of range, wrong form) still don't show. (The queue also already predicts Killing Spree right after Adrenaline Rush when both are ready.)
+
 ## 0.3.25
 - The **alert banner** (e.g. the Keep It Rolling advisory) is now **movable**: unlock the display and it shows a "drag to move" placeholder you can drag anywhere; its position is remembered separately from the main strip. Lock again and it only appears for a real alert.
 

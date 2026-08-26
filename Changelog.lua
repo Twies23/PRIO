@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.3.26", {
+        "Low energy no longer collapses to Sinister Strike. When a spender is unusable ONLY because you're short on energy, PRIO keeps recommending it (you'll press it the instant energy ticks up) instead of falling back to the cheapest builder. Uses the game's own insufficient-power flag as the cue -- no energy modeling; genuinely unusable abilities (range, form) still don't show.",
+    } },
     { "0.3.25", {
         "The alert banner (e.g. the Keep It Rolling advisory) is now movable: unlock the display and it shows a 'drag to move' placeholder you can drag anywhere; its position is remembered separately from the main strip. Lock again and it only appears for a real alert.",
     } },
