@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.3.20", {
+        "Outlaw: new 'Opportunity >= / <= N' condition in the editor -- gate any line on PRIO's tracked Opportunity charge count (0/3/6) at the threshold you choose. Reads the real tracked count, not the Cooldown Manager's misleading max-charges number.",
+    } },
     { "0.3.19", {
         "Fix: Opportunity still jumped to 6 on the first proc. The glow anchor floored the count to a proc's worth when the button lit up, double-counting against the actual proc landing the same instant. Now the proc detection alone drives the count (first proc = 3, second = 6); the glow only resets it to 0 when Opportunity empties.",
     } },

@@ -203,6 +203,10 @@ local spec = {
 
     priority = { st = st, aoe = aoe },
 
+    -- Offer the Outlaw-only "Opportunity >=/<=" condition (reads PRIO's tracked 0/3/6
+    -- count, not the Cooldown Manager's max-charges number).
+    condTags = { outlaw = true },
+
     -- Named presets surfaced in the condition editor (meaning, not mechanics).
     condPresets = {
         { key = "maxCP",     label = "Max combo points (>=6)", clause = cpMin(6) },

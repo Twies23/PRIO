@@ -74,6 +74,10 @@ Cond.types = {
     { value = "energyNotNearCap", text = "Energy not near cap", tag = "energy" },
     { value = "energyPctMin", text = "Energy % \226\137\165", needsValue = true, min = 0, max = 100, def = 80, tag = "energy" },
     { value = "energyPctMax", text = "Energy % \226\137\164", needsValue = true, min = 0, max = 100, def = 20, tag = "energy" },
+    -- Outlaw: Opportunity charges (PRIO's tracked count, 0/3/6), not the Cooldown Manager's
+    -- max-charges read. Only offered when the spec opts in (condTags.outlaw).
+    { value = "oppStacksMin", text = "Opportunity \226\137\165", needsValue = true, min = 0, max = 6, def = 6, tag = "outlaw" },
+    { value = "oppStacksMax", text = "Opportunity \226\137\164", needsValue = true, min = 0, max = 6, def = 3, tag = "outlaw" },
 }
 
 -- A spec.condPresets entry -> a picker option. Presets are NAMED boolean conditions
@@ -157,6 +161,8 @@ function Cond.ClauseLabel(cl, selfSid)
     elseif t == "skStacks" then return "SK \226\137\165 " .. (cl.v or 1)
     elseif t == "enemiesMin" then return "\226\137\165 " .. (cl.v or 1) .. " enemies"
     elseif t == "enemiesMax" then return "\226\137\164 " .. (cl.v or 1) .. " enemies"
+    elseif t == "oppStacksMin" then return "Opportunity \226\137\165 " .. (cl.v or 0)
+    elseif t == "oppStacksMax" then return "Opportunity \226\137\164 " .. (cl.v or 0)
     end
     return "?"
 end
@@ -404,6 +410,9 @@ local function EvalClause(cl, S, selfSid)
     -- Predicted stacks (our own cast counter). Always defined (0 when none).
     elseif t == "predStackMin" then return PredStacks(sid, S) >= (cl.v or 1)
     elseif t == "predStackMax" then return PredStacks(sid, S) <= (cl.v or 1)
+    -- Opportunity charges: PRIO's tracked count (spec.oppInfer.aura), value-adjustable.
+    elseif t == "oppStacksMin" then return PredStacks(spec and spec.oppInfer and spec.oppInfer.aura, S) >= (cl.v or 0)
+    elseif t == "oppStacksMax" then return PredStacks(spec and spec.oppInfer and spec.oppInfer.aura, S) <= (cl.v or 0)
     -- Latched execute-range flag (secret-safe: usable-without-proc, debounced).
     elseif t == "inExecuteRange" then
         if S and S.execRange ~= nil then return S.execRange end
@@ -492,6 +501,10 @@ function Cond.ClauseStatus(cl, S, selfSid)
     elseif t == "predStackMin" or t == "predStackMax" then
         local s = PredStacks(sid, S)
         local ok = (t == "predStackMin") and (s >= (cl.v or 1)) or (s <= (cl.v or 1))
+        return ok and "pass" or "fail"
+    elseif t == "oppStacksMin" or t == "oppStacksMax" then
+        local s = PredStacks(spec and spec.oppInfer and spec.oppInfer.aura, S)
+        local ok = (t == "oppStacksMin") and (s >= (cl.v or 0)) or (s <= (cl.v or 0))
         return ok and "pass" or "fail"
     elseif t == "chargesMin" or t == "chargesMax" then
         local c = ChargeCount(sid); if c == nil then return "open" end

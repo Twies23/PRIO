@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.3.20
+- Outlaw: new **"Opportunity ≥ / ≤ N"** condition in the editor — gate any line on PRIO's tracked Opportunity charge count (0/3/6), with the threshold you choose. It reads the real tracked count, not the Cooldown Manager's misleading max-charges number.
+
 ## 0.3.19
 - **Fix:** Opportunity was still jumping straight to 6 on the first proc. The glow anchor was "floor to a proc's worth when the button lights up," which double-counted against the actual proc landing at the same instant. Now the proc detection alone drives the count (first proc = 3, second = 6), and the glow only resets it to 0 when Opportunity empties.
 

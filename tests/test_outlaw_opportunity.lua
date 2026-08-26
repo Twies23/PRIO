@@ -40,6 +40,9 @@ test("opportunity: a detected double-strike grants +3, caps at 6", function()
     doubleStrike(0, 1, 1); eq(H.Engine.P.oppStacks, 6, "two procs -> 6")  -- (CP values don't matter; the proc does)
     doubleStrike(0, 1, 1); eq(H.Engine.P.oppStacks, 6, "third proc -> still 6")
     truthy(evalClause({ type = "predStackMin", spell = OPP, v = 6 }), "predStackMin(6) reads the cap")
+    -- the editor-facing Opportunity condition reads the same tracked count
+    truthy(evalClause({ type = "oppStacksMin", v = 6 }), "oppStacksMin(6) passes at cap")
+    falsy(evalClause({ type = "oppStacksMax", v = 3 }), "oppStacksMax(3) fails at 6")
 end)
 
 test("opportunity: a single strike (no delayed bump) grants nothing", function()
