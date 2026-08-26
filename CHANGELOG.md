@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.3.18
+- Outlaw: the Roll the Bones / Opportunity combo-point detection now works by **order, not exact timing**. Your `/prio ssdelay` runs showed the instant bump can land anywhere from 0–120ms and the double-strike from ~200–330ms, so a fixed millisecond cutoff was brittle. It now just uses "first bump after the cast = stage, second bump = double-strike," which is immune to frame-rate and latency jitter.
+
 ## 0.3.17
 **Outlaw: real Opportunity charge count (0/3/6), from the double-strike.** Using the same combo-point timing, PRIO now detects each Sinister Strike double-strike (its combo point arrives ~200-330ms after the cast) — and that's an Opportunity proc. So it counts your charges accurately: +3 per proc, −3 per Pistol Shot, capped at 6, with the Pistol Shot glow resetting it to 0 when empty. Pistol Shot's **"dump at 6 stacks"** line is back (reliable now, no phantom 6), alongside the "3 + low combo points" spend. Debug shows the live charge count.
 

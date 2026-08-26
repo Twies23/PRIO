@@ -157,13 +157,12 @@ local spec = {
         builder   = "SinisterStrike",
         reset     = "RollTheBones",
         flag      = "rtbStage2",
-        -- The RtB stage bonus is applied INSTANTLY with the Sinister Strike (<=~100ms),
-        -- while a double-strike lands ~200-330ms later. So the FIRST combo-point bump
-        -- (within instantWindow) is the stage read (+1 = stage 1, +2 = stage 2+); a bump
-        -- in the (instantWindow, doubleWindow] range is the double-strike, which grants
-        -- Opportunity (counted as a proc by the Opportunity tracker).
-        instantWindow = 0.15,
-        doubleWindow  = 0.6,
+        -- Detection is by ORDER, not exact timing (the ms jitter is real -- instant lands
+        -- 0-120ms, the double 200-330ms). Within `window` after the cast, the FIRST combo-
+        -- point bump is the instant (first strike + stage bonus: +1 = stage 1, +2 = stage
+        -- 2+); the SECOND bump is the double-strike (grants Opportunity -> a proc). Bumps
+        -- after `window` (the next GCD's builder) are ignored.
+        window = 0.6,
     },
 
     -- OPPORTUNITY charge tracking. The stack COUNT is secret in combat, so PRIO tracks it

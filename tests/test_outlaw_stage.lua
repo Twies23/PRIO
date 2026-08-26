@@ -1,9 +1,10 @@
 -- test_outlaw_stage.lua -------------------------------------------------------
--- Outlaw Roll the Bones STAGE READ via combo-point timing. The RtB stage bonus is
--- applied INSTANTLY with a Sinister Strike, while a double-strike's CP lands ~200-330ms
--- later. So the FIRST combo-point bump after the builder cast (within instantWindow) is
--- the stage read: +1 => stage 1 (rtbStage2=false), +2 => stage 2+ (true). Later bumps
--- (the double-strike) are ignored. Guarded against the CP cap; reset on Roll the Bones.
+-- Outlaw Roll the Bones STAGE READ from Sinister Strike combo-point bumps, split by
+-- ORDER (robust to timing jitter): within `window` after the builder cast, the FIRST
+-- positive combo-point bump is the instant (first strike + stage bonus) -> +1 = stage 1
+-- (rtbStage2=false), +2 = stage 2+ (true); a SECOND bump is the double-strike (an
+-- Opportunity proc, see the opportunity suite). Guarded against the CP cap; reset on
+-- Roll the Bones; bumps after `window` (the next GCD) are ignored.
 --------------------------------------------------------------------------------
 
 local SINISTER  = 193315
@@ -17,8 +18,8 @@ local function setOutlaw()
     H.rebind()
 end
 
--- Cast a Sinister Strike at `startCP`, then `dt` seconds later land `bump` combo points
--- and fire the power update the engine reads the stage from.
+-- Cast a Sinister Strike at `startCP`, then `dt` seconds later land a `bump` and fire
+-- the power update the engine reads.
 local function sinisterStrike(startCP, bump, dt)
     H.S.power[COMBO] = startCP
     H.fire("UNIT_SPELLCAST_SUCCEEDED", "player", nil, SINISTER)   -- records ssT0 / ssCP0
@@ -27,35 +28,41 @@ local function sinisterStrike(startCP, bump, dt)
     H.fire("UNIT_POWER_UPDATE", "player")
 end
 
-test("outlaw stage: instant +1 -> stage 1 (reroll)", function()
+test("outlaw stage: first bump +1 -> stage 1 (reroll)", function()
     setOutlaw()
     eq(H.Engine.P.predFlags.rtbStage2, nil, "starts unknown")
     sinisterStrike(0, 1, 0)
-    eq(H.Engine.P.predFlags.rtbStage2, false, "instant +1 CP -> stage 1")
+    eq(H.Engine.P.predFlags.rtbStage2, false, "instant +1 -> stage 1")
     truthy(evalClause({ type = "predFalse", key = "rtbStage2" }), "reroll fires")
 end)
 
-test("outlaw stage: instant +2 -> stage 2+ (good)", function()
+test("outlaw stage: first bump +2 -> stage 2+ (good)", function()
     setOutlaw()
     sinisterStrike(0, 2, 0)
-    eq(H.Engine.P.predFlags.rtbStage2, true, "instant +2 CP -> stage 2+")
+    eq(H.Engine.P.predFlags.rtbStage2, true, "instant +2 -> stage 2+")
     truthy(evalClause({ type = "predTrue", key = "rtbStage2" }), "confirmed good roll")
 end)
 
-test("outlaw stage: a delayed bump (double-strike) is not misread as the instant", function()
+test("outlaw stage: the instant reads even when it lands late (order, not ms)", function()
     setOutlaw()
-    sinisterStrike(0, 1, 0.30)   -- first bump arrives past the 0.15s window
-    eq(H.Engine.P.predFlags.rtbStage2, nil, "late first bump ignored, no stage set")
+    sinisterStrike(0, 2, 0.12)   -- first bump at 120ms is still the instant
+    eq(H.Engine.P.predFlags.rtbStage2, true, "first bump = instant regardless of exact ms")
 end)
 
-test("outlaw stage: the double-strike after the instant does not flip the stage", function()
+test("outlaw stage: the second bump (double-strike) does not re-read the stage", function()
     setOutlaw()
-    sinisterStrike(0, 2, 0)                       -- instant +2 -> stage 2+
+    sinisterStrike(0, 2, 0)                        -- 1st bump -> stage 2+
     eq(H.Engine.P.predFlags.rtbStage2, true)
-    H.S.now = H.S.now + 0.25                       -- the double-strike lands later
+    H.S.now = H.S.now + 0.25                        -- 2nd bump lands (the double)
     H.S.power[COMBO] = 4
     H.fire("UNIT_POWER_UPDATE", "player")
-    eq(H.Engine.P.predFlags.rtbStage2, true, "stage already read this cast; unchanged")
+    eq(H.Engine.P.predFlags.rtbStage2, true, "2nd bump is the double, stage unchanged")
+end)
+
+test("outlaw stage: a bump after the window is ignored (next GCD)", function()
+    setOutlaw()
+    sinisterStrike(0, 1, 0.75)   -- first bump arrives past the 0.6s window
+    eq(H.Engine.P.predFlags.rtbStage2, nil, "out-of-window bump not read")
 end)
 
 test("outlaw stage: near combo-point cap is not read (clipped bump)", function()

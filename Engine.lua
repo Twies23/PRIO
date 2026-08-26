@@ -748,11 +748,10 @@ PRIO:On("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
     local si = spec.stageInfer
     if si then
         if key == si.builder then
-            Engine.P.ssT0         = GetTime()
-            Engine.P.ssCP0        = spec.resource and API.Power(spec.resource) or nil
-            Engine.P.ssStageRead  = false
-            Engine.P.ssDoubleDone = false        -- one Opportunity proc counted per cast
-            Engine.P.ssLastCP     = nil
+            Engine.P.ssT0     = GetTime()
+            Engine.P.ssCP0    = spec.resource and API.Power(spec.resource) or nil
+            Engine.P.ssBumps  = 0                -- 1st bump = stage, 2nd = double-strike proc
+            Engine.P.ssLastCP = Engine.P.ssCP0
         elseif key == si.reset then
             Engine.P.predFlags = Engine.P.predFlags or {}
             Engine.P.predFlags[si.flag] = nil            -- fresh roll: stage unknown until next builder
@@ -833,7 +832,7 @@ PRIO:On("PLAYER_REGEN_ENABLED", function()
     -- Combat ended: clear volatile procs; Maelstrom and charges keep syncing from
     -- the real values now that they're readable again.
     local P = Engine.P
-    if P then P.fsExpire = 0; P.mote = false; P.skStacks = 0; P.ssT0 = nil; P.ssCP0 = nil; P.ssStageRead = nil; P.ssDoubleDone = nil; P.ssLastCP = nil; P.oppStacks = 0; if P.auraExpire then wipe(P.auraExpire) end; if P.stacks then wipe(P.stacks) end; if P.predFlags then wipe(P.predFlags) end end
+    if P then P.fsExpire = 0; P.mote = false; P.skStacks = 0; P.ssT0 = nil; P.ssCP0 = nil; P.ssBumps = nil; P.ssLastCP = nil; P.oppStacks = 0; if P.auraExpire then wipe(P.auraExpire) end; if P.stacks then wipe(P.stacks) end; if P.predFlags then wipe(P.predFlags) end end
     Engine:ResetExecuteRange()
     Engine.openerActive = false
 end)
@@ -901,37 +900,35 @@ PRIO:On("UNIT_POWER_UPDATE", function(unit)
     local ms = API.Power(spec.resource)
     if ms ~= nil then Engine.P.maelstrom = ms end
 
-    -- Combo-point timing after a builder (Sinister Strike) cast:
-    --   * FIRST bump, within instantWindow (<=150ms) = first strike + Roll the Bones stage
-    --     bonus -> +1 = stage 1, +2 = stage 2+ (guarded against the CP cap).
-    --   * A LATER positive bump (instantWindow..doubleWindow, ~200-330ms) = the DOUBLE-
-    --     STRIKE, which grants Opportunity -> count one proc (+gain charges).
+    -- Combo-point bumps after a builder (Sinister Strike) cast, split by ORDER (robust to
+    -- timing jitter -- the exact ms varies, but the instant always lands before the double):
+    --   * 1st positive bump = first strike + Roll the Bones stage bonus -> +1 = stage 1,
+    --     +2 = stage 2+ (guarded against the CP cap so a clipped bump isn't misread).
+    --   * 2nd positive bump = the DOUBLE-STRIKE (its second hit), which grants Opportunity
+    --     -> count one proc. Only bumps within `window` count; a finisher (negative) or the
+    --     next GCD's builder (>window later) is ignored.
     local si = spec.stageInfer
     local P = Engine.P
     if si and ms ~= nil and P.ssT0 and P.ssCP0 ~= nil then
-        local dt = GetTime() - P.ssT0
-        local iw = si.instantWindow or 0.15
-        local dw = si.doubleWindow or 0.6
-        if not P.ssStageRead then
-            if dt <= iw then
-                local maxCP = (spec.resource and API.PowerMax(spec.resource)) or P.maelstromMax or 99
-                if P.ssCP0 <= maxCP - 2 then              -- room to see a +2 without clipping
-                    local instant = ms - P.ssCP0
-                    P.predFlags = P.predFlags or {}
-                    if instant >= 2 then P.predFlags[si.flag] = true      -- stage 2+ (bonus present)
-                    elseif instant == 1 then P.predFlags[si.flag] = false end  -- stage 1 (no bonus)
+        if (GetTime() - P.ssT0) <= (si.window or 0.6) then
+            local delta = ms - (P.ssLastCP or P.ssCP0)
+            if delta > 0 then
+                P.ssBumps = (P.ssBumps or 0) + 1
+                P.ssLastCP = ms
+                if P.ssBumps == 1 then                    -- INSTANT: read the stage
+                    local maxCP = (spec.resource and API.PowerMax(spec.resource)) or P.maelstromMax or 99
+                    if P.ssCP0 <= maxCP - 2 then           -- room to see a +2 without clipping
+                        P.predFlags = P.predFlags or {}
+                        if delta >= 2 then P.predFlags[si.flag] = true       -- stage 2+ (bonus present)
+                        elseif delta == 1 then P.predFlags[si.flag] = false end   -- stage 1 (no bonus)
+                    end
+                elseif P.ssBumps == 2 then                -- DOUBLE-STRIKE: one Opportunity proc
+                    local oi = spec.oppInfer
+                    if oi then
+                        local gain, _, cap = OppAmounts(oi)
+                        P.oppStacks = math.min(cap, (P.oppStacks or 0) + gain)
+                    end
                 end
-                P.ssStageRead, P.ssLastCP = true, ms
-            elseif dt > iw then
-                P.ssStageRead, P.ssLastCP = true, ms      -- missed the instant window; don't misread
-            end
-        elseif not P.ssDoubleDone and dt > iw and dt <= dw and ms > (P.ssLastCP or P.ssCP0) then
-            -- The delayed second hit landed -> Opportunity was granted. Count one proc.
-            P.ssDoubleDone, P.ssLastCP = true, ms
-            local oi = spec.oppInfer
-            if oi then
-                local gain, _, cap = OppAmounts(oi)
-                P.oppStacks = math.min(cap, (P.oppStacks or 0) + gain)
             end
         end
     end
