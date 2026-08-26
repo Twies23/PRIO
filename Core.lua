@@ -332,6 +332,7 @@ PRIO:On("PLAYER_ENTERING_WORLD", function()
     C_Timer.After(4, function()                                    -- after spec data loads
         PRIO:MaybePromptDefaults()
         if PRIO.Setup then PRIO.Setup:MaybeAutoOpen() end
+        if PRIO.Changelog then PRIO.Changelog:MaybeAutoOpen() end   -- once per new version
     end)
 end)
 

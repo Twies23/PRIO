@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.75", {
+        "The changelog now pops up automatically the first time you log in on a new version.",
+    } },
     { "0.2.74", {
         "During a channel like Bladestorm (when the game reports every ability as unusable), PRIO now keeps predicting the next actions instead of collapsing to a single filler icon.",
     } },
@@ -288,4 +291,25 @@ end
 function Changelog:Toggle()
     self:Build()
     if win:IsShown() then win:Hide() else win:Show() end
+end
+
+function Changelog:Open()
+    self:Build()
+    win:Show()
+end
+
+-- The newest version we have notes for.
+function Changelog:CurrentVersion()
+    return ENTRIES[1] and ENTRIES[1][1]
+end
+
+-- Pop the changelog once when the addon's version changes from what was last seen.
+function Changelog:MaybeAutoOpen()
+    local db = PRIO.db
+    if not db then return end
+    local cur = self:CurrentVersion()
+    if not cur then return end
+    local seen = db.changelogSeenVersion
+    db.changelogSeenVersion = cur
+    if seen ~= cur then self:Open() end
 end

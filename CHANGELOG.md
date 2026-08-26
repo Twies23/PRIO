@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.75 (alpha)
+- **The changelog opens automatically on a new version.** The first time you log in after updating, PRIO pops the changelog so you can see what changed (once per version). You can still open it any time with `/prio changelog`.
+
+
 ## 0.2.74 (alpha)
 - **Keeps predicting during channels (e.g. Bladestorm).** While you're channeling, the game reports every other ability as "unusable" for the duration, which was collapsing the strip to a single filler icon. PRIO now relaxes that usability check while a cast/channel is in flight (it already skips the spell you're casting) and predicts the next actions from cooldowns and conditions — so you see what to press coming out of Bladestorm. (Requires "Advance primary while casting", which is on by default.)
 
