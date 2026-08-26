@@ -83,6 +83,7 @@ local function cpMax(n)      return { type = "resourceMax", v = n } end   -- com
 local function stacksMin(id, n) return { type = "stacksMin", spell = id, v = n } end
 local function stacksMax(id, n) return { type = "stacksMax", spell = id, v = n } end
 local function glow(id)      return { type = "glowing", spell = id } end            -- button proc glow
+local function enemiesMin(n) return { type = "enemiesMin", v = n } end               -- nameplate count >= n
 
 --------------------------------------------------------------------------------
 -- Trickster priority (Wowhead 12.1). Combo-point gates are exact; RtB stage reads
@@ -119,7 +120,9 @@ local st = {
 }
 
 local aoe = {
-    { spell = "BladeFlurry",   cond = buffDown(ID_BLADEFLURRY) },                   -- keep the cleave buff up
+    -- Blade Flurry: put the cleave buff up; also RECAST at <=4 CP with 4+ targets (its
+    -- cooldown lets you refresh the cleave for the bigger pull) -- per Wowhead.
+    { spell = "BladeFlurry",   cond = OR(buffDown(ID_BLADEFLURRY), AND(cpMax(4), enemiesMin(4))) },
     { spell = "RollTheBones",  cond = rtbReroll() },
     { spell = "Preparation",   cond = AND(cdDown(ID_BTE), cdDown(ID_ADRENALINE),
                                           cdDown(ID_KILLSPREE), cdDown(ID_BLADERUSH)) },
@@ -276,11 +279,9 @@ local spec = {
     OnCast = function(P, key, now) end,
 
     debug = {
-        { label = "RtB stage 3 (TripleThreat)", kind = "buff", spell = ID_RTB_S3 },
-        { label = "Roll the Bones (bar)", kind = "buff",  spell = ID_ROLLBONES },
+        { label = "Roll the Bones (active)", kind = "buff", spell = ID_ROLLBONES },
         { label = "Slice and Dice",      kind = "buff",  spell = ID_SND },
         { label = "Blade Flurry",        kind = "buff",  spell = ID_BLADEFLURRY },
-        { label = "Opportunity",         kind = "stacks", spell = ID_OPPORTUNITY },
         { label = "Adrenaline Rush",     kind = "buff",  spell = ID_ADRENALINE },
         { label = "Between the Eyes (t)", kind = "buff", spell = ID_BTE },
     },
@@ -290,14 +291,10 @@ local spec = {
     },
 
     --------------------------------------------------------------------------------
-    -- Rotation Ability & Buff Debug (/prio rotdebug). THIS is the point of this build:
-    -- watch which signals read live in combat before trusting the rotation.
-    --   * buffs  -> API.IsAuraActive (what the COOLDOWN MANAGER reports active) + the
-    --               rendered stack/stage count and its source.
-    --   * rangeProbes.resource   -> combo points read straight off the power bar.
-    --   * rangeProbes.directAura -> GetPlayerAuraBySpellID for the untracked RtB buffs
-    --               (the only path that might survive combat). "readable" vs
-    --               "PRESENT/secret" vs "absent" tells us if direct reads work.
+    -- Rotation Ability & Buff Debug (/prio rotdebug): the live signals the rotation
+    -- actually reads. abilities = cooldown/usable; buffs = what the Cooldown Manager
+    -- reports active; rangeProbes = combo points, the inferred roll state, and the
+    -- Opportunity boolean (from the Pistol Shot glow).
     --------------------------------------------------------------------------------
     rotationDebug = {
         title = "Rotation Ability & Buff Debug",
@@ -306,37 +303,19 @@ local spec = {
             "BladeRush", "BetweenTheEyes", "Dispatch", "PistolShot", "SinisterStrike", "BladeFlurry",
         },
         buffs = {
-            { label = "RtB bar (assumed 1)",     spell = ID_ROLLBONES },   -- CDM bar: active, no stage
-            { label = "One of a Kind (stg1)",    spell = ID_RTB_S1 },      -- via direct-read fallback
-            { label = "Double Trouble (stg2)",   spell = ID_RTB_S2 },
-            { label = "Triple Threat (stg3)",    spell = ID_RTB_S3 },
+            { label = "Roll the Bones (active)", spell = ID_ROLLBONES },   -- a roll is up (bar/buff)
             { label = "Slice and Dice",          spell = ID_SND },
             { label = "Blade Flurry",            spell = ID_BLADEFLURRY },
-            { label = "Opportunity",             spell = ID_OPPORTUNITY },
             { label = "Adrenaline Rush",         spell = ID_ADRENALINE },
-            { label = "Loaded Dice",             spell = ID_LOADEDDICE },
             { label = "Between the Eyes (dbf)",  spell = ID_BTE },
-            { label = "Unseen Blade",            spell = ID_UNSEENBLADE },
-            { label = "Flawless Form",           spell = ID_FLAWLESS },
-        },
-        predStacks = {
-            -- Predicted Opportunity charges (0/3/6 with Fan the Hammer), glow-anchored.
-            { label = "Opportunity (pred)",      spell = ID_OPPORTUNITY },
-        },
-        glows = {
-            { label = "Pistol Shot (Opportunity)", spell = ID_PISTOLSHOT },   -- glow = Opportunity present (>=3)
         },
         rangeProbes = {
             { label = "Combo Points",            kind = "resource" },
-            -- Inferred RtB stage: false = proven stage 1 (reroll), true = proven high,
-            -- unknown = not yet disproven (treated as good). Drives the reroll line.
-            { label = "RtB stage2 (inferred)",   kind = "predFlag", key = "rtbStage2" },
-            -- Direct-ID reads for the named RtB stage buffs (CDM doesn't track them).
-            -- These confirm whether the direct read survives combat -- if it does, the
-            -- reroll / Keep It Rolling lines work; if "PRESENT/secret", they can't.
-            { label = "One of a Kind (direct)",  kind = "directAura", spell = ID_RTB_S1 },
-            { label = "Double Trouble (direct)", kind = "directAura", spell = ID_RTB_S2 },
-            { label = "Triple Threat (direct)",  kind = "directAura", spell = ID_RTB_S3 },
+            -- Inferred roll quality: false = proven stage 1 (reroll), true = confirmed
+            -- stage 2+ (good), unknown = not yet disproven (treated as good).
+            { label = "Roll good? (inferred)",   kind = "predFlag", key = "rtbStage2" },
+            -- Opportunity as a boolean, from the Pistol Shot glow (up = spend a Pistol Shot).
+            { label = "Opportunity",             kind = "boolStack", spell = ID_OPPORTUNITY },
         },
     },
 }

@@ -11,6 +11,10 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.3.13", {
+        "Outlaw single-target and AoE priorities locked to the Trickster guide, top to bottom. AoE also recasts Blade Flurry at <=4 combo points on 4+ targets.",
+        "Rotation Debug tidied: dropped the exploratory Roll-the-Bones probes, and Opportunity now shows up / down instead of a stack number.",
+    } },
     { "0.3.12", {
         "Opportunity: anchor to the glow instead of guessing the count. The live count isn't reliably readable in combat (the game exposes only its MAX charges), so PRIO now reads only the Pistol Shot glow -- off = 0, on = 3+ -- and spends Pistol Shot when the glow is up and combo points are low. No more phantom 6, no more wasted Pistol Shot at high combo points.",
     } },

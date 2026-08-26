@@ -588,6 +588,11 @@ function RotationDebug:Update()
                 if v == true then return "|cff0cd29ftrue|r" end
                 if v == false then return "|cffe0685afalse (reroll)|r" end
                 return "|cff9fb0beunknown (assume good)|r"
+            elseif r.kind == "boolStack" then
+                -- A predicted counter shown as a boolean up/down (e.g. Opportunity).
+                local st = PRIO.Engine and PRIO.Engine.P and PRIO.Engine.P.stacks
+                local v = (st and st[r.spell]) or 0
+                return v > 0 and "|cff0cd29fup|r" or "|cff5a6a76down|r"
             end
             return "-"
         end)
