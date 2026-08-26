@@ -710,6 +710,106 @@ function Options:OpenCondEditor(spec, mode, index, variant)
     editor:Raise()
 end
 
+--------------------------------------------------------------------------------
+-- Opener editor: a plain ordered list of ability steps (no conditions). Stored per
+-- spec in db.customOpeners[specKey] as a list of spell KEYS; copy-on-write from the
+-- spec default on first edit.
+--------------------------------------------------------------------------------
+local function KeyForSid(spec, sid)
+    for k, s in pairs(spec.spells) do if s == sid then return k end end
+    return nil
+end
+local function IsCustomOpener(spec)
+    return (PRIO.db.customOpeners and PRIO.db.customOpeners[spec.key]) and true or false
+end
+local function EnsureCustomOpener(spec)
+    PRIO.db.customOpeners = PRIO.db.customOpeners or {}
+    if not PRIO.db.customOpeners[spec.key] then
+        local copy = {}
+        for _, k in ipairs(spec.opener or {}) do copy[#copy + 1] = k end
+        PRIO.db.customOpeners[spec.key] = copy
+    end
+    return PRIO.db.customOpeners[spec.key]
+end
+
+function Pages.opener()
+    local db = PRIO.db
+    if picker then picker:Hide() end
+    local spec = CurrentSpec()
+
+    Section("Opener")
+    SettingRow("Play the opener at pull", 30, function(r)
+        local t = UI.Toggle(r, function() return db.useOpener ~= false end,
+            function(v) db.useOpener = v and true or false end, AfterChange)
+        t:SetPoint("RIGHT", 0, 0)
+    end)
+
+    if not spec then
+        local none = Track(UI.Font(content, 13, C.faint))
+        none:SetPoint("TOPLEFT", 0, -cursorY); none:SetText("Log in on a supported spec to edit its opener.")
+        cursorY = cursorY + 30
+        return
+    end
+
+    local op = PRIO.Engine:ActiveOpener() or {}
+    local custom = IsCustomOpener(spec)
+    local function refresh() AfterChange(); Options:ShowPage("opener") end
+
+    Section("Sequence" .. (custom and "   (custom)" or "   (default)"))
+    if custom then
+        SettingRow("This opener is customized", 26, function(r)
+            local b = UI.Card(r, C.control, 0.1); b:SetSize(130, 24); b:SetPoint("RIGHT", 0, 0)
+            local bb = CreateFrame("Button", nil, b); bb:SetAllPoints()
+            local fs = UI.Font(b, 12, C.accent); fs:SetPoint("CENTER"); fs:SetText("Reset to default")
+            bb:SetScript("OnClick", function()
+                if PRIO.db.customOpeners then PRIO.db.customOpeners[spec.key] = nil end
+                refresh()
+            end)
+        end)
+    end
+
+    for i, key in ipairs(op) do
+        local sid = spec.spells[key]
+        local known = sid and API.IsKnown(sid)
+        local row = Track(UI.Card(content, C.surface, 0.07))
+        row:SetSize(contentW, 42); row:SetPoint("TOPLEFT", 0, -cursorY); cursorY = cursorY + 48
+
+        local up = IconButton(row, "\226\150\178", i > 1, function()
+            local L = EnsureCustomOpener(spec); L[i], L[i - 1] = L[i - 1], L[i]; refresh()
+        end); up:SetPoint("TOPLEFT", 6, -3)
+        local dn = IconButton(row, "\226\150\188", i < #op, function()
+            local L = EnsureCustomOpener(spec); L[i], L[i + 1] = L[i + 1], L[i]; refresh()
+        end); dn:SetPoint("BOTTOMLEFT", 6, 3)
+
+        local idx = UI.Font(row, 11, C.faint); idx:SetPoint("LEFT", 30, 0); idx:SetText(tostring(i))
+        local ic = row:CreateTexture(nil, "ARTWORK"); ic:SetSize(28, 28); ic:SetPoint("LEFT", 44, 0)
+        ic:SetTexture(sid and API.SpellTexture(sid)); ic:SetTexCoord(0.1, 0.9, 0.1, 0.9); ic:SetDesaturated(not known)
+        local nm = UI.Font(row, 13, known and C.head or C.faint)
+        nm:SetPoint("LEFT", ic, "RIGHT", 10, 6); nm:SetWidth(150); nm:SetJustifyH("LEFT"); nm:SetWordWrap(false)
+        nm:SetText(sid and API.SpellName(sid) or tostring(key))
+        local pid = UI.Font(row, 10, C.faint); pid:SetPoint("LEFT", ic, "RIGHT", 10, -8)
+        pid:SetText((sid and ("#" .. sid) or tostring(key)) .. (known and "" or "  |cffe0685anot known|r"))
+
+        local rm = IconButton(row, "\195\151", true, function()
+            local L = EnsureCustomOpener(spec); table.remove(L, i); refresh()
+        end); rm:SetSize(18, 18); rm:SetPoint("RIGHT", -8, 0)
+    end
+
+    local addRow = Track(CreateFrame("Button", nil, content, "BackdropTemplate"))
+    addRow:SetSize(contentW, 30); addRow:SetPoint("TOPLEFT", 0, -cursorY)
+    addRow:SetBackdrop({ bgFile = WHITE, edgeFile = WHITE, edgeSize = 1 })
+    addRow:SetBackdropColor(C.accent[1], C.accent[2], C.accent[3], 0.06)
+    addRow:SetBackdropBorderColor(C.accent[1], C.accent[2], C.accent[3], 0.3)
+    local al = UI.Font(addRow, 13, C.accent); al:SetPoint("CENTER"); al:SetText("+  Add step")
+    addRow:SetScript("OnClick", function()
+        ShowSpellPicker(addRow, spec, function(sid)
+            local key = KeyForSid(spec, sid)
+            if key then local L = EnsureCustomOpener(spec); L[#L + 1] = key; refresh() end
+        end)
+    end)
+    cursorY = cursorY + 38
+end
+
 function Pages.general()
     local db = PRIO.db
     Section("Behavior")
@@ -851,7 +951,8 @@ end
 --------------------------------------------------------------------------------
 local NAV = {
     { header = "DISPLAY",  items = { { label = "Icons & Layout", page = "display" } } },
-    { header = "ROTATION", items = { { label = "Priorities",     page = "rotation" } } },
+    { header = "ROTATION", items = { { label = "Priorities",     page = "rotation" },
+                                     { label = "Opener",         page = "opener" } } },
     { header = "GENERAL",  items = { { label = "Behavior",       page = "general" },
                                      { label = "Profiles",       page = "profiles" } } },
 }
@@ -859,6 +960,7 @@ local NAV = {
 local PAGE_META = {
     display  = { title = "Display",    desc = "Size, layout, and what the strip draws on each icon." },
     rotation = { title = "Priorities", desc = "Order abilities highest to lowest. PRIO shows the first one that's ready and passes its condition." },
+    opener   = { title = "Opener",     desc = "The exact sequence PRIO shows at the pull, in order. Steps that aren't known or ready are skipped." },
     general  = { title = "Behavior",   desc = "Enable, lock, out-of-combat visibility, and auto-mode thresholds." },
     profiles = { title = "Profiles",   desc = "Save your settings and priority lists as named profiles, or apply the recommended preset." },
 }

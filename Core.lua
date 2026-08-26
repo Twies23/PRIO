@@ -76,6 +76,8 @@ PRIO.defaults = {
     -- Custom priority lists: customPriorities[specKey][mode] = { {spell=id, cond=, off=}, ... }
     -- When present for a spec/mode, it replaces the built-in default entirely.
     customPriorities = {},
+    -- Custom openers: customOpeners[specKey] = { "SpellKey", ... }. Replaces spec.opener.
+    customOpeners = {},
 }
 
 --------------------------------------------------------------------------------
@@ -136,6 +138,7 @@ function PRIO:SaveProfile(name)
     local p = {}
     for _, k in ipairs(self.PROFILE_KEYS) do p[k] = self.db[k] end
     p.customPriorities = CopyTable(self.db.customPriorities or {})
+    p.customOpeners = CopyTable(self.db.customOpeners or {})
     self.db.profiles[name] = p
     print("|cff" .. (self.UI and self.UI.accentHex or "0cd29f") .. "PRIO|r: saved profile \"" .. name .. "\".")
 end
@@ -145,6 +148,7 @@ function PRIO:ApplyProfile(name)
     if not p then return end
     for _, k in ipairs(self.PROFILE_KEYS) do if p[k] ~= nil then self.db[k] = p[k] end end
     if p.customPriorities then self.db.customPriorities = CopyTable(p.customPriorities) end
+    if p.customOpeners then self.db.customOpeners = CopyTable(p.customOpeners) end
     if self.UI then self.UI.ApplyAccent() end
     if self.RecolorMinimapButton then self.RecolorMinimapButton() end
     if self.Display and self.Display.Refresh then self.Display:Refresh() end

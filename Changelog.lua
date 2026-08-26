@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.62", {
+        "Openers are now configurable: Options -> Opener lets you reorder, add, and remove opener steps per spec, with reset-to-default. Saved with your profiles.",
+    } },
     { "0.2.61", {
         "Rebuilt the Slayer Arms default lists to the tuned versions (ST, plus a shared list for AoE / ST-Execute / AoE-Execute). Reset Arms lists to default to pick them up. Colossus unchanged.",
     } },

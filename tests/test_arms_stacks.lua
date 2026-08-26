@@ -157,6 +157,22 @@ test("execute overlay swaps the active mode", function()
     H.reset(); H.rebind()
 end)
 
+-- Configurable opener: a custom sequence in db overrides the spec default.
+test("opener: custom db override wins, else spec default", function()
+    H.reset(); H.S.specID = 71; H.rebind()
+    local def = H.armsSpec.opener
+    truthy(def and #def > 0, "spec has a default opener")
+    eq(H.Engine:ActiveOpener(), def, "no custom -> spec default")
+
+    H.db.customOpeners = { [H.armsSpec.key] = { "Avatar", "MortalStrike" } }
+    local ao = H.Engine:ActiveOpener()
+    eq(ao[1], "Avatar"); eq(ao[2], "MortalStrike")
+    eq(#ao, 2, "custom opener replaces the default entirely")
+
+    H.db.customOpeners = nil
+    H.reset(); H.rebind()
+end)
+
 -- Debuff conditions alias the tracked-aura read (buff logic), debuff-labeled.
 test("debuffActive / debuffMissing read the tracked aura", function()
     H.reset()

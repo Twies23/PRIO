@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.62 (alpha)
+- **Configurable openers.** New **Options → Opener** page: reorder, add, and remove the steps of the pull sequence per spec, just like the priority lists (steps that aren't known or off cooldown are still skipped automatically). Comes with a **Reset to default**, and your custom opener is saved and restored with your profiles.
+
+
 ## 0.2.61 (alpha)
 - **New tuned Slayer default lists.** The Slayer single-target list is rebuilt, and the AoE, ST-Execute, and AoE-Execute lists now share one tuned list. Reset Arms lists to default to pick them up. (Colossus defaults are unchanged — those weren't part of this pass.)
 

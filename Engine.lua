@@ -578,11 +578,21 @@ PRIO:On("PLAYER_TALENT_UPDATE", function() Engine:RefreshTalentFlags() end)
 --------------------------------------------------------------------------------
 -- Hardcoded opener
 --------------------------------------------------------------------------------
+-- The effective opener sequence: the user's custom copy (db.customOpeners[specKey])
+-- if present, else the spec default. A list of spell keys.
+function Engine:ActiveOpener()
+    if not spec then return nil end
+    local co = PRIO.db.customOpeners
+    if co and co[spec.key] then return co[spec.key] end
+    return spec.opener
+end
+
 -- Begin the opener at combat start, but only on a "fresh" pull (a big cooldown is
 -- up). Skips any leading steps already pre-cast (on cooldown / no charge).
 function Engine:StartOpener()
     self.openerActive = false
-    if not (PRIO.db.useOpener and spec and spec.opener and #spec.opener > 0) then return end
+    local op = self:ActiveOpener()
+    if not (PRIO.db.useOpener and spec and op and #op > 0) then return end
     -- Fresh pull = one of the spec's signature cooldowns is ready.
     local fresh = false
     for _, key in ipairs(spec.openerReady or {}) do
@@ -591,12 +601,12 @@ function Engine:StartOpener()
     end
     if not fresh then return end
     local idx = 1
-    while idx <= #spec.opener do
-        local sid = spec.spells[spec.opener[idx]]
+    while idx <= #op do
+        local sid = spec.spells[op[idx]]
         if sid and API.IsKnown(sid) and API.IsReady(sid) then break end
         idx = idx + 1
     end
-    if idx > #spec.opener then return end
+    if idx > #op then return end
     self.openerActive = true
     self.openerIndex  = idx
     self.openerStart  = GetTime()
@@ -605,15 +615,16 @@ end
 -- Skip opener steps that aren't castable right now (already used / on cooldown),
 -- so a long-CD step like Ascendance isn't shown when it's down.
 function Engine:SkipOpenerSteps()
-    while self.openerActive and self.openerIndex <= #spec.opener do
-        local sid = spec.spells[spec.opener[self.openerIndex]]
+    local op = self:ActiveOpener() or {}
+    while self.openerActive and self.openerIndex <= #op do
+        local sid = spec.spells[op[self.openerIndex]]
         if sid and API.IsKnown(sid) and not API.IsReady(sid) then
             self.openerIndex = self.openerIndex + 1
         else
             break
         end
     end
-    if self.openerActive and self.openerIndex > #spec.opener then self.openerActive = false end
+    if self.openerActive and self.openerIndex > #op then self.openerActive = false end
 end
 
 -- Advance/abort the opener as the player casts.
@@ -621,9 +632,10 @@ function Engine:AdvanceOpener(key)
     if not self.openerActive then return end
     self:SkipOpenerSteps()
     if not self.openerActive then return end
-    if key == spec.opener[self.openerIndex] then
+    local op = self:ActiveOpener() or {}
+    if key == op[self.openerIndex] then
         self.openerIndex = self.openerIndex + 1
-        if self.openerIndex > #spec.opener then self.openerActive = false end
+        if self.openerIndex > #op then self.openerActive = false end
     elseif key then
         self.openerActive = false            -- deviated -> hand off to the priority
     end
@@ -1143,12 +1155,13 @@ function Engine:Evaluate()
         if GetTime() - (self.openerStart or 0) > 15 then self.openerActive = false end
     end
     if self.openerActive then self:SkipOpenerSteps() end
-    if self.openerActive and spec.opener then
+    local openerSeq = self:ActiveOpener()
+    if self.openerActive and openerSeq then
         local want2 = 1 + (PRIO.db.numQueue or 3)
         local picks, n = {}, 0
-        for i = self.openerIndex, #spec.opener do
+        for i = self.openerIndex, #openerSeq do
             if n >= want2 then break end
-            local sid = spec.spells[spec.opener[i]]
+            local sid = spec.spells[openerSeq[i]]
             -- Only show steps that are known AND currently castable.
             if sid and API.IsKnown(sid) and API.IsReady(sid) then n = n + 1; picks[n] = Entry(sid) end
         end
