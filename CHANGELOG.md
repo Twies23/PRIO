@@ -1,110 +1,19 @@
 # PRIO Changelog
 
-## 0.3.27
-- The low-energy "keep recommending it" behavior already covers **Pistol Shot** and **Blade Flurry** too — it's applied to every ability, not just finishers (confirmed with tests).
-- New `/prio usable` command: for each rotation ability it prints the game's usable / insufficient-power flags and PRIO's recommend decision — handy if something you expect still isn't showing (it'll tell you whether it's an energy block or a real one like range).
+## 0.4.0
+Third stable release — headlined by full **Outlaw Rogue** support, plus engine improvements that help every spec. Everything since 0.3.0.
 
-## 0.3.26
-- **Low energy no longer collapses to Sinister Strike.** When a spender (a finisher, or an empowered Pistol Shot) is unusable *only* because you're short on energy, PRIO now keeps recommending it — you'll press it the instant energy ticks up — instead of falling back to the cheapest builder. It uses the game's own "insufficient power" flag as the cue, so there's no energy modeling; abilities that are genuinely unusable (out of range, wrong form) still don't show. (The queue also already predicts Killing Spree right after Adrenaline Rush when both are ready.)
+**Outlaw Rogue (Trickster)**
+- Complete single-target and AoE priorities and the opener.
+- **Roll the Bones read exactly.** PRIO figures out your roll's stage from combo-point *timing* — a stage-2+ roll makes Sinister Strike generate an extra combo point, landing an instant beat before a double-strike does — so it rerolls a stage-1 roll and never a good one.
+- **Opportunity tracked (0/3/6)** by detecting Sinister Strike double-strikes from that same timing, driving the Pistol Shot lines. New adjustable "Opportunity ≥ N" condition.
+- **Keep It Rolling** is a movable advisory alert (only you can tell if a roll's a 3/Jackpot worth extending); the free **Dispatch** keys off the 4-set **Fang Strike** buff.
 
-## 0.3.25
-- The **alert banner** (e.g. the Keep It Rolling advisory) is now **movable**: unlock the display and it shows a "drag to move" placeholder you can drag anywhere; its position is remembered separately from the main strip. Lock again and it only appears for a real alert.
-
-## 0.3.24
-- **Fix:** a couple of Outlaw default conditions showed blank when you opened them in the editor ("RtB needs reroll" and "Opportunity ≥"). They were built from internal condition types that aren't user-editable; they now use the proper preset / "Opportunity ≥ N" forms, so every default condition opens and edits cleanly. (Reset an Outlaw list to default to pick up the fixed versions.)
-
-## 0.3.23
-**Outlaw — tuned defaults + opener.**
-- The shipped ST and AoE priorities are now the tuned lists: **Killing Spree** fires right after Adrenaline Rush; **Pistol Shot** is two lines (dump at 6 charges, or spend at low combo points); **Blade Flurry** in AoE has a dedicated recast line for 4+ targets at low combo points. (If you'd customized Outlaw, hit "Reset to default" to pick these up.)
-- **Opener** matches the Icy Veins 12.1 sequence: Adrenaline Rush → Roll the Bones → Slice and Dice, then build and Between the Eyes at 6.
-- Note: Sinister Strike sitting at the bottom as the fallback builder is *correct* — Outlaw doesn't pool energy, so it's the baseline generator you fall back to.
-
-## 0.3.22
-- Outlaw: the **queue ("what's next") now predicts combo-point generation** — builders add combo points (Sinister Strike 1, or 2 on a stage-2+ roll; Ambush 2; an Opportunity-empowered Pistol Shot 3 with Fan the Hammer) and finishers spend them all — so the upcoming icons correctly build toward a finisher and back down. Roll the Bones is treated as *not* a finisher (it costs Energy, no combo points).
-
-## 0.3.21
-- **Fix (Outlaw):** Roll the Bones (and other Energy-cost abilities) could be silently skipped. PRIO was comparing their **Energy** cost against your **combo points** — so at low combo points it wrongly decided you couldn't afford them. It now checks the cost of the *right* resource, so Roll the Bones is recommended whenever it's off cooldown. (Windwalker was unaffected — it already uses its own Chi cost.)
-
-## 0.3.20
-- Outlaw: new **"Opportunity ≥ / ≤ N"** condition in the editor — gate any line on PRIO's tracked Opportunity charge count (0/3/6), with the threshold you choose. It reads the real tracked count, not the Cooldown Manager's misleading max-charges number.
-
-## 0.3.19
-- **Fix:** Opportunity was still jumping straight to 6 on the first proc. The glow anchor was "floor to a proc's worth when the button lights up," which double-counted against the actual proc landing at the same instant. Now the proc detection alone drives the count (first proc = 3, second = 6), and the glow only resets it to 0 when Opportunity empties.
-
-## 0.3.18
-- Outlaw: the Roll the Bones / Opportunity combo-point detection now works by **order, not exact timing**. Your `/prio ssdelay` runs showed the instant bump can land anywhere from 0–120ms and the double-strike from ~200–330ms, so a fixed millisecond cutoff was brittle. It now just uses "first bump after the cast = stage, second bump = double-strike," which is immune to frame-rate and latency jitter.
-
-## 0.3.17
-**Outlaw: real Opportunity charge count (0/3/6), from the double-strike.** Using the same combo-point timing, PRIO now detects each Sinister Strike double-strike (its combo point arrives ~200-330ms after the cast) — and that's an Opportunity proc. So it counts your charges accurately: +3 per proc, −3 per Pistol Shot, capped at 6, with the Pistol Shot glow resetting it to 0 when empty. Pistol Shot's **"dump at 6 stacks"** line is back (reliable now, no phantom 6), alongside the "3 + low combo points" spend. Debug shows the live charge count.
-
-## 0.3.16
-**Outlaw: read the Roll the Bones stage *exactly*, from combo-point timing.** Your `/prio ssdelay` data confirmed it — the stage bonus lands the instant a Sinister Strike hits, while a double-strike's combo point arrives ~200-330ms later. So PRIO now reads the first combo-point bump after each Sinister Strike: **+1 = stage 1, +2 = stage 2+.** That's an exact, per-cast read (replacing the old inference that needed a few casts to settle and could briefly guess wrong), so reroll and the Keep It Rolling alert are now dead-on.
-
-## 0.3.15
-- New `/prio ssdelay` diagnostic (Outlaw groundwork): times each combo-point arrival after a Sinister Strike, so we can see the gap between the *instant* combo point (the strike + Roll the Bones stage bonus) and the *delayed* one from a double-strike. This timing split could let PRIO read your roll stage exactly and detect Opportunity procs cleanly.
-
-## 0.3.14
-- Outlaw: the "free Dispatch" line now correctly keys off the real 4-set buff, **Fang Strike** (was a placeholder). If you have the 4-piece tier set, track Fang Strike and PRIO will suggest the free Dispatch while it's up. Harmless if you don't have the set.
-
-## 0.3.13
-**Outlaw — finalized rotations + tidied debug.**
-- Single-target and AoE priorities locked to the Trickster guide, top to bottom. AoE also recasts Blade Flurry at ≤4 combo points on 4+ targets.
-- Rotation Debug cleaned up: dropped the exploratory Roll-the-Bones probes we no longer need, and Opportunity now shows a simple **up / down** instead of a stack number (it's a boolean now).
-
-## 0.3.12
-**Opportunity: anchor to the glow, stop guessing the count.** The live Opportunity count isn't reliably readable in combat — the game only exposes its *max* charges — so trying to track 3-vs-6 kept landing on a false 6. PRIO now reads only what's solid: the Pistol Shot button glows while Opportunity is up. Glow off = 0, glow on = 3+. Pistol Shot spends when the glow is up and combo points are low, which never overcaps combo points. No more phantom 6, no more wasted Pistol Shot at high combo points.
-
-## 0.3.11
-- **Fix:** Opportunity was jumping straight to 6 the moment it lit up. The Cooldown Manager reports Opportunity's *max* charges (6), not the live count, and PRIO was trusting that. It now ignores that read and predicts from the glow instead — first proc = 3, and it only climbs to 6 on a detected second proc. (This also stops a wasted Pistol Shot that overcapped combo points when the count falsely read 6.)
-
-## 0.3.10
-**Outlaw — Opportunity charge tracking.** The stack count is hidden in combat, so PRIO calculates it, anchored to signals it *can* read:
-- The Pistol Shot button glows while Opportunity is up, and with Fan the Hammer every proc is +3 and every Pistol Shot −3 (cap 6) — so the count is only ever 0, 3, or 6, and a glowing Pistol Shot means 3+. That makes the *"3 stacks + low combo points"* Pistol Shot fully readable.
-- The count self-corrects: whenever Opportunity empties and the glow goes off, it hard-resets to 0, so it can't drift over a fight. Double-strikes add a proc; Pistol Shot spends. All amounts adjust to whether Fan the Hammer is talented.
-
-## 0.3.9
-- The Keep It Rolling alert now shows its **keybind** and clearer wording: *"2+ roll detected — extend if it's a 3 or Jackpot."* Says exactly what PRIO knows (a good roll) and leaves the extend-or-not call to you.
-
-## 0.3.8
-- Roll the Bones can be tracked as **either a bar or a buff** in your Cooldown Manager — both let PRIO see a roll is active. Setup guidance corrected (it previously implied a bar was required).
-
-## 0.3.7
-**Advisory alerts — and a smarter Keep It Rolling.**
-- New alert banner: PRIO can now surface a pulsing prompt above the strip for a decision it can't make for you. First use: **Keep It Rolling**. Since only you can see whether your roll is a stage 3 / Jackpot worth extending, PRIO no longer auto-presses it — instead, when Keep It Rolling is ready on a confirmed good roll (stage 2+), it shows *"Keep It Rolling ready — check your roll & extend if it's strong,"* and leaves the call to you.
-- (Requires Roll the Bones tracked as a bar in your Cooldown Manager — same as the reroll logic.)
-
-## 0.3.6
-**Outlaw Roll the Bones — sharper roll detection using Opportunity.**
-- Sinister Strike awards a combo point per strike and, on its double-strike, grants Opportunity. PRIO now reads that Opportunity gain to know whether the strike doubled — so it interprets the combo-point yield exactly: a yield equal to the number of strikes means no Roll-the-Bones bonus (stage 1 → reroll), and more means the roll is good (stage 2+, now positively confirmed, not just assumed).
-- Keep It Rolling now fires once a good roll is **confirmed** (stage 2+) rather than on any active roll, so it never wastes on a stage-1 roll you're about to reroll. (Stage 3 itself isn't readable — it only speeds up secret cooldowns — so stage 2+ is the trigger.)
-
-## 0.3.5
-**Outlaw Roll the Bones — figure out the roll from combo points.**
-- The stage buffs can't be read directly in combat, so PRIO now *infers* the roll from what it does: stage 2 makes Sinister Strike generate an extra combo point, so a Sinister Strike that gives only its base 1 combo point proves you're on a stage-1 roll → reroll. Anything higher is kept. It can never mistake a good roll for a bad one (stage 2+ never gives just 1), and Roll the Bones' long cooldown gives it plenty of time to settle before a reroll is even available.
-- Keep It Rolling runs on cooldown while any roll is active (the stage-3 breakpoint isn't readable).
-- Rotation Debug shows the inferred roll state ("RtB stage2 (inferred)": reroll / assume good).
-
-## 0.3.4
-**Outlaw Roll the Bones — read the stage from the bar's name.**
-- The three stage buffs all share one Cooldown Manager bar (so they always read as "a roll is active"), and reading them by ID is blocked in combat. PRIO now reads the **name the Roll the Bones bar is showing** ("One of a Kind" / "Double Trouble" / "Triple Threat") to know the real stage — so reroll and Keep It Rolling finally fire on the right stage. **Track Roll the Bones as a Bar in your Cooldown Manager** for this to read.
-- New `/prio rtbframe` dumps the Roll the Bones bar's icon and text so the stage read can be verified in combat.
-
-## 0.3.3
-**Outlaw Roll the Bones — correct 12.1 model.**
-- In 12.1 Roll the Bones grants a single named buff whose identity is the stage — **One of a Kind** (1), **Double Trouble** (2), **Triple Threat** (3) — and the tracked bar only ever reads as one stack. PRIO now reads the stage from which named buff is active, so the reroll (stage 1 or less) and Keep It Rolling (stage 3) lines work correctly.
-- Buff conditions now fall back to reading a buff **directly** when the Cooldown Manager doesn't track it — this is what lets the named Roll the Bones buffs (and other untracked buffs) drive the rotation.
-- Rotation Debug shows all three stage buffs and a direct-read test for each, so you can confirm the stage reads in combat.
-
-## 0.3.2
-**Outlaw Rogue — first pass (work in progress).**
-- Outlaw is now a recognised spec with a Trickster single-target and AoE priority. Combo points read exactly (they're a discrete resource), so finisher and builder combo-point gates are precise.
-- **Rotation Debug window** (`/prio rotdebug`) now works for Outlaw and shows, live, what your Cooldown Manager reports active for each buff (Roll the Bones stage, Slice and Dice, Blade Flurry, Opportunity, …), your combo points, and a direct read test for the Roll the Bones buffs the Cooldown Manager doesn't track.
-- `/prio myauras` gained a direct-ID probe: `/prio myauras <id> <id>` (or `/prio rtb`) tests specific auras via a path that can survive combat, since listing all buffs is blocked while fighting.
-- Still to come: verified 12.1 Roll the Bones buff IDs, Fatebound tuning, and Energy pooling.
-
-## 0.3.1
-Groundwork for **Outlaw Rogue** support.
-- New `/prio myauras` (alias `/prio buffs`) command — lists every buff currently on you with its spell ID and whether the game lets PRIO read it in combat. This is how we map auras the Cooldown Manager doesn't track (like the individual Roll the Bones buffs) so the upcoming Outlaw rotation can read them.
+**Engine (all specs)**
+- The queue now predicts combo-point generation, so the upcoming icons build toward a finisher and back down.
+- Abilities unusable *only* because you're low on a filling resource (Energy, etc.) keep showing — you'll press them the instant it regenerates — instead of collapsing to the cheapest filler.
+- Fixed a resource-cost check that compared an ability's Energy cost against a different resource (combo points), and a couple of default conditions that opened blank in the editor.
+- The advisory alert banner can be dragged to its own spot (unlock the display).
 
 ## 0.3.0
 Second stable release — everything since 0.2.0, headlined by full **Arms Warrior** and **Windwalker Monk** support and a much deeper secret-value engine.
