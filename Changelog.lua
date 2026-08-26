@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.3.12", {
+        "Opportunity: anchor to the glow instead of guessing the count. The live count isn't reliably readable in combat (the game exposes only its MAX charges), so PRIO now reads only the Pistol Shot glow -- off = 0, on = 3+ -- and spends Pistol Shot when the glow is up and combo points are low. No more phantom 6, no more wasted Pistol Shot at high combo points.",
+    } },
     { "0.3.11", {
         "Fix: Opportunity jumped straight to 6 when it lit up. The Cooldown Manager reports Opportunity's MAX charges (6), not the live count, and PRIO was trusting it. It now ignores that read and predicts from the glow -- first proc = 3, climbing to 6 only on a detected second proc. Also stops a wasted Pistol Shot that overcapped combo points when the count falsely read 6.",
     } },

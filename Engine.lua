@@ -733,22 +733,12 @@ local function MarkerCount(dm)
     return a == true and 1 or 0
 end
 
--- Exact stack count ONLY when it reads clean (from the aura's own .applications or the
--- Cooldown Viewer's rendered number), else nil. Used to sync a predicted counter to the
--- real value whenever the game exposes it. "assumed"/nil sources return nil (unreadable).
-local function ReadableStacks(aura)
-    if not (aura and API.AuraStackSource) then return nil end
-    local n, src = API.AuraStackSource(aura)
-    if n ~= nil and (src == "appl" or src == "cdm") then return n end
-    return nil
-end
-
--- Opportunity charge amounts, talent-scaled. Fan the Hammer (rank 2) turns each grant
--- and each Pistol Shot into +/-3 and raises the cap to 6; without it, a single charge.
+-- Opportunity "present" value, talent-scaled. Fan the Hammer makes a proc worth 3
+-- charges (so glow-on => >=3); without it, a single charge. We don't resolve the cap.
 local function OppAmounts(oi)
     local fth = oi.talent and API.IsTalentSelected(oi.talent)
-    if fth then return (oi.gain or 3), (oi.spend or 3), (oi.cap or 6) end
-    return (oi.gainBase or 1), (oi.spendBase or 1), (oi.capBase or 1)
+    if fth then return (oi.gain or 3) end
+    return (oi.gainBase or 1)
 end
 
 PRIO:On("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
@@ -775,13 +765,6 @@ PRIO:On("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
             Engine.P.predFlags[si.flag] = nil            -- fresh roll: stage unknown again
             Engine.P.siEval = nil
         end
-    end
-    -- Opportunity spender (Pistol Shot) consumes charges on cast; the glow anchor in
-    -- BuildState corrects to 0 next tick if that emptied it.
-    local oi = spec.oppInfer
-    if oi and key == oi.spendKey then
-        local _, spend = OppAmounts(oi)
-        Engine.P.oppStacks = math.max(0, (Engine.P.oppStacks or 0) - spend)
     end
     -- Spend a predicted charge and start its recharge.
     local cc = spec.chargeTrack and spec.chargeTrack[key] and Engine.P.charges[key]
@@ -1032,13 +1015,6 @@ local function BuildState(self, mode, enemies)
                 local oppNow = MarkerCount(si.doubleMarker)
                 if oppNow ~= nil and oppNow > startOpp then strikes = 2 end
             end
-            -- A double-strike granted Opportunity: add a proc's worth of charges (this
-            -- is the 3->6 step; the 0->3 step is also caught by the glow anchor below).
-            if strikes == 2 and spec.oppInfer then
-                local oi = spec.oppInfer
-                local gain, _, cap = OppAmounts(oi)
-                P.oppStacks = math.min(cap, (P.oppStacks or 0) + gain)
-            end
             -- Only measure when the full possible yield fits without hitting the CP cap,
             -- so a clipped stage-2 can never masquerade as stage 1.
             if startCP <= maxCP - (strikes + 1) then
@@ -1059,27 +1035,20 @@ local function BuildState(self, mode, enemies)
     -- one empty; glow on while we thought 0 => snap to a proc's worth). The +proc step
     -- (3->6) is added on detected double-strikes above; Pistol Shot spends on cast. The
     -- result lands in P.stacks so predStackMin(aura) reads it.
+    -- OPPORTUNITY presence (Outlaw). The live COUNT isn't reliably readable in combat
+    -- (the Cooldown Manager renders its MAX charges, and the stack-delta marker is just
+    -- as unreliable), so we don't try to resolve 3 vs 6 -- we anchor to the one clean
+    -- signal: the Pistol Shot button GLOWS while Opportunity is up. Glow off => 0; glow
+    -- on => a proc's worth (>=3 with Fan the Hammer). Never a phantom 6, so the rotation
+    -- can't fire a cap-dump Pistol Shot that overcaps combo points.
     local oi = spec.oppInfer
-    if oi then
-        local gain, _, cap = OppAmounts(oi)
-        P.oppStacks = P.oppStacks or 0
-        -- Sync to the real count ONLY if the spec opts in (oi.sync): for Opportunity the
-        -- Cooldown Manager renders the MAX charges (6), not the live count, so syncing
-        -- would wrongly snap a fresh single proc (3) up to 6. We rely on the glow anchor
-        -- + proc/spend prediction instead.
-        local rc = oi.sync and ReadableStacks(oi.aura) or nil
-        if rc ~= nil then
-            P.oppStacks = rc
-        elseif oi.glowSpell then
-            local g = API.SpellGlowing(oi.glowSpell)
-            -- glow off => exactly 0; glow on while we thought 0 => ONE proc's worth (never
-            -- the cap -- reaching the cap needs a second, separately-detected proc).
-            if g == false then P.oppStacks = 0
-            elseif g == true and P.oppStacks == 0 then P.oppStacks = gain end
-        end
-        P.oppStacks = math.max(0, math.min(cap, P.oppStacks))
+    if oi and oi.glowSpell then
+        local gain = OppAmounts(oi)
+        local g = API.SpellGlowing(oi.glowSpell)
+        if g == false then P.oppStacks = 0
+        elseif g == true then P.oppStacks = gain end   -- present -> a proc's worth (we don't resolve the cap)
         P.stacks = P.stacks or {}
-        P.stacks[oi.aura] = P.oppStacks
+        P.stacks[oi.aura] = P.oppStacks or 0
     end
 
     -- Expire a predicted MotE that was granted but never consumed.

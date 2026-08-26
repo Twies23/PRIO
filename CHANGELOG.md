@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.3.12
+**Opportunity: anchor to the glow, stop guessing the count.** The live Opportunity count isn't reliably readable in combat — the game only exposes its *max* charges — so trying to track 3-vs-6 kept landing on a false 6. PRIO now reads only what's solid: the Pistol Shot button glows while Opportunity is up. Glow off = 0, glow on = 3+. Pistol Shot spends when the glow is up and combo points are low, which never overcaps combo points. No more phantom 6, no more wasted Pistol Shot at high combo points.
+
 ## 0.3.11
 - **Fix:** Opportunity was jumping straight to 6 the moment it lit up. The Cooldown Manager reports Opportunity's *max* charges (6), not the live count, and PRIO was trusting that. It now ignores that read and predicts from the glow instead — first proc = 3, and it only climbs to 6 on a detected second proc. (This also stops a wasted Pistol Shot that overcapped combo points when the count falsely read 6.)
 

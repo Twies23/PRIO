@@ -83,7 +83,6 @@ local function cpMax(n)      return { type = "resourceMax", v = n } end   -- com
 local function stacksMin(id, n) return { type = "stacksMin", spell = id, v = n } end
 local function stacksMax(id, n) return { type = "stacksMax", spell = id, v = n } end
 local function glow(id)      return { type = "glowing", spell = id } end            -- button proc glow
-local function predOppMin(n) return { type = "predStackMin", spell = ID_OPPORTUNITY, v = n } end  -- predicted Opportunity charges
 
 --------------------------------------------------------------------------------
 -- Trickster priority (Wowhead 12.1). Combo-point gates are exact; RtB stage reads
@@ -115,8 +114,7 @@ local st = {
     { spell = "BladeRush" },                                                        -- on CD
     { spell = "BetweenTheEyes", cond = cpMin(6) },                                  -- finisher at >=6 CP
     { spell = "Dispatch",      cond = cpMin(6) },                                   -- finisher at >=6 CP
-    { spell = "PistolShot",    cond = OR(predOppMin(6),                                         -- Opportunity at cap (predicted)
-                                         AND(glow(ID_PISTOLSHOT), cpMin(1), cpMax(3))) },   -- Opportunity up (glow=>3+) & low CP
+    { spell = "PistolShot",    cond = AND(glow(ID_PISTOLSHOT), cpMax(3)) },                     -- spend Opportunity (glow=up) while CP is low
     { spell = "SinisterStrike", cond = cpMax(5) },                                  -- builder at <=5 CP
 }
 
@@ -131,8 +129,7 @@ local aoe = {
     { spell = "BladeRush" },
     { spell = "BetweenTheEyes", cond = cpMin(6) },
     { spell = "Dispatch",      cond = cpMin(6) },
-    { spell = "PistolShot",    cond = OR(predOppMin(6),                                         -- Opportunity at cap (predicted)
-                                         AND(glow(ID_PISTOLSHOT), cpMin(1), cpMax(3))) },   -- Opportunity up (glow=>3+) & low CP
+    { spell = "PistolShot",    cond = AND(glow(ID_PISTOLSHOT), cpMax(3)) },                     -- spend Opportunity (glow=up) while CP is low
     { spell = "SinisterStrike", cond = cpMax(5) },
 }
 
@@ -172,10 +169,9 @@ local spec = {
     oppInfer = {
         aura      = ID_OPPORTUNITY,
         glowSpell = ID_PISTOLSHOT,     -- button glow = Opportunity present (>=3 with Fan the Hammer)
-        spendKey  = "PistolShot",
-        talent    = 381846,            -- Fan the Hammer (rank 2: +2 gain / +2 spend / max 6)
-        gain = 3, spend = 3, cap = 6,  -- with Fan the Hammer
-        gainBase = 1, spendBase = 1, capBase = 1,   -- without it (single charge)
+        talent    = 381846,            -- Fan the Hammer: a proc is worth 3 charges
+        gain = 3,                      -- "present" value with Fan the Hammer
+        gainBase = 1,                  -- without it (single charge)
     },
 
     -- ALERTS: advisory nudges, not auto-suggestions. Keep It Rolling's value depends on
@@ -206,8 +202,7 @@ local spec = {
         { key = "lowCP",     label = "Low combo points (<=2)", clause = cpMax(2) },
         { key = "rtbReroll", label = "RtB needs reroll",       clause = rtbReroll() },
         { key = "rtbGood",   label = "RtB good roll (2+)",     clause = AND(buffUp(ID_ROLLBONES), predStage2True()) },
-        { key = "opp6",      label = "Opportunity (6)",        clause = predOppMin(6) },
-        { key = "opp3",      label = "Opportunity up (3+)",    clause = glow(ID_PISTOLSHOT) },
+        { key = "oppUp",     label = "Opportunity up (glow)",  clause = glow(ID_PISTOLSHOT) },
     },
 
     auras = {
