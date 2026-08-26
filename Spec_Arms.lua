@@ -324,6 +324,7 @@ local spec = {
         ThunderousRoar = 384318,
         HeroicStrike   = 1269383,  -- Slayer proc (Slam-swap)
         StormBolt      = 107570,   -- talent (stun + damage)
+        Charge         = 100,      -- gap-closer (opener)
     },
 
     openerReady = { "Avatar", "ColossusSmash", "Warbreaker" },
@@ -339,7 +340,7 @@ local spec = {
         "MortalStrike", "Overpower", "Execute", "Slam", "Cleave", "HeroicStrike", "ThunderClap",
         "Bladestorm", "ColossusSmash", "Warbreaker", "Rend", "Skullsplitter",
         "ChampionsSpear", "Avatar", "SweepingStrikes", "Ravager", "Demolish",
-        "ThunderousRoar", "StormBolt",
+        "ThunderousRoar", "StormBolt", "Charge",
     },
 
     -- Overpower runs on 2 charges.

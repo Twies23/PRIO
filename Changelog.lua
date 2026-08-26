@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.70", {
+        "Added Charge to Arms -- selectable in the priority and opener editors.",
+    } },
     { "0.2.69", {
         "Added Storm Bolt to Arms -- it's now selectable in the priority and opener editors.",
     } },

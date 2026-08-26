@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.70 (alpha)
+- **Added Charge** to Arms — selectable in the priority and opener editors (handy as an opener lead-in).
+
+
 ## 0.2.69 (alpha)
 - **Added Storm Bolt** (talent) to Arms. It's now a selectable ability in the priority and opener editors — add it wherever you want it in your lists.
 
