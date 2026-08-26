@@ -1438,7 +1438,11 @@ function Engine:Evaluate()
             if a.when == nil or PRIO.Cond.Eval(a.when, S, nil) then
                 alerts = alerts or {}
                 local sid = a.spell and spec.spells[a.spell]
-                alerts[#alerts + 1] = { text = a.text, texture = sid and API.SpellTexture(sid) or nil }
+                alerts[#alerts + 1] = {
+                    text = a.text,
+                    texture = sid and API.SpellTexture(sid) or nil,
+                    keybind = sid and API.Keybind(sid) or nil,
+                }
             end
         end
     end

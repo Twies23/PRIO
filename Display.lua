@@ -126,6 +126,10 @@ function Display:EnsureCreated()
     alert.icon = alert:CreateTexture(nil, "ARTWORK")
     alert.icon:SetSize(22, 22); alert.icon:SetPoint("LEFT", 5, 0)
     alert.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+    -- Keybind chip on the alert icon (same style as the strip icons).
+    alert.kb = alert:CreateFontString(nil, "OVERLAY")
+    alert.kb:SetPoint("TOPRIGHT", alert.icon, "TOPRIGHT", 2, 2)
+    alert.kb:SetTextColor(gold[1], gold[2], gold[3])
     alert.text = alert:CreateFontString(nil, "OVERLAY")
     alert.text:SetPoint("LEFT", alert.icon, "RIGHT", 6, 0)
     alert.text:SetTextColor(gold[1], gold[2], gold[3])
@@ -191,7 +195,7 @@ function Display:ApplyFonts()
         if fs then pcall(fs.SetFont, fs, font, size or 12, "OUTLINE") end
     end
     setf(container.title, db.titleSize)
-    if container.alert then setf(container.alert.text, db.titleSize) end
+    if container.alert then setf(container.alert.text, db.titleSize); setf(container.alert.kb, db.keybindSize) end
     setf(icons.primary.kb, db.keybindSize)
     setf(icons.primary.name, db.nameSize)
     for i = 1, MAX_ICONS - 1 do
@@ -272,6 +276,7 @@ function Display:Render(result)
     if al and PRIO.db.showAlerts ~= false and container.alert then
         local a = container.alert
         a.text:SetText(al.text or "")
+        a.kb:SetText(PRIO.db.showKeybinds and al.keybind or "")
         if al.texture then a.icon:SetTexture(al.texture); a.icon:Show() else a.icon:Hide() end
         local tw = (a.text:GetStringWidth() or 120) + (al.texture and 33 or 12) + 10
         a:SetSize(tw, 28)

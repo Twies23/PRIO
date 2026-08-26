@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.3.9", {
+        "The Keep It Rolling alert now shows its keybind and clearer wording: \"2+ roll detected -- extend if it's a 3 or Jackpot.\" Says what PRIO knows (a good roll) and leaves the extend call to you.",
+    } },
     { "0.3.8", {
         "Roll the Bones can be tracked as either a bar OR a buff in your Cooldown Manager -- both let PRIO see a roll is active. Setup guidance corrected (it previously implied a bar was required).",
     } },

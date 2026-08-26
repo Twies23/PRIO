@@ -167,7 +167,7 @@ local spec = {
     alerts = {
         { key = "keepItRolling",
           when = AND(cdReady(ID_KEEPROLLING), buffUp(ID_ROLLBONES), predStage2True()),
-          text = "Keep It Rolling ready \226\128\148 check your roll & extend if it's strong",
+          text = "2+ roll detected \226\128\148 extend if it's a 3 or Jackpot",
           spell = "KeepItRolling" },
     },
 
