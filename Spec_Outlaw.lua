@@ -84,6 +84,7 @@ local function stacksMin(id, n) return { type = "stacksMin", spell = id, v = n }
 local function stacksMax(id, n) return { type = "stacksMax", spell = id, v = n } end
 local function glow(id)      return { type = "glowing", spell = id } end            -- button proc glow
 local function enemiesMin(n) return { type = "enemiesMin", v = n } end               -- nameplate count >= n
+local function predOppMin(n) return { type = "predStackMin", spell = ID_OPPORTUNITY, v = n } end  -- predicted Opportunity charges
 
 --------------------------------------------------------------------------------
 -- Trickster priority (Wowhead 12.1). Combo-point gates are exact; RtB stage reads
@@ -115,7 +116,8 @@ local st = {
     { spell = "BladeRush" },                                                        -- on CD
     { spell = "BetweenTheEyes", cond = cpMin(6) },                                  -- finisher at >=6 CP
     { spell = "Dispatch",      cond = cpMin(6) },                                   -- finisher at >=6 CP
-    { spell = "PistolShot",    cond = AND(glow(ID_PISTOLSHOT), cpMax(3)) },                     -- spend Opportunity (glow=up) while CP is low
+    { spell = "PistolShot",    cond = OR(predOppMin(6),                                         -- dump at cap (6 tracked charges)
+                                         AND(glow(ID_PISTOLSHOT), cpMax(3))) },   -- or spend at low CP (glow = Opportunity up)
     { spell = "SinisterStrike", cond = cpMax(5) },                                  -- builder at <=5 CP
 }
 
@@ -132,7 +134,8 @@ local aoe = {
     { spell = "BladeRush" },
     { spell = "BetweenTheEyes", cond = cpMin(6) },
     { spell = "Dispatch",      cond = cpMin(6) },
-    { spell = "PistolShot",    cond = AND(glow(ID_PISTOLSHOT), cpMax(3)) },                     -- spend Opportunity (glow=up) while CP is low
+    { spell = "PistolShot",    cond = OR(predOppMin(6),                                         -- dump at cap (6 tracked charges)
+                                         AND(glow(ID_PISTOLSHOT), cpMax(3))) },   -- or spend at low CP (glow = Opportunity up)
     { spell = "SinisterStrike", cond = cpMax(5) },
 }
 
@@ -154,25 +157,29 @@ local spec = {
         builder   = "SinisterStrike",
         reset     = "RollTheBones",
         flag      = "rtbStage2",
-        -- The RtB stage bonus is applied INSTANTLY with the Sinister Strike, while a
-        -- double-strike lands ~200-330ms later -- so the FIRST combo-point bump after the
-        -- cast (within this window) is the stage read: +1 => stage 1, +2 => stage 2+.
+        -- The RtB stage bonus is applied INSTANTLY with the Sinister Strike (<=~100ms),
+        -- while a double-strike lands ~200-330ms later. So the FIRST combo-point bump
+        -- (within instantWindow) is the stage read (+1 = stage 1, +2 = stage 2+); a bump
+        -- in the (instantWindow, doubleWindow] range is the double-strike, which grants
+        -- Opportunity (counted as a proc by the Opportunity tracker).
         instantWindow = 0.15,
+        doubleWindow  = 0.6,
     },
 
-    -- OPPORTUNITY charge tracking. The stack COUNT is secret in combat, so PRIO predicts
-    -- it, anchored to readable signals: the Pistol Shot button GLOWS while Opportunity is
-    -- up, and with Fan the Hammer every proc is +3 and every Pistol Shot -3 (cap 6) -- so
-    -- the count is only ever 0 / 3 / 6, and glow-on means >=3. Glow off snaps it to 0 (so
-    -- drift can't build up); a detected Sinister Strike double-strike adds a proc (3->6);
-    -- Pistol Shot spends. Synced to the real count whenever it reads clean. All amounts
-    -- gate on Fan the Hammer so it degrades to a single-charge buff without it.
+    -- OPPORTUNITY charge tracking. The stack COUNT is secret in combat, so PRIO tracks it
+    -- from reliable signals: a Sinister Strike DOUBLE-STRIKE grants Opportunity, and we
+    -- detect that from the delayed combo-point bump (~200-330ms after the cast -- see the
+    -- UNIT_POWER_UPDATE handler). Each proc = +3 with Fan the Hammer (cap 6), Pistol Shot
+    -- spends 3, so the count is 0/3/6. The Pistol Shot GLOW anchors it: glow off => 0 (so
+    -- drift can't accumulate), glowing while we somehow read 0 => floor at one proc. All
+    -- amounts gate on Fan the Hammer (degrades to a single-charge buff without it).
     oppInfer = {
         aura      = ID_OPPORTUNITY,
         glowSpell = ID_PISTOLSHOT,     -- button glow = Opportunity present (>=3 with Fan the Hammer)
-        talent    = 381846,            -- Fan the Hammer: a proc is worth 3 charges
-        gain = 3,                      -- "present" value with Fan the Hammer
-        gainBase = 1,                  -- without it (single charge)
+        spendKey  = "PistolShot",
+        talent    = 381846,            -- Fan the Hammer (rank 2: +2 gain / +2 spend / max 6)
+        gain = 3, spend = 3, cap = 6,  -- with Fan the Hammer
+        gainBase = 1, spendBase = 1, capBase = 1,   -- without it (single charge)
     },
 
     -- ALERTS: advisory nudges, not auto-suggestions. Keep It Rolling's value depends on
@@ -311,13 +318,19 @@ local spec = {
             { label = "Adrenaline Rush",         spell = ID_ADRENALINE },
             { label = "Between the Eyes (dbf)",  spell = ID_BTE },
         },
+        predStacks = {
+            -- Tracked Opportunity charges (0/3/6 with Fan the Hammer): +proc on a detected
+            -- double-strike, -3 on Pistol Shot, glow-anchored (off => 0).
+            { label = "Opportunity (charges)",   spell = ID_OPPORTUNITY },
+        },
+        glows = {
+            { label = "Pistol Shot (Opp up)",    spell = ID_PISTOLSHOT },   -- glow = Opportunity present (>=3)
+        },
         rangeProbes = {
             { label = "Combo Points",            kind = "resource" },
-            -- Inferred roll quality: false = proven stage 1 (reroll), true = confirmed
-            -- stage 2+ (good), unknown = not yet disproven (treated as good).
-            { label = "Roll good? (inferred)",   kind = "predFlag", key = "rtbStage2" },
-            -- Opportunity as a boolean, from the Pistol Shot glow (up = spend a Pistol Shot).
-            { label = "Opportunity",             kind = "boolStack", spell = ID_OPPORTUNITY },
+            -- Read from the instant combo-point bump: false = stage 1 (reroll), true =
+            -- stage 2+ (good), unknown = not read yet this roll.
+            { label = "Roll good? (read)",       kind = "predFlag", key = "rtbStage2" },
         },
     },
 }

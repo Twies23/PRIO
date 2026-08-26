@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.3.17", {
+        "Outlaw: real Opportunity charge count (0/3/6). Using the combo-point timing, PRIO detects each Sinister Strike double-strike (its CP arrives ~200-330ms after the cast) = an Opportunity proc, and counts charges accurately: +3 per proc, -3 per Pistol Shot, cap 6, with the glow resetting to 0 when empty. Pistol Shot's 'dump at 6' line is back (reliable now, no phantom 6). Debug shows the live count.",
+    } },
     { "0.3.16", {
         "Outlaw: reads the Roll the Bones stage EXACTLY from combo-point timing. The stage bonus lands the instant a Sinister Strike hits; a double-strike's combo point arrives ~200-330ms later. So PRIO reads the first bump after each Sinister Strike -- +1 = stage 1, +2 = stage 2+ -- an exact per-cast read (replacing the old inference that needed a few casts to settle). Reroll and the Keep It Rolling alert are now dead-on.",
     } },

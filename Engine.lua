@@ -722,12 +722,12 @@ end
 -- Prediction: advance P on the player's own casts
 --------------------------------------------------------------------------------
 
--- Opportunity "present" value, talent-scaled. Fan the Hammer makes a proc worth 3
--- charges (so glow-on => >=3); without it, a single charge. We don't resolve the cap.
+-- Opportunity charge amounts, talent-scaled: gain per proc, spend per Pistol Shot, cap.
+-- Fan the Hammer -> +3 / -3 / cap 6 (so the count is 0/3/6); without it, a single charge.
 local function OppAmounts(oi)
     local fth = oi.talent and API.IsTalentSelected(oi.talent)
-    if fth then return (oi.gain or 3) end
-    return (oi.gainBase or 1)
+    if fth then return (oi.gain or 3), (oi.spend or 3), (oi.cap or 6) end
+    return (oi.gainBase or 1), (oi.spendBase or 1), (oi.capBase or 1)
 end
 
 PRIO:On("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
@@ -748,14 +748,23 @@ PRIO:On("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
     local si = spec.stageInfer
     if si then
         if key == si.builder then
-            Engine.P.ssT0        = GetTime()
-            Engine.P.ssCP0       = spec.resource and API.Power(spec.resource) or nil
-            Engine.P.ssStageRead = false
+            Engine.P.ssT0         = GetTime()
+            Engine.P.ssCP0        = spec.resource and API.Power(spec.resource) or nil
+            Engine.P.ssStageRead  = false
+            Engine.P.ssDoubleDone = false        -- one Opportunity proc counted per cast
+            Engine.P.ssLastCP     = nil
         elseif key == si.reset then
             Engine.P.predFlags = Engine.P.predFlags or {}
             Engine.P.predFlags[si.flag] = nil            -- fresh roll: stage unknown until next builder
             Engine.P.ssT0 = nil
         end
+    end
+    -- Opportunity spender (Pistol Shot) consumes charges on cast; the glow anchor in
+    -- BuildState corrects to 0 next tick if that emptied it.
+    local oiSpend = spec.oppInfer
+    if oiSpend and key == oiSpend.spendKey then
+        local _, spend = OppAmounts(oiSpend)
+        Engine.P.oppStacks = math.max(0, (Engine.P.oppStacks or 0) - spend)
     end
     -- Spend a predicted charge and start its recharge.
     local cc = spec.chargeTrack and spec.chargeTrack[key] and Engine.P.charges[key]
@@ -824,7 +833,7 @@ PRIO:On("PLAYER_REGEN_ENABLED", function()
     -- Combat ended: clear volatile procs; Maelstrom and charges keep syncing from
     -- the real values now that they're readable again.
     local P = Engine.P
-    if P then P.fsExpire = 0; P.mote = false; P.skStacks = 0; P.ssT0 = nil; P.ssCP0 = nil; P.ssStageRead = nil; P.oppStacks = 0; if P.auraExpire then wipe(P.auraExpire) end; if P.stacks then wipe(P.stacks) end; if P.predFlags then wipe(P.predFlags) end end
+    if P then P.fsExpire = 0; P.mote = false; P.skStacks = 0; P.ssT0 = nil; P.ssCP0 = nil; P.ssStageRead = nil; P.ssDoubleDone = nil; P.ssLastCP = nil; P.oppStacks = 0; if P.auraExpire then wipe(P.auraExpire) end; if P.stacks then wipe(P.stacks) end; if P.predFlags then wipe(P.predFlags) end end
     Engine:ResetExecuteRange()
     Engine.openerActive = false
 end)
@@ -892,25 +901,38 @@ PRIO:On("UNIT_POWER_UPDATE", function(unit)
     local ms = API.Power(spec.resource)
     if ms ~= nil then Engine.P.maelstrom = ms end
 
-    -- Stage read: the FIRST combo-point bump after a builder cast is the instant portion
-    -- (first strike + Roll the Bones stage bonus). +1 => stage 1, +2 => stage 2+. The
-    -- double-strike lands later (>~150ms) and is ignored here. Guarded against the CP cap
-    -- (a clipped bump can't be read). Consumed once per cast via ssStageRead.
+    -- Combo-point timing after a builder (Sinister Strike) cast:
+    --   * FIRST bump, within instantWindow (<=150ms) = first strike + Roll the Bones stage
+    --     bonus -> +1 = stage 1, +2 = stage 2+ (guarded against the CP cap).
+    --   * A LATER positive bump (instantWindow..doubleWindow, ~200-330ms) = the DOUBLE-
+    --     STRIKE, which grants Opportunity -> count one proc (+gain charges).
     local si = spec.stageInfer
     local P = Engine.P
-    if si and ms ~= nil and P.ssT0 and not P.ssStageRead and P.ssCP0 ~= nil then
+    if si and ms ~= nil and P.ssT0 and P.ssCP0 ~= nil then
         local dt = GetTime() - P.ssT0
-        if dt <= (si.instantWindow or 0.15) then
-            local maxCP = (spec.resource and API.PowerMax(spec.resource)) or P.maelstromMax or 99
-            if P.ssCP0 <= maxCP - 2 then                 -- room to see a +2 without clipping
-                local instant = ms - P.ssCP0
-                P.predFlags = P.predFlags or {}
-                if instant >= 2 then P.predFlags[si.flag] = true      -- stage 2+ (bonus present)
-                elseif instant == 1 then P.predFlags[si.flag] = false end  -- stage 1 (no bonus)
+        local iw = si.instantWindow or 0.15
+        local dw = si.doubleWindow or 0.6
+        if not P.ssStageRead then
+            if dt <= iw then
+                local maxCP = (spec.resource and API.PowerMax(spec.resource)) or P.maelstromMax or 99
+                if P.ssCP0 <= maxCP - 2 then              -- room to see a +2 without clipping
+                    local instant = ms - P.ssCP0
+                    P.predFlags = P.predFlags or {}
+                    if instant >= 2 then P.predFlags[si.flag] = true      -- stage 2+ (bonus present)
+                    elseif instant == 1 then P.predFlags[si.flag] = false end  -- stage 1 (no bonus)
+                end
+                P.ssStageRead, P.ssLastCP = true, ms
+            elseif dt > iw then
+                P.ssStageRead, P.ssLastCP = true, ms      -- missed the instant window; don't misread
             end
-            P.ssStageRead = true
-        elseif dt > (si.instantWindow or 0.15) then
-            P.ssStageRead = true                         -- missed the instant window; don't misread the double
+        elseif not P.ssDoubleDone and dt > iw and dt <= dw and ms > (P.ssLastCP or P.ssCP0) then
+            -- The delayed second hit landed -> Opportunity was granted. Count one proc.
+            P.ssDoubleDone, P.ssLastCP = true, ms
+            local oi = spec.oppInfer
+            if oi then
+                local gain, _, cap = OppAmounts(oi)
+                P.oppStacks = math.min(cap, (P.oppStacks or 0) + gain)
+            end
         end
     end
 end)
@@ -1025,12 +1047,17 @@ local function BuildState(self, mode, enemies)
     -- can't fire a cap-dump Pistol Shot that overcaps combo points.
     local oi = spec.oppInfer
     if oi and oi.glowSpell then
-        local gain = OppAmounts(oi)
+        local gain, _, cap = OppAmounts(oi)
+        P.oppStacks = P.oppStacks or 0
         local g = API.SpellGlowing(oi.glowSpell)
-        if g == false then P.oppStacks = 0
-        elseif g == true then P.oppStacks = gain end   -- present -> a proc's worth (we don't resolve the cap)
+        if g == false then
+            P.oppStacks = 0                        -- empty: hard reset (drift correction)
+        elseif g == true and P.oppStacks == 0 then
+            P.oppStacks = gain                     -- glowing but we have 0 -> floor at one proc
+        end                                        -- glowing & >0: keep the proc-tracked climb (3->6)
+        P.oppStacks = math.max(0, math.min(cap, P.oppStacks))
         P.stacks = P.stacks or {}
-        P.stacks[oi.aura] = P.oppStacks or 0
+        P.stacks[oi.aura] = P.oppStacks
     end
 
     -- Expire a predicted MotE that was granted but never consumed.
