@@ -105,7 +105,7 @@ local slayer_aoe = {
     { spell = "Cleave" },
     { spell = "Overpower" },
     { spell = "Execute" },
-    { spell = "MortalStrike", cond = refreshable(ID_REND) },                          -- Rend in pandemic
+    { spell = "MortalStrike" },
     { spell = "Slam" },
 }
 

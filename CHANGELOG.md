@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.71 (alpha)
+- **Slayer AoE tweak.** Mortal Strike in the AoE list (also used for AoE-Execute) now fires on cooldown instead of only during Rend's pandemic window. Reset Arms lists to default to pick it up.
+
+
 ## 0.2.70 (alpha)
 - **Added Charge** to Arms — selectable in the priority and opener editors (handy as an opener lead-in).
 

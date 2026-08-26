@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.71", {
+        "Slayer AoE (and AoE-Execute): Mortal Strike now fires on cooldown instead of only in Rend's pandemic window. Reset Arms lists to default.",
+    } },
     { "0.2.70", {
         "Added Charge to Arms -- selectable in the priority and opener editors.",
     } },
