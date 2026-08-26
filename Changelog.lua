@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.47", {
+        "Arms warrior now splits by hero tree: Slayer weaves Bladestorm / spends Sudden Death, Colossus casts Demolish in the Colossus Smash window. PRIO auto-picks your tree from Demolish and swaps on talent change. Reset Arms lists to default.",
+    } },
     { "0.2.46", {
         "Chi prediction handles Obsidian Spiral: Blackout Kick becomes a +1 Chi builder (talent-gated), castable at 0 Chi.",
     } },

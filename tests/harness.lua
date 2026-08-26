@@ -137,9 +137,11 @@ local function load(rel)
 end
 load("Engine.lua")
 load("Spec_Windwalker.lua")
+load("Spec_Arms.lua")
 
 PRIO.Engine:OnSpecChanged()
 H.spec = PRIO.specs[269]
+H.armsSpec = PRIO.specs[71]
 H.Engine = PRIO.Engine
 H.Cond = PRIO.Cond
 H.API = API

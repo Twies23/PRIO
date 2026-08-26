@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.47 (alpha)
+- **Arms warrior now has a per-hero-tree priority split.** Like Windwalker's Conduit/Shado-Pan split, Arms holds two tuned lists and picks one automatically: **Slayer** (weaves Bladestorm during Colossus Smash, spends Sudden Death, uses the Heroic Strike proc) and **Colossus** (casts Demolish inside the Colossus Smash window, no Bladestorm weave). Detection keys on Demolish via a strict talent check, so it won't flip mid-combat and swaps cleanly when you change hero trees. Both lists are separately editable in Options. Reset Arms lists to default to pick this up.
+
+
 ## 0.2.46 (alpha)
 - **Chi prediction now handles Obsidian Spiral correctly.** With that talent, Blackout Kick generates a Chi instead of costing one, so it's modeled as a +1 builder (always, not just during Zenith) and is castable at 0 Chi. Talent-gated, so it's inert unless you spec it — meaning the aggressive Blackout Kick! dumps help pool Chi for Fists of Fury once you're in Obsidian Spiral.
 

@@ -1,9 +1,19 @@
 -- Spec_Arms.lua ----------------------------------------------------------------
--- Arms Warrior (spec 71), patch 12.1 (Midnight). All-inclusive lists covering
--- both hero trees -- Colossus (Demolish / Colossal Might) and Slayer (Sudden
--- Death / Imminent Demise / Bladestorm-weaving). Untalented abilities are filtered
--- by IsKnown; talent-only lines are gated with talentYes/No or go inert when their
--- buff never appears. Spell IDs are best-guess; verify with /prio spells.
+-- Arms Warrior (spec 71), patch 12.1 (Midnight).
+--
+-- HERO-SPLIT: the two hero trees play with different orderings, so this spec holds
+-- TWO complete lists per mode and picks one at runtime (mirrors Windwalker):
+--   * Slayer   -- Sudden Death / Imminent Demise / Bladestorm-weaving (default)
+--   * Colossus -- Demolish during the Colossus Smash window; no Bladestorm weave
+-- `spec.priority` is a live metatable proxy that returns the ACTIVE hero's list on
+-- read, so the engine, condition editor, and export always see the right list, and
+-- it swaps automatically on a talent change. Active hero is decided by a STRICT
+-- known-check on Demolish (436358) -- the Colossus capstone ability that Slayer
+-- never has -- so it can't flip just because a buff/debuff became tracked.
+--
+-- Untalented abilities are filtered by IsKnown; talent-only lines are gated with
+-- talentYes/No or go inert when their buff never appears. Spell IDs verified via
+-- /prio spells; Demolish confirmed 436358.
 --
 -- Resource note: Rage is a filling bar -> secret in combat (like Focus/Maelstrom),
 -- so it's predicted and spenders never hard-gate in combat (fail open).
@@ -24,6 +34,8 @@ local ID_IMMINENT     = 445606   -- Imminent Demise (stacks)
 local ID_COLOSSUS_DBF = 167105   -- Colossus Smash (tracked bar / debuff)
 local ID_SWEEPING     = 260708   -- Sweeping Strikes (self)
 local ID_REND         = 772      -- Rend debuff (on target)
+local ID_DEMOLISH     = 436358   -- Demolish (Colossus capstone -- hero signature)
+local ID_BLADESTORM   = 227847   -- Bladestorm (Slayer weave gate)
 
 local function AND(...) return { op = "and", clauses = { ... } } end
 local function OR(...)  return { op = "or",  clauses = { ... } } end
@@ -36,6 +48,114 @@ local function stacksMin(id, n) return { type = "stacksMin", spell = id, v = n }
 local function stacksMax(id, n) return { type = "stacksMax", spell = id, v = n } end
 local function chargesMin(id, n) return { type = "chargesMin", spell = id, v = n } end
 
+local API = PRIO.API
+
+--------------------------------------------------------------------------------
+-- HERO LISTS. Slayer is the default; Colossus swaps Bladestorm-weaving for the
+-- Demolish burst window. Cleave (2-target) = Sweeping Strikes + the hero's ST list.
+--------------------------------------------------------------------------------
+
+-- Slayer single target: Sudden Death procs, Imminent Demise pre-Bladestorm Execute,
+-- Bladestorm during Colossus Smash, Heroic Strike (Slayer proc). No Demolish.
+local slayer_st = {
+    { spell = "Cleave", cond = AND(refreshable(ID_REND), cdReady(ID_COLOSSUS_DBF)) }, -- refresh Rend before Colossus Smash
+    { spell = "Avatar" },                                 -- on CD
+    { spell = "ThunderousRoar" },                         -- talent CD
+    { spell = "ChampionsSpear" },                         -- talent CD
+    { spell = "ColossusSmash" },                          -- on CD (smart-swaps to Warbreaker if talented)
+    { spell = "Ravager" },                                -- talent: with Colossus Smash
+    { spell = "Execute", cond = stacksMin(ID_SUDDENDEATH, 2) }, -- 2 stacks Sudden Death
+    { spell = "Execute", cond = AND(stacksMax(ID_IMMINENT, 2), cdReady(ID_BLADESTORM)) }, -- before Bladestorm, <3 Imminent Demise
+    { spell = "Bladestorm", cond = buffUp(ID_COLOSSUS_DBF) }, -- during Colossus Smash
+    { spell = "HeroicStrike" },                           -- Slayer proc (when available)
+    { spell = "MortalStrike" },
+    { spell = "Execute", cond = buffUp(ID_SUDDENDEATH) }, -- during Sudden Death
+    { spell = "Overpower" },
+    { spell = "Cleave", cond = OR(buffDown(ID_REND), refreshable(ID_REND)) }, -- keep Rend up
+    { spell = "Slam" },                                   -- filler
+}
+
+-- Slayer AoE (3+): Sweeping Strikes + Cleave-heavy, Bladestorm on CD.
+local slayer_aoe = {
+    { spell = "SweepingStrikes" },                        -- on CD
+    { spell = "Cleave", cond = buffDown(ID_REND) },       -- early, to apply Rend
+    { spell = "Avatar" },
+    { spell = "ThunderousRoar" },
+    { spell = "ChampionsSpear" },
+    { spell = "ColossusSmash" },
+    { spell = "Ravager" },
+    { spell = "Cleave", cond = stacksMin(ID_COLLATERAL, 3) }, -- 3 stacks Collateral Damage
+    { spell = "Bladestorm" },
+    { spell = "Execute", cond = stacksMin(ID_SUDDENDEATH, 2) },
+    { spell = "Cleave" },                                 -- main AoE spender
+    { spell = "Overpower", cond = chargesMin(7384, 2) },  -- with 2 charges
+    { spell = "Execute", cond = buffUp(ID_SUDDENDEATH) },
+    { spell = "Overpower" },
+    { spell = "MortalStrike" },
+    { spell = "Execute" },
+    { spell = "Slam" },                                   -- filler
+}
+
+-- Colossus single target: Demolish inside the Colossus Smash window (Colossal Might
+-- payoff), no Bladestorm weave, no Heroic Strike / Imminent Demise lines.
+local colossus_st = {
+    { spell = "Cleave", cond = AND(refreshable(ID_REND), cdReady(ID_COLOSSUS_DBF)) }, -- refresh Rend before Colossus Smash
+    { spell = "Avatar" },                                 -- on CD
+    { spell = "ThunderousRoar" },                         -- talent CD
+    { spell = "ChampionsSpear" },                         -- talent CD
+    { spell = "ColossusSmash" },                          -- on CD (smart-swaps to Warbreaker if talented)
+    { spell = "Ravager" },                                -- talent: with Colossus Smash
+    { spell = "Demolish", cond = buffUp(ID_COLOSSUS_DBF) }, -- Colossus: spend inside the Colossus Smash window
+    { spell = "Execute", cond = stacksMin(ID_SUDDENDEATH, 2) }, -- 2 stacks Sudden Death
+    { spell = "MortalStrike" },
+    { spell = "Execute", cond = buffUp(ID_SUDDENDEATH) }, -- during Sudden Death
+    { spell = "Overpower" },
+    { spell = "Cleave", cond = OR(buffDown(ID_REND), refreshable(ID_REND)) }, -- keep Rend up
+    { spell = "Slam" },                                   -- filler
+}
+
+-- Colossus AoE (3+): as Slayer AoE but Demolish replaces the Bladestorm line.
+local colossus_aoe = {
+    { spell = "SweepingStrikes" },                        -- on CD
+    { spell = "Cleave", cond = buffDown(ID_REND) },       -- early, to apply Rend
+    { spell = "Avatar" },
+    { spell = "ThunderousRoar" },
+    { spell = "ChampionsSpear" },
+    { spell = "ColossusSmash" },
+    { spell = "Ravager" },
+    { spell = "Demolish", cond = buffUp(ID_COLOSSUS_DBF) }, -- Colossus burst inside Colossus Smash
+    { spell = "Cleave", cond = stacksMin(ID_COLLATERAL, 3) }, -- 3 stacks Collateral Damage
+    { spell = "Execute", cond = stacksMin(ID_SUDDENDEATH, 2) },
+    { spell = "Cleave" },                                 -- main AoE spender
+    { spell = "Overpower", cond = chargesMin(7384, 2) },  -- with 2 charges
+    { spell = "Execute", cond = buffUp(ID_SUDDENDEATH) },
+    { spell = "Overpower" },
+    { spell = "MortalStrike" },
+    { spell = "Execute" },
+    { spell = "Slam" },                                   -- filler
+}
+
+-- 2-target cleave = Sweeping Strikes then the hero's ST list (Arms cleaves its ST
+-- rotation onto a second target via Sweeping Strikes).
+local function withSweeping(st)
+    local t = { { spell = "SweepingStrikes" } }
+    for _, e in ipairs(st) do t[#t + 1] = e end
+    return t
+end
+
+local heroLists = {
+    slayer   = { st = slayer_st,   cleave = withSweeping(slayer_st),   aoe = slayer_aoe },
+    colossus = { st = colossus_st, cleave = withSweeping(colossus_st), aoe = colossus_aoe },
+}
+
+-- Active hero: Demolish (436358) is the Colossus capstone -- Slayer never has it, so
+-- a STRICT known check (spellbook/talent only, not tracked/aura state) is the reliable
+-- signature. Default to Slayer.
+local function activeHero()
+    if API and API.IsKnownStrict and API.IsKnownStrict(ID_DEMOLISH) then return "colossus" end
+    return "slayer"
+end
+
 local spec = {
     key      = "WARRIOR_ARMS",
     label    = "Arms",
@@ -46,6 +166,15 @@ local spec = {
     cleaveAt = 2,
     aoeAt    = 3,
     usesPandemic = true,             -- Rend refreshes in its pandemic window
+
+    -- Hero split (see top-of-file note). activeHero picks the list; priorityVariants
+    -- drives the Options hero picker + per-hero custom lists.
+    activeHero = activeHero,
+    priorityByVariant = heroLists,
+    priorityVariants = {
+        { key = "slayer",   label = "Slayer" },
+        { key = "colossus", label = "Colossus" },
+    },
 
     -- Relevant buffs/debuffs (selectable in the condition editor regardless of build).
     auras = {
@@ -130,52 +259,6 @@ local spec = {
 
     OnCast = function(P, key, now) end,
 
-    priority = {
-        -- Single target (Slayer list from Icy Veins; talent CDs fold in via IsKnown).
-        -- Cleave applies/refreshes Rend in this build (no separate Rend cast).
-        st = {
-            { spell = "Cleave", cond = AND(refreshable(ID_REND), cdReady(ID_COLOSSUS_DBF)) }, -- refresh Rend before Colossus Smash
-            { spell = "Avatar" },                                 -- on CD
-            { spell = "ThunderousRoar" },                         -- talent CD
-            { spell = "ChampionsSpear" },                         -- talent CD
-            { spell = "ColossusSmash" },                          -- on CD (smart-swaps to Warbreaker if talented)
-            { spell = "Ravager" },                                -- talent: with Colossus Smash
-            { spell = "Demolish" },                               -- Colossus: during Colossus Smash
-            { spell = "Execute", cond = stacksMin(ID_SUDDENDEATH, 2) }, -- 2 stacks Sudden Death
-            { spell = "Execute", cond = AND(stacksMax(ID_IMMINENT, 2), cdReady(227847)) }, -- before Bladestorm, <3 Imminent Demise
-            { spell = "Bladestorm", cond = buffUp(ID_COLOSSUS_DBF) }, -- during Colossus Smash
-            { spell = "HeroicStrike" },                           -- Slayer proc (when available)
-            { spell = "MortalStrike" },
-            { spell = "Execute", cond = buffUp(ID_SUDDENDEATH) }, -- during Sudden Death
-            { spell = "Overpower" },
-            { spell = "Cleave", cond = OR(buffDown(ID_REND), refreshable(ID_REND)) }, -- keep Rend up
-            { spell = "Slam" },                                   -- filler
-        },
-
-        -- AoE (3+): Sweeping Strikes + Cleave-heavy. Cleave applies Rend and is the
-        -- Collateral Damage spender at 3 stacks.
-        aoe = {
-            { spell = "SweepingStrikes" },                        -- on CD
-            { spell = "Cleave", cond = buffDown(ID_REND) },       -- early, to apply Rend
-            { spell = "Avatar" },
-            { spell = "ThunderousRoar" },
-            { spell = "ChampionsSpear" },
-            { spell = "ColossusSmash" },
-            { spell = "Ravager" },
-            { spell = "Cleave", cond = stacksMin(ID_COLLATERAL, 3) }, -- 3 stacks Collateral Damage
-            { spell = "Bladestorm" },
-            { spell = "Demolish" },
-            { spell = "Execute", cond = stacksMin(ID_SUDDENDEATH, 2) },
-            { spell = "Cleave" },                                 -- main AoE spender
-            { spell = "Overpower", cond = chargesMin(7384, 2) },  -- with 2 charges
-            { spell = "Execute", cond = buffUp(ID_SUDDENDEATH) },
-            { spell = "Overpower" },
-            { spell = "MortalStrike" },
-            { spell = "Execute" },
-            { spell = "Slam" },                                   -- filler
-        },
-    },
-
     --------------------------------------------------------------------------------
     -- Debug metadata (see Debug.lua). Rows shown live; economy is informational.
     --------------------------------------------------------------------------------
@@ -195,9 +278,15 @@ local spec = {
     },
 }
 
--- 2-target cleave = Sweeping Strikes up + the single-target list (Arms cleaves its
--- ST rotation onto a second target via Sweeping Strikes).
-spec.priority.cleave = { { spell = "SweepingStrikes" } }
-for _, e in ipairs(spec.priority.st) do spec.priority.cleave[#spec.priority.cleave + 1] = e end
+-- spec.priority is a live proxy: reads resolve to the ACTIVE hero's list for the
+-- requested mode. Nothing writes to spec.priority (customization lives in
+-- db.customPriorities), so an empty backing table with an __index resolver is safe
+-- for the engine, editor, and export.
+spec.priority = setmetatable({}, {
+    __index = function(_, mode)
+        local h = heroLists[activeHero()] or heroLists.slayer
+        return h[mode] or h.st
+    end,
+})
 
 PRIO.specs[spec.specID] = spec

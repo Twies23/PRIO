@@ -29,6 +29,7 @@ function evalClause(cl) return H.Cond.EvalClause(cl, H.Engine:CurrentState(), ni
 -- Test files.
 dofile(TESTS_DIR .. "\\test_conditions.lua")
 dofile(TESTS_DIR .. "\\test_hero.lua")
+dofile(TESTS_DIR .. "\\test_arms_hero.lua")
 dofile(TESTS_DIR .. "\\test_queue.lua")
 
 print(string.format("\n=== PRIO tests: %d passed, %d failed ===", pass, fail))
