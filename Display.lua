@@ -114,15 +114,25 @@ function Display:EnsureCreated()
     container.title:SetPoint("BOTTOM", icons.primary, "TOP", 0, 8)
     container.title:SetJustifyH("CENTER")
 
-    -- Advisory alert banner (gold, pulsing), floating above the strip. Shown when the
-    -- engine returns an alert (e.g. "Keep It Rolling ready -- check your roll"). Purely
-    -- an indicator; the player decides.
-    local alert = CreateFrame("Frame", "PRIOAlert", container, "BackdropTemplate")
+    -- Advisory alert banner (gold, pulsing) -- e.g. "Keep It Rolling ready -- check your
+    -- roll". Parented to UIParent so it can be dragged to its own spot; while UNLOCKED it
+    -- shows a placeholder so you can position it. Purely an indicator; the player decides.
+    local alert = CreateFrame("Frame", "PRIOAlert", UIParent, "BackdropTemplate")
     alert:SetBackdrop({ bgFile = WHITE, edgeFile = WHITE, edgeSize = 1 })
     alert:SetBackdropColor(0, 0, 0, 0.85)
     alert:SetBackdropBorderColor(gold[1], gold[2], gold[3], 0.9)
-    alert:SetPoint("BOTTOM", container, "TOP", 0, 26)
     alert:SetFrameStrata("HIGH")
+    alert:SetMovable(true)
+    alert:SetClampedToScreen(true)
+    alert:RegisterForDrag("LeftButton")
+    alert:SetScript("OnDragStart", function(self)
+        if not PRIO.db.locked then self.isMoving = true; self:StartMoving() end
+    end)
+    alert:SetScript("OnDragStop", function(self)
+        self:StopMovingOrSizing(); self.isMoving = false
+        local p, _, rp, x, y = self:GetPoint()
+        PRIO.db.alertPoint = { p, rp, x, y }
+    end)
     alert.icon = alert:CreateTexture(nil, "ARTWORK")
     alert.icon:SetSize(22, 22); alert.icon:SetPoint("LEFT", 5, 0)
     alert.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
@@ -134,7 +144,8 @@ function Display:EnsureCreated()
     alert.text:SetPoint("LEFT", alert.icon, "RIGHT", 6, 0)
     alert.text:SetTextColor(gold[1], gold[2], gold[3])
     alert:SetScript("OnUpdate", function(self)
-        self:SetAlpha(0.72 + 0.28 * (0.5 + 0.5 * math.sin(GetTime() * 4)))
+        if self._placeholder then self:SetAlpha(0.55)     -- steady while positioning
+        else self:SetAlpha(0.72 + 0.28 * (0.5 + 0.5 * math.sin(GetTime() * 4))) end
     end)
     alert:Hide()
     container.alert = alert
@@ -210,6 +221,47 @@ function Display:ApplyLock()
     container:EnableMouse(unlocked)
     container:SetBackdropBorderColor(accent[1], accent[2], accent[3], unlocked and 0.8 or 0)
     container:SetBackdropColor(0, 0, 0, unlocked and 0.35 or 0)
+    -- Alert banner: while unlocked, show a draggable placeholder so it can be positioned;
+    -- when locked it hides again (Render re-shows it only for a real alert).
+    self:ShowAlert(nil)
+end
+
+-- Anchor the alert banner: a saved custom point if it was dragged, else above the strip.
+function Display:PositionAlert()
+    if not (container and container.alert) then return end
+    local a = container.alert
+    if a.isMoving then return end
+    a:ClearAllPoints()
+    local ap = PRIO.db.alertPoint
+    if ap then a:SetPoint(ap[1], UIParent, ap[2], ap[3], ap[4])
+    else a:SetPoint("BOTTOM", container, "TOP", 0, 26) end
+end
+
+-- Show the alert: a real one when `al` is given, else a drag-me placeholder while
+-- unlocked, else hidden. Draggable only when unlocked.
+function Display:ShowAlert(al)
+    if not (container and container.alert) then return end
+    local a = container.alert
+    local unlocked = not PRIO.db.locked
+    if al and PRIO.db.showAlerts ~= false then
+        a._placeholder = false
+        a.text:SetText(al.text or "")
+        a.kb:SetText(PRIO.db.showKeybinds and al.keybind or "")
+        if al.texture then a.icon:SetTexture(al.texture); a.icon:Show() else a.icon:Hide() end
+    elseif unlocked and PRIO.db.showAlerts ~= false then
+        a._placeholder = true
+        a.text:SetText("Alert banner \226\128\148 drag to move")
+        a.kb:SetText("")
+        a.icon:SetTexture(API.SpellTexture(381989))   -- Keep It Rolling icon
+        a.icon:Show()
+    else
+        a:Hide(); return
+    end
+    local tw = (a.text:GetStringWidth() or 120) + (a.icon:IsShown() and 33 or 12) + 10
+    a:SetSize(tw, 28)
+    self:PositionAlert()
+    a:EnableMouse(unlocked)
+    a:Show()
 end
 
 --------------------------------------------------------------------------------
@@ -271,19 +323,8 @@ function Display:Render(result)
         container.title:Hide()
     end
 
-    -- Advisory alert banner (first active alert; gold, pulsing).
-    local al = result.alerts and result.alerts[1]
-    if al and PRIO.db.showAlerts ~= false and container.alert then
-        local a = container.alert
-        a.text:SetText(al.text or "")
-        a.kb:SetText(PRIO.db.showKeybinds and al.keybind or "")
-        if al.texture then a.icon:SetTexture(al.texture); a.icon:Show() else a.icon:Hide() end
-        local tw = (a.text:GetStringWidth() or 120) + (al.texture and 33 or 12) + 10
-        a:SetSize(tw, 28)
-        a:Show()
-    elseif container.alert then
-        container.alert:Hide()
-    end
+    -- Advisory alert banner (first active alert; placeholder when unlocked).
+    self:ShowAlert(result.alerts and result.alerts[1])
 
     -- Optional clickable mode buttons under the strip.
     if PRIO.db.showModeButtons then
@@ -391,8 +432,12 @@ end
 
 function Display:Hide()
     if container then container:Hide() end
-    if container and container.alert then container.alert:Hide() end
     if modeBar then modeBar:Hide() end
+    -- Keep the alert placeholder up while unlocked so it can still be positioned when the
+    -- strip itself is hidden (e.g. out of combat); otherwise hide it.
+    if container and container.alert then
+        if PRIO.db.locked then container.alert:Hide() else self:ShowAlert(nil) end
+    end
 end
 
 -- Called by Options when geometry settings change.

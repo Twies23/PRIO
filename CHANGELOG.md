@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.3.25
+- The **alert banner** (e.g. the Keep It Rolling advisory) is now **movable**: unlock the display and it shows a "drag to move" placeholder you can drag anywhere; its position is remembered separately from the main strip. Lock again and it only appears for a real alert.
+
 ## 0.3.24
 - **Fix:** a couple of Outlaw default conditions showed blank when you opened them in the editor ("RtB needs reroll" and "Opportunity ≥"). They were built from internal condition types that aren't user-editable; they now use the proper preset / "Opportunity ≥ N" forms, so every default condition opens and edits cleanly. (Reset an Outlaw list to default to pick up the fixed versions.)
 
