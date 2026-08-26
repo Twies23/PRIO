@@ -217,6 +217,22 @@ test("opener picks ST vs AoE by pull size", function()
     H.reset(); H.rebind()
 end)
 
+-- Cleave has a (hasted) cooldown, so it must not be a spammable filler -- the queue
+-- should never stack it multiple times.
+test("Arms AoE queue never stacks Cleave", function()
+    H.reset(); H.S.specID = 71; H.rebind()
+    H.Engine.openerActive = false
+    H.S.enemies = 3
+    H.db.numQueue = 5
+    local r = H.Engine:Evaluate()
+    local n, all = 0, { r.primary }
+    for _, e in ipairs(r.queue or {}) do all[#all + 1] = e end
+    for _, e in ipairs(all) do if e and e.id == 845 then n = n + 1 end end
+    truthy(n <= 1, "Cleave (845) appears at most once, got " .. n)
+    H.db.numQueue = 3
+    H.reset(); H.rebind()
+end)
+
 -- Debuff conditions alias the tracked-aura read (buff logic), debuff-labeled.
 test("debuffActive / debuffMissing read the tracked aura", function()
     H.reset()

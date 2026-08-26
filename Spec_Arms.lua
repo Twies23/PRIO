@@ -348,7 +348,10 @@ local spec = {
         Overpower = { max = 2, recharge = 12 },
     },
 
-    fillers = { [1464] = true, [845] = true },   -- Slam (ST) / Cleave (AoE)
+    -- Only Slam is a true no-cooldown filler. Cleave has a (hasted) cooldown -- except
+    -- with Crushing Combo (1261056: 2 free Cleaves after Colossus Smash), which we can't
+    -- model -- so it must NOT be a spammable filler, or the look-ahead stacks it 3x.
+    fillers = { [1464] = true },   -- Slam
 
     flash = {
         Execute = { type = "buffActive", spell = ID_SUDDENDEATH },

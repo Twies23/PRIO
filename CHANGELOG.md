@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.73 (alpha)
+- **Fixed Cleave being queued several times in a row.** Cleave has a (hasted) cooldown, so it was wrong to treat it as a no-cooldown filler — the look-ahead was stacking it as the next 2–3 icons. It's now single-use in the queue (Slam remains the only true filler). The live "Now" recommendation is unchanged — it still suggests Cleave whenever it's actually off cooldown. (Crushing Combo's free Cleaves after Colossus Smash aren't modeled — its haste-scaled cooldown isn't readable.)
+
+
 ## 0.2.72 (alpha)
 - **The opener shows before the pull.** It now arms out of combat (as soon as your signature cooldowns are ready) and displays the opening sequence pre-pull — even if "Show out of combat" is off — instead of waiting until you're already in combat. It won't time out while you're standing there; it flows straight into the fight when you engage.
 - **Updated Arms opener defaults** to the tuned ST and AoE sequences.
