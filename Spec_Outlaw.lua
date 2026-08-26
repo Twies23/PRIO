@@ -85,6 +85,7 @@ local function stacksMax(id, n) return { type = "stacksMax", spell = id, v = n }
 local function glow(id)      return { type = "glowing", spell = id } end            -- button proc glow
 local function enemiesMin(n) return { type = "enemiesMin", v = n } end               -- nameplate count >= n
 local function predOppMin(n) return { type = "predStackMin", spell = ID_OPPORTUNITY, v = n } end  -- predicted Opportunity charges
+local function lastCast(id)  return { type = "lastCast", spell = id } end            -- previous cast was this
 
 --------------------------------------------------------------------------------
 -- Trickster priority (Wowhead 12.1). Combo-point gates are exact; RtB stage reads
@@ -107,35 +108,36 @@ local function rtbReroll() return OR(buffDown(ID_ROLLBONES), predStage2False()) 
 -- buff. So instead of guessing, PRIO ALERTS when KiR is ready and the roll is a
 -- confirmed good one (stage 2+), and leaves the call to you (see spec.alerts).
 
+-- Default lists = user-tuned (0.3.23). Sinister Strike as the bottom filler is CORRECT:
+-- Outlaw doesn't pool Energy, so it's the baseline builder you fall back to (Icy Veins).
 local st = {
     { spell = "RollTheBones",  cond = rtbReroll() },                                 -- reroll: nothing up, or inferred stage 1
     { spell = "Preparation",   cond = AND(cdDown(ID_BTE), cdDown(ID_ADRENALINE), cdDown(ID_KILLSPREE)) },
     { spell = "AdrenalineRush", cond = cpMax(2) },                                  -- on CD at <=2 CP
-    { spell = "KillingSpree" },                                                     -- follows Adrenaline Rush
+    { spell = "KillingSpree",  cond = lastCast(ID_ADRENALINE) },                    -- right after Adrenaline Rush
     { spell = "Dispatch",      cond = buffUp(ID_FANGSTRIKE) },                       -- free Dispatch (4pc Fang Strike up)
     { spell = "BladeRush" },                                                        -- on CD
     { spell = "BetweenTheEyes", cond = cpMin(6) },                                  -- finisher at >=6 CP
     { spell = "Dispatch",      cond = cpMin(6) },                                   -- finisher at >=6 CP
-    { spell = "PistolShot",    cond = OR(predOppMin(6),                                         -- dump at cap (6 tracked charges)
-                                         AND(glow(ID_PISTOLSHOT), cpMax(3))) },   -- or spend at low CP (glow = Opportunity up)
-    { spell = "SinisterStrike", cond = cpMax(5) },                                  -- builder at <=5 CP
+    { spell = "PistolShot",    cond = predOppMin(6) },                             -- dump at cap (6 tracked charges)
+    { spell = "PistolShot",    cond = AND(glow(ID_PISTOLSHOT), cpMax(3)) },        -- or spend at low CP (glow = Opportunity up)
+    { spell = "SinisterStrike", cond = cpMax(5) },                                  -- baseline builder at <=5 CP
 }
 
 local aoe = {
-    -- Blade Flurry: put the cleave buff up; also RECAST at <=4 CP with 4+ targets (its
-    -- cooldown lets you refresh the cleave for the bigger pull) -- per Wowhead.
-    { spell = "BladeFlurry",   cond = OR(buffDown(ID_BLADEFLURRY), AND(cpMax(4), enemiesMin(4))) },
+    { spell = "BladeFlurry",   cond = buffDown(ID_BLADEFLURRY) },                   -- put the cleave buff up
+    { spell = "BladeFlurry",   cond = AND(buffUp(ID_BLADEFLURRY), enemiesMin(4), cpMax(4)) }, -- recast on 4+ at low CP
     { spell = "RollTheBones",  cond = rtbReroll() },
     { spell = "Preparation",   cond = AND(cdDown(ID_BTE), cdDown(ID_ADRENALINE),
                                           cdDown(ID_KILLSPREE), cdDown(ID_BLADERUSH)) },
     { spell = "AdrenalineRush", cond = cpMax(2) },
-    { spell = "KillingSpree" },
+    { spell = "KillingSpree",  cond = lastCast(ID_ADRENALINE) },
     { spell = "Dispatch",      cond = buffUp(ID_FANGSTRIKE) },                       -- free Dispatch (4pc Fang Strike up)
     { spell = "BladeRush" },
     { spell = "BetweenTheEyes", cond = cpMin(6) },
     { spell = "Dispatch",      cond = cpMin(6) },
-    { spell = "PistolShot",    cond = OR(predOppMin(6),                                         -- dump at cap (6 tracked charges)
-                                         AND(glow(ID_PISTOLSHOT), cpMax(3))) },   -- or spend at low CP (glow = Opportunity up)
+    { spell = "PistolShot",    cond = predOppMin(6) },                             -- dump at cap
+    { spell = "PistolShot",    cond = AND(glow(ID_PISTOLSHOT), cpMax(3)) },        -- or spend at low CP
     { spell = "SinisterStrike", cond = cpMax(5) },
 }
 
@@ -269,11 +271,14 @@ local spec = {
         ThistleTea     = ID_THISTLETEA,
     },
 
+    -- Opener (Icy Veins 12.1): pre-pull Adrenaline Rush -> Roll the Bones -> Slice and Dice,
+    -- then Blade Rush / Sinister Strike to build, Between the Eyes at 6 CP, then hand off to
+    -- the normal rotation (which fires Killing Spree after Adrenaline Rush, keeps building).
     openerReady = { "AdrenalineRush" },
-    opener = { "AdrenalineRush", "RollTheBones", "SliceandDice", "SinisterStrike",
-               "PistolShot", "BetweenTheEyes" },
+    opener = { "AdrenalineRush", "RollTheBones", "SliceandDice",
+               "BladeRush", "SinisterStrike", "SinisterStrike", "BetweenTheEyes" },
     openerAoe = { "AdrenalineRush", "RollTheBones", "SliceandDice", "BladeFlurry",
-                  "SinisterStrike", "PistolShot", "BetweenTheEyes" },
+                  "BladeRush", "SinisterStrike", "SinisterStrike", "BetweenTheEyes" },
     precombat = {},
 
     pickable = {

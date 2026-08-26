@@ -11,6 +11,11 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.3.23", {
+        "Outlaw tuned defaults: Killing Spree fires right after Adrenaline Rush; Pistol Shot is two lines (dump at 6 charges, or spend at low CP); AoE Blade Flurry has a dedicated recast line for 4+ targets at low CP. If you customized Outlaw, hit Reset to default to pick these up.",
+        "Opener matches Icy Veins 12.1: Adrenaline Rush -> Roll the Bones -> Slice and Dice, then build and Between the Eyes at 6.",
+        "Note: Sinister Strike at the bottom as the fallback builder is correct -- Outlaw doesn't pool energy, so it's the baseline generator.",
+    } },
     { "0.3.22", {
         "Outlaw: the queue (what's next) now predicts combo-point generation -- builders add combo points (Sinister Strike 1, or 2 on a stage-2+ roll; Ambush 2; an Opportunity-empowered Pistol Shot 3 with Fan the Hammer) and finishers spend them all -- so the upcoming icons build toward a finisher and back down. Roll the Bones is treated as not a finisher (it costs Energy, no combo points).",
     } },
