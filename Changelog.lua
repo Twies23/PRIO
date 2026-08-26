@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.69", {
+        "Added Storm Bolt to Arms -- it's now selectable in the priority and opener editors.",
+    } },
     { "0.2.68", {
         "Openers are now split into ST and AoE (PRIO picks by pull size, editable separately in Options -> Opener). Replaced the opener condition with a simple \"only when all cooldowns are ready\" checkbox.",
     } },
