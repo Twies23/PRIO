@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.3.8", {
+        "Roll the Bones can be tracked as either a bar OR a buff in your Cooldown Manager -- both let PRIO see a roll is active. Setup guidance corrected (it previously implied a bar was required).",
+    } },
     { "0.3.7", {
         "Advisory alerts: PRIO can now show a pulsing prompt above the strip for a decision only you can make. First use is Keep It Rolling -- since only you can see if your roll is a stage 3 / Jackpot worth extending, PRIO no longer auto-presses it; when it's ready on a confirmed good roll (stage 2+) it prompts you to check and extend, and leaves the call to you.",
         "(Needs Roll the Bones tracked as a bar, like the reroll logic.)",

@@ -209,7 +209,7 @@ local spec = {
 
     setup = {
         { kind = "trackedAura", label = "Roll the Bones tracked", spell = ID_ROLLBONES,
-          hint = "Track Roll the Bones (a Tracked Bar) so PRIO sees a roll is active. NOTE: the bar doesn't expose the stage -- PRIO reads that from which named buff is up (One of a Kind / Double Trouble / Triple Threat), automatically." },
+          hint = "Track Roll the Bones in your Cooldown Manager -- as a bar OR a buff, either works -- so PRIO can see a roll is active (drives the reroll and the Keep It Rolling alert). The stage itself isn't read from here: PRIO infers it from your combo points automatically." },
         { kind = "trackedAura", label = "Opportunity tracked", spell = ID_OPPORTUNITY,
           hint = "Track Opportunity so its stack count (3 / 6) reads for the Pistol Shot lines." },
         { kind = "trackedAura", label = "Slice and Dice tracked", spell = ID_SND,
