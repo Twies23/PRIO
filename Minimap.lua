@@ -1,6 +1,7 @@
 -- Minimap.lua ------------------------------------------------------------------
 -- A lightweight minimap button (no LibDBIcon dependency). Left-click opens the
--- options window, right-click toggles the debug window. Drag it around the ring.
+-- options window, right-click toggles the debug window, middle-click toggles the
+-- rotation debug window. Drag it around the ring.
 --------------------------------------------------------------------------------
 
 local ADDON, PRIO = ...
@@ -15,7 +16,7 @@ local btn = CreateFrame("Button", "PRIOMinimapButton", Minimap)
 btn:SetSize(31, 31)
 btn:SetFrameStrata("MEDIUM")
 btn:SetFrameLevel(8)
-btn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+btn:RegisterForClicks("LeftButtonUp", "RightButtonUp", "MiddleButtonUp")
 btn:RegisterForDrag("LeftButton")
 btn:SetMovable(true)
 
@@ -83,6 +84,8 @@ btn:SetScript("OnDragStop", function() btn:SetScript("OnUpdate", nil) end)
 btn:SetScript("OnClick", function(_, mouseButton)
     if mouseButton == "RightButton" then
         if PRIO.Debug then PRIO.Debug:Toggle() end
+    elseif mouseButton == "MiddleButton" then
+        if PRIO.RotationDebug then PRIO.RotationDebug:Toggle() end
     else
         if PRIO.Options then PRIO.Options:Toggle() end
     end
@@ -94,6 +97,7 @@ btn:SetScript("OnEnter", function()
     GameTooltip:AddLine("|cff0cd29fPRIO|r")
     GameTooltip:AddLine("Left-click: options", 0.8, 0.8, 0.8)
     GameTooltip:AddLine("Right-click: debug window", 0.8, 0.8, 0.8)
+    GameTooltip:AddLine("Middle-click: rotation debug", 0.8, 0.8, 0.8)
     GameTooltip:Show()
 end)
 btn:SetScript("OnLeave", function() setGlow(false); GameTooltip:Hide() end)

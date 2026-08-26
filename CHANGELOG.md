@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.51 (alpha)
+- **Middle-click the minimap button to open the Rotation Debug window.** The minimap button now has three actions: left-click = options, right-click = main debug window, middle-click = rotation debug window. (Also still available via `/prio rotdebug`.)
+
+
 ## 0.2.50 (alpha)
 - **Rotation Debug buff rows now show the stack-count source.** Each active buff shows a small tag after the count telling you where it came from: `appl` (the aura's exact applications value — clean), `cdm` (the Cooldown Viewer's rendered number), `appl-secret` (the applications value is a protected/secret value, so we fell back — shown amber), or `assumed` (active but no readable count, defaulted to 1 — amber). This makes it visible, right in the window, whether stacks like Imminent Demise read exactly or need a different source.
 
