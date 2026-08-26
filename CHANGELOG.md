@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.3.1
+Groundwork for **Outlaw Rogue** support.
+- New `/prio myauras` (alias `/prio buffs`) command — lists every buff currently on you with its spell ID and whether the game lets PRIO read it in combat. This is how we map auras the Cooldown Manager doesn't track (like the individual Roll the Bones buffs) so the upcoming Outlaw rotation can read them.
+
 ## 0.3.0
 Second stable release — everything since 0.2.0, headlined by full **Arms Warrior** and **Windwalker Monk** support and a much deeper secret-value engine.
 

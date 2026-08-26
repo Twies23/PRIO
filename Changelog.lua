@@ -11,6 +11,10 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.3.1", {
+        "Groundwork for Outlaw Rogue support.",
+        "New /prio myauras (alias /prio buffs): lists every buff on you with its spell ID and whether PRIO can read it in combat -- used to map auras the Cooldown Manager doesn't track, like the individual Roll the Bones buffs.",
+    } },
     { "0.3.0", {
         "Second stable release -- full Arms Warrior and Windwalker Monk support, plus a much deeper engine.",
         "Arms rebuilt: auto hero-tree split (Slayer/Colossus); separate ST and AoE lists, each auto-swapping to an execute variant in execute range; the Cleave tier is dropped for a configurable AoE-at-N threshold; tuned Slayer defaults and ST/AoE openers.",

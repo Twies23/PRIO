@@ -434,6 +434,14 @@ SlashCmdList.PRIO = function(msg)
                 end
             end
         end
+    elseif msg == "myauras" or msg == "buffs" then
+        -- Dump every current player buff (id + name + secret status), tracked or not.
+        -- Finds the IDs of untracked auras (e.g. the six Roll the Bones buffs) and shows
+        -- whether they read clean. Run OOC to grab IDs, then IN COMBAT to test secrecy.
+        local API = PRIO.API
+        print(("|cff0cd29fPRIO|r player buffs (%s):")
+            :format(InCombatLockdown() and "|cff0cd29fin combat|r" or "|cffe0a03aOUT of combat - values always readable here|r"))
+        print(API.DumpPlayerAuras())
     elseif msg == "setup" then
         if PRIO.Setup then PRIO.Setup:Toggle() end
     elseif msg == "changelog" or msg == "changes" then

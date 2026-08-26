@@ -955,6 +955,34 @@ function API.AuraRemaining(spellID)
     return nil
 end
 
+-- Diagnostic: dump EVERY current player buff (HELPFUL), whether or not it's tracked
+-- in the Cooldown Viewer. For each: spellId, name, .applications (with secret status)
+-- and whether the duration reads clean. This is how we find the IDs of auras that
+-- aren't in any CDV category (e.g. the six Roll the Bones buffs) AND learn whether
+-- they read clean in combat -- run it OOC to grab IDs, then IN COMBAT to test secrecy.
+-- Drives /prio myauras.
+function API.DumpPlayerAuras()
+    local out = {}
+    if not (C_UnitAuras and C_UnitAuras.GetAuraDataByIndex) then
+        return "C_UnitAuras.GetAuraDataByIndex unavailable."
+    end
+    for i = 1, 60 do
+        local ok, d = pcall(C_UnitAuras.GetAuraDataByIndex, "player", i, "HELPFUL")
+        if not ok or type(d) ~= "table" then break end
+        local sid = d.spellId
+        -- spellId itself is normally clean; guard anyway so a secret one can't taint.
+        local idStr = (type(sid) == "number" and not IsSecret(sid)) and tostring(sid) or "<secret>"
+        local name = (type(sid) == "number" and not IsSecret(sid)) and (API.SpellName(sid) or "?") or "?"
+        local a = d.applications
+        local appStr = IsSecret(a) and "<secret>" or (type(a) == "number" and a > 0 and ("x" .. a) or "-")
+        local durSecret = IsSecret(d.expirationTime)
+        out[#out + 1] = ("  #%s  %s  %s%s")
+            :format(idStr, name, appStr, durSecret and "  |cffe0685adur:secret|r" or "")
+    end
+    if #out == 0 then return "  (no player buffs found)" end
+    return table.concat(out, "\n")
+end
+
 --------------------------------------------------------------------------------
 -- Keep the tracked-frame map fresh.
 --------------------------------------------------------------------------------
