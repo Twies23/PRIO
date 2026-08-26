@@ -11,6 +11,10 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.3.6", {
+        "Outlaw Roll the Bones -- sharper detection via Opportunity. Sinister Strike grants Opportunity on its double-strike, so PRIO reads that to know how many strikes landed and interprets the combo-point yield exactly: yield == strike count means stage 1 (reroll); more means stage 2+ (now confirmed, not just assumed).",
+        "Keep It Rolling now fires on a CONFIRMED good roll (stage 2+) instead of any roll, so it never extends a stage-1 roll you're about to reroll. (Stage 3 isn't readable -- it only speeds secret cooldowns.)",
+    } },
     { "0.3.5", {
         "Outlaw Roll the Bones -- infer the roll from combo points. The stage buffs aren't readable in combat, so PRIO watches Sinister Strike: stage 2 makes it generate an extra combo point, so a Sinister Strike that gives only its base 1 CP proves a stage-1 roll -> reroll. It never mistakes a good roll for a bad one, and RtB's long cooldown gives it time to settle.",
         "Keep It Rolling runs on cooldown while a roll is active (stage 3 isn't readable).",

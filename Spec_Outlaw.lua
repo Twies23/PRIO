@@ -96,10 +96,14 @@ local function stacksMax(id, n) return { type = "stacksMax", spell = id, v = n }
 -- 1 CP proves the roll is stage 1 (reroll). Stage 3 (Restless Blades) touches only secret
 -- cooldowns, so we can't read it -> Keep It Rolling just runs on cooldown while a roll is up.
 local function predStage2False() return { type = "predFalse", key = "rtbStage2" } end
+local function predStage2True()  return { type = "predTrue",  key = "rtbStage2" } end
 -- Reroll: no roll active, OR the current roll was inferred to be stage 1.
 local function rtbReroll() return OR(buffDown(ID_ROLLBONES), predStage2False()) end
--- Keep It Rolling: on cooldown whenever any roll is active.
-local function rtbKeep()   return buffUp(ID_ROLLBONES) end
+-- Keep It Rolling: on cooldown once we've CONFIRMED a good roll (stage 2+). We can't
+-- read stage 3 (Restless Blades touches only secret cooldowns), so "stage 2+ confirmed"
+-- is the best readable trigger -- and it's strictly better than firing on any roll,
+-- since it never extends a stage-1 roll we're about to reroll.
+local function rtbKeep()   return AND(buffUp(ID_ROLLBONES), predStage2True()) end
 
 local st = {
     { spell = "RollTheBones",  cond = rtbReroll() },                                 -- reroll: nothing up, or inferred stage 1
@@ -151,8 +155,12 @@ local spec = {
         builder   = "SinisterStrike",
         reset     = "RollTheBones",
         flag      = "rtbStage2",
-        baseYield = 1,     -- stage 1 Sinister Strike gives 1 CP; stage 2+ always adds +1
         window    = 0.5,   -- seconds to sum the yield (covers the double-strike)
+        -- Double-strike marker: Sinister Strike awards 1 CP PER strike and, on its ~30%
+        -- double-strike, grants Opportunity. So the engine reads Opportunity's stack gain
+        -- to know how many strikes landed (1 or 2). A yield equal to the strike count =
+        -- no Roll-the-Bones bonus = stage 1; a yield above it = stage 2+ (the extra CP).
+        doubleMarker = { aura = ID_OPPORTUNITY },
     },
 
     -- Blade Flurry at 2+; no distinct cleave tier, so AoE mode covers 2+.

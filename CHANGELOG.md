@@ -1,5 +1,10 @@
 # PRIO Changelog
 
+## 0.3.6
+**Outlaw Roll the Bones — sharper roll detection using Opportunity.**
+- Sinister Strike awards a combo point per strike and, on its double-strike, grants Opportunity. PRIO now reads that Opportunity gain to know whether the strike doubled — so it interprets the combo-point yield exactly: a yield equal to the number of strikes means no Roll-the-Bones bonus (stage 1 → reroll), and more means the roll is good (stage 2+, now positively confirmed, not just assumed).
+- Keep It Rolling now fires once a good roll is **confirmed** (stage 2+) rather than on any active roll, so it never wastes on a stage-1 roll you're about to reroll. (Stage 3 itself isn't readable — it only speeds up secret cooldowns — so stage 2+ is the trigger.)
+
 ## 0.3.5
 **Outlaw Roll the Bones — figure out the roll from combo points.**
 - The stage buffs can't be read directly in combat, so PRIO now *infers* the roll from what it does: stage 2 makes Sinister Strike generate an extra combo point, so a Sinister Strike that gives only its base 1 combo point proves you're on a stage-1 roll → reroll. Anything higher is kept. It can never mistake a good roll for a bad one (stage 2+ never gives just 1), and Roll the Bones' long cooldown gives it plenty of time to settle before a reroll is even available.

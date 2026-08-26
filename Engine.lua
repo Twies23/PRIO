@@ -721,6 +721,18 @@ end
 --------------------------------------------------------------------------------
 -- Prediction: advance P on the player's own casts
 --------------------------------------------------------------------------------
+
+-- Marker-aura count for stage inference (e.g. Opportunity, granted when Sinister Strike
+-- double-strikes). Prefers the readable stack count; falls back to presence (1/0) when
+-- the count isn't exposed. nil marker -> nil (no double detection, treated as 1 strike).
+local function MarkerCount(dm)
+    if not (dm and dm.aura) then return nil end
+    local n = API.AuraStackCount and API.AuraStackCount(dm.aura)
+    if n ~= nil then return n end
+    local a = API.IsAuraActive and API.IsAuraActive(dm.aura)
+    return a == true and 1 or 0
+end
+
 PRIO:On("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
     if unit ~= "player" or not spec then return end
     spellID = API.SafeNum(spellID)
@@ -737,8 +749,9 @@ PRIO:On("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
     local si = spec.stageInfer
     if si then
         if key == si.builder then
-            Engine.P.siStartCP = spec.resource and API.Power(spec.resource) or nil
-            Engine.P.siEval    = GetTime() + (si.window or 0.45)
+            Engine.P.siStartCP  = spec.resource and API.Power(spec.resource) or nil
+            Engine.P.siStartOpp = MarkerCount(si.doubleMarker)   -- for double-strike detection
+            Engine.P.siEval     = GetTime() + (si.window or 0.45)
         elseif key == si.reset then
             Engine.P.predFlags = Engine.P.predFlags or {}
             Engine.P.predFlags[si.flag] = nil            -- fresh roll: stage unknown again
@@ -812,7 +825,7 @@ PRIO:On("PLAYER_REGEN_ENABLED", function()
     -- Combat ended: clear volatile procs; Maelstrom and charges keep syncing from
     -- the real values now that they're readable again.
     local P = Engine.P
-    if P then P.fsExpire = 0; P.mote = false; P.skStacks = 0; P.siEval = nil; P.siStartCP = nil; if P.auraExpire then wipe(P.auraExpire) end; if P.stacks then wipe(P.stacks) end; if P.predFlags then wipe(P.predFlags) end end
+    if P then P.fsExpire = 0; P.mote = false; P.skStacks = 0; P.siEval = nil; P.siStartCP = nil; P.siStartOpp = nil; if P.auraExpire then wipe(P.auraExpire) end; if P.stacks then wipe(P.stacks) end; if P.predFlags then wipe(P.predFlags) end end
     Engine:ResetExecuteRange()
     Engine.openerActive = false
 end)
@@ -981,13 +994,29 @@ local function BuildState(self, mode, enemies)
     -- we never falsely clear a good roll. Guarded so a near-cap (wasted) cast is skipped.
     local si = spec.stageInfer
     if si and P.siEval and now >= P.siEval then
-        local startCP = P.siStartCP
-        P.siEval, P.siStartCP = nil, nil
-        if realMs ~= nil and startCP ~= nil and startCP <= (P.maelstromMax or 99) - 2 then
-            local yield = realMs - startCP
-            if yield >= 0 and yield <= (si.baseYield or 1) then
+        local startCP, startOpp = P.siStartCP, P.siStartOpp
+        P.siEval, P.siStartCP, P.siStartOpp = nil, nil, nil
+        if realMs ~= nil and startCP ~= nil then
+            local maxCP = P.maelstromMax or 99
+            -- How many times did the builder strike? Each strike awards the base 1 CP.
+            -- A double-strike is revealed by the marker aura (Opportunity) gaining a stack;
+            -- when the marker isn't readable we assume a single strike (the safe default:
+            -- it can only DELAY a stage-1 flag, never fake one, because false is sticky).
+            local strikes = 1
+            if si.doubleMarker and startOpp ~= nil then
+                local oppNow = MarkerCount(si.doubleMarker)
+                if oppNow ~= nil and oppNow > startOpp then strikes = 2 end
+            end
+            -- Only measure when the full possible yield fits without hitting the CP cap,
+            -- so a clipped stage-2 can never masquerade as stage 1.
+            if startCP <= maxCP - (strikes + 1) then
+                local yield = realMs - startCP
                 P.predFlags = P.predFlags or {}
-                P.predFlags[si.flag] = false
+                if yield >= 0 and yield <= strikes then
+                    P.predFlags[si.flag] = false               -- yield == strikes: no RtB bonus -> stage 1
+                elseif yield > strikes and P.predFlags[si.flag] ~= false then
+                    P.predFlags[si.flag] = true                -- got the +1 -> stage 2+ (don't override a stage-1 proof)
+                end
             end
         end
     end
