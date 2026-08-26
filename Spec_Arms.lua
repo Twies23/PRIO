@@ -300,6 +300,7 @@ local spec = {
             { label = "Bladestorm (ImmDemise 3?)", spell = 227847 },
             { label = "Execute (Sudden Death?)",   spell = 163201 },
             { label = "Mortal Strike (Exec Prec?)", spell = 12294 },
+            { label = "Cleave (Collateral 3?)",    spell = 845 },
         },
     },
 }

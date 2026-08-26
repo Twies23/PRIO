@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.54 (alpha)
+- **Added a Cleave proc-glow probe** to the Rotation Debug "Proc glows" section, to test whether Cleave glows at 3 stacks of Collateral Damage — the same glow-as-stack-signal approach we're using for Bladestorm/Execute/Mortal Strike.
+
+
 ## 0.2.53 (alpha)
 - **Rotation Debug: new "Proc glows" section.** Shows the spell-activation-overlay (button glow) state for Bladestorm, Execute, and Mortal Strike. This is a different signal than the aura stack count, so it may be readable even when stacks are secret — we're testing whether "Bladestorm is glowing" can stand in for "Imminent Demise at 3 stacks," and likewise for Sudden Death / Executioner's Precision. Each row shows GLOWING / off / secret-na.
 

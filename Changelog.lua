@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.54", {
+        "Added a Cleave proc-glow probe to Rotation Debug -- testing whether Cleave glows at 3 Collateral Damage (another possible readable stack signal).",
+    } },
     { "0.2.53", {
         "Rotation Debug now shows proc-glow (spell overlay) state for Bladestorm / Execute / Mortal Strike -- testing whether the button glow is a readable stand-in for stack counts we can't read directly.",
     } },
