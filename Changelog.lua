@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.3.22", {
+        "Outlaw: the queue (what's next) now predicts combo-point generation -- builders add combo points (Sinister Strike 1, or 2 on a stage-2+ roll; Ambush 2; an Opportunity-empowered Pistol Shot 3 with Fan the Hammer) and finishers spend them all -- so the upcoming icons build toward a finisher and back down. Roll the Bones is treated as not a finisher (it costs Energy, no combo points).",
+    } },
     { "0.3.21", {
         "Fix (Outlaw): Roll the Bones (and other Energy-cost abilities) could be silently skipped -- PRIO compared their Energy cost against your combo points, so at low CP it decided you couldn't afford them. It now checks the cost of the right resource, so Roll the Bones is recommended whenever it's off cooldown. (Windwalker was unaffected -- it uses its own Chi cost.)",
     } },

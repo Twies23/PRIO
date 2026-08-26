@@ -290,6 +290,30 @@ local spec = {
 
     OnCast = function(P, key, now) end,
 
+    -- LOOK-AHEAD combo-point modelling: how each cast changes combo points, so the queue
+    -- (the "next" icons) predicts building toward a finisher and spending it. Combo points
+    -- read clean, so the sim seeds from the real value and advances by this each pick.
+    --   * Builders GENERATE: Sinister Strike 1 (2 at RtB stage 2+), Ambush 2, and an
+    --     Opportunity-empowered Pistol Shot with Fan the Hammer fires extra bullets (3 CP).
+    --   * Finishers SPEND ALL: Dispatch / Between the Eyes / Slice and Dice -> 0.
+    --   * Roll the Bones is NOT a finisher (costs Energy, no combo points) -> no change;
+    --     nor do Adrenaline Rush / Blade Rush / Killing Spree / Keep It Rolling / Preparation.
+    ResourceDelta = function(_, key, sid, S)
+        if key == "Dispatch" or key == "BetweenTheEyes" or key == "SliceandDice" then
+            return -(S.maelstrom or 0)                       -- finisher: spend all combo points
+        elseif key == "SinisterStrike" then
+            return (S.predFlags and S.predFlags.rtbStage2 == true) and 2 or 1
+        elseif key == "PistolShot" then
+            local opp = (PRIO.Engine and PRIO.Engine.P and PRIO.Engine.P.stacks
+                         and PRIO.Engine.P.stacks[ID_OPPORTUNITY]) or 0
+            if opp > 0 and API.IsTalentSelected(381846) then return 3 end   -- Fan the Hammer empowered
+            return 1
+        elseif key == "Ambush" then
+            return 2
+        end
+        return 0
+    end,
+
     debug = {
         { label = "Roll the Bones (active)", kind = "buff", spell = ID_ROLLBONES },
         { label = "Slice and Dice",      kind = "buff",  spell = ID_SND },

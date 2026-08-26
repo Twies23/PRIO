@@ -112,4 +112,20 @@ test("outlaw: a combo-point-cost ability IS still gated by combo points", functi
           "a real combo-point cost above the pool still blocks it")
 end)
 
+test("outlaw look-ahead: builders build toward a finisher in the queue", function()
+    setOutlaw()
+    H.S.power[COMBO] = 4                                   -- 4 combo points now
+    H.S.auras[ROLLBONES] = true                            -- a roll is active (no reroll)
+    H.S.ready[51690] = false                               -- Killing Spree on CD
+    H.S.ready[271877] = false                              -- Blade Rush on CD
+    H.rebind()
+    H.Engine.P.predFlags = { rtbStage2 = true }            -- stage 2 -> Sinister Strike gives 2 CP
+    local r = H.Engine:Evaluate()
+    eq(r.primary and r.primary.name, "Spell" .. SINISTER, "primary is Sinister Strike at 4 CP")
+    -- +2 from the stage-2 Sinister Strike -> 6 CP, so a finisher should appear next
+    local n1 = r.queue and r.queue[1] and r.queue[1].name
+    truthy(n1 == "Spell315341" or n1 == "Spell2098",
+           "next is a finisher (Between the Eyes / Dispatch) once combo points reach 6")
+end)
+
 H.reset(); H.rebind()   -- restore Windwalker for later suites
