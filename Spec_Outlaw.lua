@@ -154,12 +154,10 @@ local spec = {
         builder   = "SinisterStrike",
         reset     = "RollTheBones",
         flag      = "rtbStage2",
-        window    = 0.5,   -- seconds to sum the yield (covers the double-strike)
-        -- Double-strike marker: Sinister Strike awards 1 CP PER strike and, on its ~30%
-        -- double-strike, grants Opportunity. So the engine reads Opportunity's stack gain
-        -- to know how many strikes landed (1 or 2). A yield equal to the strike count =
-        -- no Roll-the-Bones bonus = stage 1; a yield above it = stage 2+ (the extra CP).
-        doubleMarker = { aura = ID_OPPORTUNITY },
+        -- The RtB stage bonus is applied INSTANTLY with the Sinister Strike, while a
+        -- double-strike lands ~200-330ms later -- so the FIRST combo-point bump after the
+        -- cast (within this window) is the stage read: +1 => stage 1, +2 => stage 2+.
+        instantWindow = 0.15,
     },
 
     -- OPPORTUNITY charge tracking. The stack COUNT is secret in combat, so PRIO predicts

@@ -1,103 +1,88 @@
 -- test_outlaw_stage.lua -------------------------------------------------------
--- Outlaw Roll the Bones STAGE INFERENCE. The stage buffs are secret by ID in combat,
--- but combo points read clean and stage 2 makes Sinister Strike generate an extra CP.
--- So a Sinister Strike whose total yield is only its base 1 CP proves the roll is
--- stage 1 -> predFlags.rtbStage2 = false -> reroll. Stage 2+ always yields >= 2, so it
--- can never false-flag. Measured over spec.stageInfer.window after the cast.
+-- Outlaw Roll the Bones STAGE READ via combo-point timing. The RtB stage bonus is
+-- applied INSTANTLY with a Sinister Strike, while a double-strike's CP lands ~200-330ms
+-- later. So the FIRST combo-point bump after the builder cast (within instantWindow) is
+-- the stage read: +1 => stage 1 (rtbStage2=false), +2 => stage 2+ (true). Later bumps
+-- (the double-strike) are ignored. Guarded against the CP cap; reset on Roll the Bones.
 --------------------------------------------------------------------------------
 
 local SINISTER  = 193315
 local ROLLBONES = 1214909
-local OPP       = 279876   -- Opportunity (double-strike marker)
 local COMBO     = 4
 
 local function setOutlaw()
     H.reset(); H.S.specID = 260
     H.S.power[COMBO] = 0; H.S.powerMax[COMBO] = 6
-    H.S.stacks[OPP] = 0            -- Opportunity not up by default
-    H.S.tracked[ROLLBONES] = true  -- RtB tracked as a bar (buffActive needs a tracked frame)
+    H.S.tracked[ROLLBONES] = true
     H.rebind()
 end
 
--- Fire a Sinister Strike at `startCP`, land the total `yield` after the window, and
--- optionally raise Opportunity by `oppGain` to simulate a double-strike. Then run
--- BuildState (via CurrentState) so the windowed eval fires.
-local function observeSS(startCP, yield, oppGain)
+-- Cast a Sinister Strike at `startCP`, then `dt` seconds later land `bump` combo points
+-- and fire the power update the engine reads the stage from.
+local function sinisterStrike(startCP, bump, dt)
     H.S.power[COMBO] = startCP
-    H.S.stacks[OPP]  = 0
-    H.fire("UNIT_SPELLCAST_SUCCEEDED", "player", nil, SINISTER)   -- captures start CP + Opp
-    H.S.now = H.S.now + 0.6                       -- past the 0.5s window
-    H.S.power[COMBO] = startCP + yield
-    H.S.stacks[OPP]  = oppGain or 0               -- >0 => Opportunity granted (double-strike)
-    H.Engine:CurrentState()                       -- runs BuildState -> windowed eval
+    H.fire("UNIT_SPELLCAST_SUCCEEDED", "player", nil, SINISTER)   -- records ssT0 / ssCP0
+    H.S.now = H.S.now + (dt or 0)
+    H.S.power[COMBO] = startCP + bump
+    H.fire("UNIT_POWER_UPDATE", "player")
 end
 
-test("outlaw stage: single strike yielding 1 CP -> proven stage 1 (reroll)", function()
+test("outlaw stage: instant +1 -> stage 1 (reroll)", function()
     setOutlaw()
     eq(H.Engine.P.predFlags.rtbStage2, nil, "starts unknown")
-    observeSS(0, 1)
-    eq(H.Engine.P.predFlags.rtbStage2, false, "1-CP single strike -> stage 1")
-    truthy(evalClause({ type = "predFalse", key = "rtbStage2" }), "predFalse passes -> reroll fires")
+    sinisterStrike(0, 1, 0)
+    eq(H.Engine.P.predFlags.rtbStage2, false, "instant +1 CP -> stage 1")
+    truthy(evalClause({ type = "predFalse", key = "rtbStage2" }), "reroll fires")
 end)
 
-test("outlaw stage: single strike yielding 2 CP -> confirmed stage 2+", function()
+test("outlaw stage: instant +2 -> stage 2+ (good)", function()
     setOutlaw()
-    observeSS(0, 2)                               -- no Opportunity gain => single strike
-    eq(H.Engine.P.predFlags.rtbStage2, true, "single strike +extra CP -> stage 2+")
-    truthy(evalClause({ type = "predTrue", key = "rtbStage2" }), "predTrue passes -> Keep It Rolling")
+    sinisterStrike(0, 2, 0)
+    eq(H.Engine.P.predFlags.rtbStage2, true, "instant +2 CP -> stage 2+")
+    truthy(evalClause({ type = "predTrue", key = "rtbStage2" }), "confirmed good roll")
 end)
 
-test("outlaw stage: double-strike (Opportunity granted) yielding 2 CP -> stage 1", function()
+test("outlaw stage: a delayed bump (double-strike) is not misread as the instant", function()
     setOutlaw()
-    observeSS(0, 2, 2)                            -- Opportunity +2 => 2 strikes; 2 CP == strikes
-    eq(H.Engine.P.predFlags.rtbStage2, false, "2 strikes for 2 CP = no bonus -> stage 1")
+    sinisterStrike(0, 1, 0.30)   -- first bump arrives past the 0.15s window
+    eq(H.Engine.P.predFlags.rtbStage2, nil, "late first bump ignored, no stage set")
 end)
 
-test("outlaw stage: double-strike yielding 3 CP -> confirmed stage 2+", function()
+test("outlaw stage: the double-strike after the instant does not flip the stage", function()
     setOutlaw()
-    observeSS(0, 3, 1)                            -- 2 strikes + bonus = 3 CP
-    eq(H.Engine.P.predFlags.rtbStage2, true, "2 strikes + extra CP -> stage 2+")
+    sinisterStrike(0, 2, 0)                       -- instant +2 -> stage 2+
+    eq(H.Engine.P.predFlags.rtbStage2, true)
+    H.S.now = H.S.now + 0.25                       -- the double-strike lands later
+    H.S.power[COMBO] = 4
+    H.fire("UNIT_POWER_UPDATE", "player")
+    eq(H.Engine.P.predFlags.rtbStage2, true, "stage already read this cast; unchanged")
 end)
 
-test("outlaw stage: near combo-point cap is not measured (wasted cast)", function()
+test("outlaw stage: near combo-point cap is not read (clipped bump)", function()
     setOutlaw()
-    observeSS(5, 1)                               -- startCP 5 > max(6)-2: skip
-    eq(H.Engine.P.predFlags.rtbStage2, nil, "near-cap Sinister Strike ignored")
+    sinisterStrike(5, 1, 0)   -- startCP 5 > max(6)-2: skip
+    eq(H.Engine.P.predFlags.rtbStage2, nil, "clipped bump not read")
 end)
 
-test("outlaw stage: Roll the Bones resets the flag to unknown", function()
+test("outlaw stage: Roll the Bones resets the stage to unknown", function()
     setOutlaw()
-    observeSS(0, 1); eq(H.Engine.P.predFlags.rtbStage2, false, "stage 1 flagged")
+    sinisterStrike(0, 1, 0); eq(H.Engine.P.predFlags.rtbStage2, false, "stage 1 read")
     H.fire("UNIT_SPELLCAST_SUCCEEDED", "player", nil, ROLLBONES)
-    eq(H.Engine.P.predFlags.rtbStage2, nil, "re-roll -> unknown again")
+    eq(H.Engine.P.predFlags.rtbStage2, nil, "re-roll -> unknown until next builder")
 end)
 
-test("outlaw stage: not measured until the window closes", function()
-    setOutlaw()
-    H.S.power[COMBO] = 0
-    H.fire("UNIT_SPELLCAST_SUCCEEDED", "player", nil, SINISTER)
-    H.S.now = H.S.now + 0.2                       -- still inside the window
-    H.S.power[COMBO] = 1
-    H.Engine:CurrentState()
-    eq(H.Engine.P.predFlags.rtbStage2, nil, "not measured mid-window")
-    H.S.now = H.S.now + 0.5                       -- now past the window
-    H.Engine:CurrentState()
-    eq(H.Engine.P.predFlags.rtbStage2, false, "measured once the window closes")
-end)
-
-test("outlaw alert: Keep It Rolling advisory fires only on a confirmed good roll", function()
-    setOutlaw()
-    H.S.auras[ROLLBONES] = true                   -- a roll is active
-    observeSS(0, 2)                               -- confirm stage 2+ (single strike, +extra CP)
-    eq(H.Engine.P.predFlags.rtbStage2, true, "roll confirmed good")
-    local r = H.Engine:Evaluate()
-    truthy(r and r.alerts and #r.alerts >= 1, "KiR alert present on a good roll")
-
+test("outlaw alert: Keep It Rolling advisory only on a confirmed good roll", function()
     setOutlaw()
     H.S.auras[ROLLBONES] = true
-    observeSS(0, 1)                               -- stage 1 roll
+    sinisterStrike(0, 2, 0)                        -- confirm stage 2+
+    eq(H.Engine.P.predFlags.rtbStage2, true)
+    local r = H.Engine:Evaluate()
+    truthy(r and r.alerts and #r.alerts >= 1, "KiR alert on a good roll")
+
+    setOutlaw(); H.S.auras[ROLLBONES] = true
+    sinisterStrike(0, 1, 0)                        -- stage 1
     local r2 = H.Engine:Evaluate()
     falsy(r2 and r2.alerts, "no KiR alert on a stage-1 roll")
 end)
 
-H.reset(); H.rebind()   -- restore Windwalker as the active spec for later suites
+H.reset(); H.rebind()   -- restore Windwalker for later suites

@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.3.16", {
+        "Outlaw: reads the Roll the Bones stage EXACTLY from combo-point timing. The stage bonus lands the instant a Sinister Strike hits; a double-strike's combo point arrives ~200-330ms later. So PRIO reads the first bump after each Sinister Strike -- +1 = stage 1, +2 = stage 2+ -- an exact per-cast read (replacing the old inference that needed a few casts to settle). Reroll and the Keep It Rolling alert are now dead-on.",
+    } },
     { "0.3.15", {
         "New /prio ssdelay diagnostic (Outlaw groundwork): times each combo-point arrival after a Sinister Strike, so we can see the gap between the instant combo point (strike + Roll the Bones stage bonus) and the delayed one from a double-strike -- which could let PRIO read the roll stage exactly and detect Opportunity procs cleanly.",
     } },

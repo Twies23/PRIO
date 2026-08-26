@@ -722,17 +722,6 @@ end
 -- Prediction: advance P on the player's own casts
 --------------------------------------------------------------------------------
 
--- Marker-aura count for stage inference (e.g. Opportunity, granted when Sinister Strike
--- double-strikes). Prefers the readable stack count; falls back to presence (1/0) when
--- the count isn't exposed. nil marker -> nil (no double detection, treated as 1 strike).
-local function MarkerCount(dm)
-    if not (dm and dm.aura) then return nil end
-    local n = API.AuraStackCount and API.AuraStackCount(dm.aura)
-    if n ~= nil then return n end
-    local a = API.IsAuraActive and API.IsAuraActive(dm.aura)
-    return a == true and 1 or 0
-end
-
 -- Opportunity "present" value, talent-scaled. Fan the Hammer makes a proc worth 3
 -- charges (so glow-on => >=3); without it, a single charge. We don't resolve the cap.
 local function OppAmounts(oi)
@@ -750,20 +739,22 @@ PRIO:On("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
     Engine.P.lastCast     = spellID          -- for "previous cast" conditions
     Engine.P.lastCastKey  = key
     Engine.P.lastCastTime = GetTime()
-    -- STAGE INFERENCE (Outlaw Roll the Bones): a "builder" cast whose resource yield
-    -- reveals a hidden buff stage. Record the resource BEFORE the cast + a short window
-    -- to sum its yield; a "reset" cast (re-rolling) clears the inferred flag. Combo points
-    -- read clean, so BuildState measures the yield when the window closes. (spec.stageInfer)
+    -- STAGE READ (Outlaw Roll the Bones): the "builder" (Sinister Strike) awards 1 CP per
+    -- strike PLUS the RtB stage bonus, and the stage bonus arrives INSTANTLY while a
+    -- double-strike lands ~200-330ms later. So the FIRST combo-point bump after the cast
+    -- is (first strike + stage bonus): +1 => stage 1, +2 => stage 2+. We record the cast
+    -- time + CP; the UNIT_POWER_UPDATE handler reads the instant bump. A "reset" cast
+    -- (re-rolling) clears the flag until the next builder reads the new stage.
     local si = spec.stageInfer
     if si then
         if key == si.builder then
-            Engine.P.siStartCP  = spec.resource and API.Power(spec.resource) or nil
-            Engine.P.siStartOpp = MarkerCount(si.doubleMarker)   -- for double-strike detection
-            Engine.P.siEval     = GetTime() + (si.window or 0.45)
+            Engine.P.ssT0        = GetTime()
+            Engine.P.ssCP0       = spec.resource and API.Power(spec.resource) or nil
+            Engine.P.ssStageRead = false
         elseif key == si.reset then
             Engine.P.predFlags = Engine.P.predFlags or {}
-            Engine.P.predFlags[si.flag] = nil            -- fresh roll: stage unknown again
-            Engine.P.siEval = nil
+            Engine.P.predFlags[si.flag] = nil            -- fresh roll: stage unknown until next builder
+            Engine.P.ssT0 = nil
         end
     end
     -- Spend a predicted charge and start its recharge.
@@ -833,7 +824,7 @@ PRIO:On("PLAYER_REGEN_ENABLED", function()
     -- Combat ended: clear volatile procs; Maelstrom and charges keep syncing from
     -- the real values now that they're readable again.
     local P = Engine.P
-    if P then P.fsExpire = 0; P.mote = false; P.skStacks = 0; P.siEval = nil; P.siStartCP = nil; P.siStartOpp = nil; P.oppStacks = 0; if P.auraExpire then wipe(P.auraExpire) end; if P.stacks then wipe(P.stacks) end; if P.predFlags then wipe(P.predFlags) end end
+    if P then P.fsExpire = 0; P.mote = false; P.skStacks = 0; P.ssT0 = nil; P.ssCP0 = nil; P.ssStageRead = nil; P.oppStacks = 0; if P.auraExpire then wipe(P.auraExpire) end; if P.stacks then wipe(P.stacks) end; if P.predFlags then wipe(P.predFlags) end end
     Engine:ResetExecuteRange()
     Engine.openerActive = false
 end)
@@ -900,6 +891,28 @@ PRIO:On("UNIT_POWER_UPDATE", function(unit)
     if unit ~= "player" or not spec or not spec.resource then return end
     local ms = API.Power(spec.resource)
     if ms ~= nil then Engine.P.maelstrom = ms end
+
+    -- Stage read: the FIRST combo-point bump after a builder cast is the instant portion
+    -- (first strike + Roll the Bones stage bonus). +1 => stage 1, +2 => stage 2+. The
+    -- double-strike lands later (>~150ms) and is ignored here. Guarded against the CP cap
+    -- (a clipped bump can't be read). Consumed once per cast via ssStageRead.
+    local si = spec.stageInfer
+    local P = Engine.P
+    if si and ms ~= nil and P.ssT0 and not P.ssStageRead and P.ssCP0 ~= nil then
+        local dt = GetTime() - P.ssT0
+        if dt <= (si.instantWindow or 0.15) then
+            local maxCP = (spec.resource and API.PowerMax(spec.resource)) or P.maelstromMax or 99
+            if P.ssCP0 <= maxCP - 2 then                 -- room to see a +2 without clipping
+                local instant = ms - P.ssCP0
+                P.predFlags = P.predFlags or {}
+                if instant >= 2 then P.predFlags[si.flag] = true      -- stage 2+ (bonus present)
+                elseif instant == 1 then P.predFlags[si.flag] = false end  -- stage 1 (no bonus)
+            end
+            P.ssStageRead = true
+        elseif dt > (si.instantWindow or 0.15) then
+            P.ssStageRead = true                         -- missed the instant window; don't misread the double
+        end
+    end
 end)
 
 -- Advance predicted Maelstrom for a cast: spend the real cost, add spec generation.
@@ -995,39 +1008,8 @@ local function BuildState(self, mode, enemies)
     local realMax = spec.resource and API.PowerMax(spec.resource) or nil
     if realMax ~= nil then P.maelstromMax = realMax end
 
-    -- Stage inference (Outlaw): the builder's resource-gain window has closed -> total
-    -- yield tells us the stage. Disproof-only: a yield at or below the base (e.g. a
-    -- Sinister Strike that gave just its 1 base CP) proves the LOW stage, so the flag
-    -- goes false (reroll). Stage 2+ always adds +1, so it can never look this low ->
-    -- we never falsely clear a good roll. Guarded so a near-cap (wasted) cast is skipped.
-    local si = spec.stageInfer
-    if si and P.siEval and now >= P.siEval then
-        local startCP, startOpp = P.siStartCP, P.siStartOpp
-        P.siEval, P.siStartCP, P.siStartOpp = nil, nil, nil
-        if realMs ~= nil and startCP ~= nil then
-            local maxCP = P.maelstromMax or 99
-            -- How many times did the builder strike? Each strike awards the base 1 CP.
-            -- A double-strike is revealed by the marker aura (Opportunity) gaining a stack;
-            -- when the marker isn't readable we assume a single strike (the safe default:
-            -- it can only DELAY a stage-1 flag, never fake one, because false is sticky).
-            local strikes = 1
-            if si.doubleMarker and startOpp ~= nil then
-                local oppNow = MarkerCount(si.doubleMarker)
-                if oppNow ~= nil and oppNow > startOpp then strikes = 2 end
-            end
-            -- Only measure when the full possible yield fits without hitting the CP cap,
-            -- so a clipped stage-2 can never masquerade as stage 1.
-            if startCP <= maxCP - (strikes + 1) then
-                local yield = realMs - startCP
-                P.predFlags = P.predFlags or {}
-                if yield >= 0 and yield <= strikes then
-                    P.predFlags[si.flag] = false               -- yield == strikes: no RtB bonus -> stage 1
-                elseif yield > strikes and P.predFlags[si.flag] ~= false then
-                    P.predFlags[si.flag] = true                -- got the +1 -> stage 2+ (don't override a stage-1 proof)
-                end
-            end
-        end
-    end
+    -- (Roll the Bones stage is read from the instant combo-point bump in the
+    -- UNIT_POWER_UPDATE handler -- see spec.stageInfer -- not here.)
 
     -- OPPORTUNITY charge count (Outlaw). Predicted, but ANCHORED to readable signals so
     -- it self-corrects: sync to the real stack count when it reads clean; otherwise the
