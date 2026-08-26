@@ -344,6 +344,8 @@ SlashCmdList.PRIO = function(msg)
         print("|cff0cd29fPRIO|r: " .. (PRIO.db.enabled and "enabled" or "disabled") .. ".")
     elseif msg == "debug" then
         if PRIO.Debug then PRIO.Debug:Toggle() end
+    elseif msg == "rotdebug" or msg == "rotation" then
+        if PRIO.RotationDebug then PRIO.RotationDebug:Toggle() end
     elseif msg == "spells" then
         local API = PRIO.API
         local id = API.GetSpecID()

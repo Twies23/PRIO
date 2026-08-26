@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.48 (alpha)
+- **New Arms rotation debug window** — open it with `/prio rotdebug` (or `/prio rotation`). It's a focused, second window separate from the main `/prio debug`, showing exactly the raw signals the rotation gates read: for **Cleave, Avatar, Colossus Smash, Execute, Bladestorm, Heroic Strike, Mortal Strike, Overpower, Slam** it shows cooldown-ready + usable state; for **Sudden Death, Imminent Demise, Executioner's Precision** it shows active state + stack count. If a buff shows "untracked," that's the signal to track it (or fix its ID) so the rotation reads it. Built for live rotation tuning.
+
+
 ## 0.2.47 (alpha)
 - **Arms warrior now has a per-hero-tree priority split.** Like Windwalker's Conduit/Shado-Pan split, Arms holds two tuned lists and picks one automatically: **Slayer** (weaves Bladestorm during Colossus Smash, spends Sudden Death, uses the Heroic Strike proc) and **Colossus** (casts Demolish inside the Colossus Smash window, no Bladestorm weave). Detection keys on Demolish via a strict talent check, so it won't flip mid-combat and swaps cleanly when you change hero trees. Both lists are separately editable in Options. Reset Arms lists to default to pick this up.
 

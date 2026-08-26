@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.48", {
+        "New Arms debug window (/prio rotdebug): per-ability cooldown + usable state, and Sudden Death / Imminent Demise / Executioner's Precision buff + stack readouts, for tuning the rotation live.",
+    } },
     { "0.2.47", {
         "Arms warrior now splits by hero tree: Slayer weaves Bladestorm / spends Sudden Death, Colossus casts Demolish in the Colossus Smash window. PRIO auto-picks your tree from Demolish and swaps on talent change. Reset Arms lists to default.",
     } },

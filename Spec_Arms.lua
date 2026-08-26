@@ -276,6 +276,24 @@ local spec = {
         gen   = { "Auto-attack", "Mortal Strike", "Skullsplitter", "Overpower" },
         spend = { "Execute", "Slam", "Cleave", "Bladestorm" },
     },
+
+    --------------------------------------------------------------------------------
+    -- Rotation Ability & Buff Debug (separate window: /prio rotdebug). Abilities show
+    -- cooldown-ready + usable state; buffs show active + stacks. IDs mirror the
+    -- rotation gates above, so an "untracked" row means the gate itself reads a bad ID.
+    --------------------------------------------------------------------------------
+    rotationDebug = {
+        title = "Rotation Ability & Buff Debug",
+        abilities = {   -- spec.spells keys; window reads IsReady + IsUsable
+            "Cleave", "Avatar", "ColossusSmash", "Execute", "Bladestorm",
+            "HeroicStrike", "MortalStrike", "Overpower", "Slam",
+        },
+        buffs = {
+            { label = "Sudden Death",           spell = ID_SUDDENDEATH },
+            { label = "Imminent Demise",        spell = ID_IMMINENT },
+            { label = "Executioner's Precision", spell = ID_EXECPREC },
+        },
+    },
 }
 
 -- spec.priority is a live proxy: reads resolve to the ACTIVE hero's list for the

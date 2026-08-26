@@ -360,3 +360,154 @@ function Debug:Toggle()
     if win:IsShown() then win:Hide()
     else win:Show(); self:Update() end
 end
+
+--------------------------------------------------------------------------------
+-- RotationDebug: a SECOND, standalone window focused on the raw signals a rotation
+-- gate reads -- per-ability cooldown/usable state and per-buff active/stacks --
+-- driven by the active spec's `rotationDebug` metadata. Its own frame/pool so it
+-- never touches the main Debug window's layout.
+--------------------------------------------------------------------------------
+local RotationDebug = {}
+PRIO.RotationDebug = RotationDebug
+
+local rwin, rbody, relapsed = nil, nil, 0
+local rrows, rpool = {}, {}
+local rBuiltSpecID = nil
+local rLayoutH = 0
+
+-- "ColossusSmash" -> "Colossus Smash" for row labels.
+local function spaceCamel(s)
+    return (s:gsub("(%l)(%u)", "%1 %2"))
+end
+
+local function racquire(kind)
+    for _, f in ipairs(rpool) do
+        if not f._used and f._kind == kind then f._used = true; f:Show(); return f end
+    end
+    local f
+    if kind == "head" then
+        f = CreateFrame("Frame", nil, rbody)
+        f:SetSize(258, 18)
+        f.text = UI.Font(f, 10.5, C.faint)
+        f.text:SetPoint("TOPLEFT", 0, 0)
+        f.line = UI.Solid(f, "ARTWORK", { 1, 1, 1 }, 0.06)
+        f.line:SetPoint("LEFT", f.text, "RIGHT", 8, 0)
+        f.line:SetPoint("RIGHT", f, "RIGHT", 0, 0)
+        f.line:SetPoint("TOP", f.text, "CENTER", 0, 0); f.line:SetHeight(1)
+    else -- "row"
+        f = CreateFrame("Frame", nil, rbody)
+        f:SetSize(258, 22)
+        f.label = UI.Font(f, 12, C.muted); f.label:SetPoint("LEFT", 0, 0)
+        f.value = UI.Font(f, 12.5, C.head)
+        f.value:SetPoint("RIGHT", 0, 0); f.value:SetJustifyH("RIGHT"); f.value:SetWidth(180)
+    end
+    f._kind = kind; f._used = true
+    rpool[#rpool + 1] = f
+    return f
+end
+
+local function rreleaseAll()
+    for _, f in ipairs(rpool) do f._used = false; f:Hide() end
+    wipe(rrows)
+end
+
+function RotationDebug:Rebuild(spec)
+    rreleaseAll()
+    local y = 74
+    local function head(text)
+        local h = racquire("head")
+        h:ClearAllPoints(); h:SetPoint("TOPLEFT", 20, -y)
+        h.text:SetText(text:upper())
+        y = y + 22
+    end
+    local function row(id, label)
+        local r = racquire("row")
+        r:ClearAllPoints(); r:SetPoint("TOPLEFT", 20, -y)
+        r.label:SetText(label)
+        rrows[id] = r.value
+        y = y + 24
+    end
+
+    local rd = spec and spec.rotationDebug
+    if not rd then
+        head("Rotation debug")
+        row("none", "(no rotation debug for this spec)")
+    else
+        head("Abilities  (cooldown / usable)")
+        for i, key in ipairs(rd.abilities or {}) do
+            row("a" .. i, spaceCamel(key))
+        end
+        head("Buffs  (active / stacks)")
+        for i, b in ipairs(rd.buffs or {}) do
+            row("b" .. i, b.label or "?")
+        end
+    end
+
+    rLayoutH = y + 20
+    rBuiltSpecID = spec and spec.specID or "none"
+    if rwin then rwin:SetHeight(rLayoutH) end
+end
+
+function RotationDebug:Build()
+    if rwin then return end
+    rwin = UI.Window("PRIORotationDebug", 300, 460, "PRIO  Rotation Debug",
+        "Ability cooldown/usable + buff/stacks")
+    rwin:SetFrameStrata("DIALOG")
+    rbody = CreateFrame("Frame", nil, rwin)
+    rbody:SetPoint("TOPLEFT", 0, 0); rbody:SetPoint("BOTTOMRIGHT", 0, 0)
+    rwin:SetScript("OnUpdate", function(_, dt)
+        relapsed = relapsed + dt
+        if relapsed >= 0.1 then relapsed = 0; RotationDebug:Update() end
+    end)
+end
+
+-- Cooldown-ready + usable, side by side. IsReady is a clean bool; UsableClean is
+-- true/false/nil (never guesses), so a secret usable flag reads honestly.
+local function abilityText(sid)
+    local ready = API.IsReady(sid)
+    local cd = (ready == true) and "|cff0cd29fready|r"
+        or (ready == false) and "|cffe0685aon CD|r" or "|cffe0a03a?|r"
+    local u = API.UsableClean and API.UsableClean(sid)
+    local us = (u == true) and "|cff0cd29fusable|r"
+        or (u == false) and "|cffe0685aunusable|r" or "|cffe0a03asecret|r"
+    return cd .. "  |cff5a6a76/|r  " .. us
+end
+
+local function buffText(sid)
+    local a = API.IsAuraActive(sid)
+    if a == nil then return "|cffe0a03auntracked|r" end
+    if a ~= true then return "|cffe0685agone|r" end
+    local s = API.AuraStackCount and API.AuraStackCount(sid)
+    if s and s > 0 then
+        return ("|cff0cd29factive|r  |cff9fb0be\195\151%d|r"):format(s)
+    end
+    return "|cff0cd29factive|r"
+end
+
+function RotationDebug:Update()
+    if not (rwin and rwin:IsShown()) then return end
+    local specID = API.GetSpecID()
+    local spec = specID and PRIO.specs and PRIO.specs[specID]
+    if (spec and spec.specID or "none") ~= rBuiltSpecID then
+        self:Rebuild(spec)
+    end
+    local rd = spec and spec.rotationDebug
+    if not rd then return end
+
+    local function set(id, text) if rrows[id] then rrows[id]:SetText(text) end end
+    for i, key in ipairs(rd.abilities or {}) do
+        local sid = spec.spells and spec.spells[key]
+        local ok, res = pcall(function() return sid and abilityText(sid) or "|cffe0685ano id|r" end)
+        set("a" .. i, ok and res or "|cffe0685aerr|r")
+    end
+    for i, b in ipairs(rd.buffs or {}) do
+        local ok, res = pcall(function() return buffText(b.spell) end)
+        set("b" .. i, ok and res or "|cffe0685aerr|r")
+    end
+end
+
+function RotationDebug:Toggle()
+    self:Build()
+    if rwin:IsShown() then rwin:Hide()
+    else rwin:Show(); self:Update() end
+end
