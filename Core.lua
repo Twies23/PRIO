@@ -20,7 +20,7 @@ PRIO.PROFILE_KEYS = {
     "showCooldown", "showFlash", "mode", "useOpener", "showPrecombat",
     "advanceWhileCasting", "enemyDetect", "manageNameplates", "cleaveAt", "aoeAt",
     "combatRate", "idleRate", "minimapShow", "classColor",
-    "font", "titleSize", "keybindSize", "nameSize",
+    "font", "titleSize", "keybindSize", "nameSize", "showModeButtons",
 }
 
 -- Colors reused across the UI (EllesmereUI-style accent).
@@ -53,6 +53,7 @@ PRIO.defaults = {
     showFlash     = true,
     debug         = false,
     mode          = "auto",     -- auto | st | cleave | aoe
+    showModeButtons = false,    -- clickable Auto/ST/AoE buttons under the display
     useOpener     = true,       -- play the hardcoded opener at pull
     showPrecombat = true,       -- pre-combat reminders out of combat
     advanceWhileCasting = true, -- while hard-casting, advance the primary to the next GCD

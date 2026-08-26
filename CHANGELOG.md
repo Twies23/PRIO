@@ -1,5 +1,10 @@
 # PRIO Changelog
 
+## 0.2.63 (alpha)
+- **Clickable mode buttons under the display.** New **Behavior → Mode buttons under display** toggle adds an **Auto / ST / AoE** row beneath the strip (spec-driven — execute variants stay automatic). Click to hot-swap the live mode mid-combat; the active one is highlighted. They're plain indicator buttons, so there's nothing to taint.
+- **Removed the duplicate "AoE at N+ targets" control** from the Priorities screen. The **AoE at (enemies)** slider in Behavior is now per-spec (so it actually drives Arms' 2-target default), and is the single place to set it.
+
+
 ## 0.2.62 (alpha)
 - **Configurable openers.** New **Options → Opener** page: reorder, add, and remove the steps of the pull sequence per spec, just like the priority lists (steps that aren't known or off cooldown are still skipped automatically). Comes with a **Reset to default**, and your custom opener is saved and restored with your profiles.
 

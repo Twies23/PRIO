@@ -11,9 +11,11 @@ PRIO.Display = Display
 local MAX_ICONS = 6      -- 1 primary + up to 5 queue, created once
 local icons = {}
 local container
+local modeBar
 
 local accent = PRIO.color.accent
 local gold   = PRIO.color.gold
+local WHITE  = "Interface\\Buttons\\WHITE8x8"
 
 --------------------------------------------------------------------------------
 -- Icon construction
@@ -238,10 +240,85 @@ function Display:Render(result)
         container.title:Hide()
     end
 
+    -- Optional clickable mode buttons under the strip.
+    if PRIO.db.showModeButtons then
+        local specID = API.GetSpecID()
+        local spec = specID and PRIO.specs and PRIO.specs[specID]
+        self:BuildModeButtons(spec)
+        self:UpdateModeButtons()
+        modeBar:Show()
+    elseif modeBar then
+        modeBar:Hide()
+    end
+end
+
+--------------------------------------------------------------------------------
+-- Mode buttons: an optional clickable row under the display to hot-swap
+-- Auto / ST / AoE (spec-driven; execute variants are auto only). These are plain
+-- frames that just set db.mode and re-evaluate -- nothing secure, safe in combat.
+--------------------------------------------------------------------------------
+local function StyleModeButton(b, active)
+    if active then
+        b:SetBackdropColor(accent[1], accent[2], accent[3], 0.85)
+        b:SetBackdropBorderColor(accent[1], accent[2], accent[3], 1)
+        b.text:SetTextColor(0.02, 0.09, 0.07, 1)
+    else
+        b:SetBackdropColor(0, 0, 0, 0.7)
+        b:SetBackdropBorderColor(accent[1], accent[2], accent[3], 0.4)
+        b.text:SetTextColor(0.72, 0.80, 0.86, 1)
+    end
+end
+
+function Display:UpdateModeButtons()
+    if not modeBar then return end
+    local cur = PRIO.db.mode or "auto"
+    for _, b in ipairs(modeBar.buttons) do StyleModeButton(b, b.value == cur) end
+end
+
+function Display:BuildModeButtons(spec)
+    if not modeBar then
+        modeBar = CreateFrame("Frame", "PRIOModeBar", container)
+        modeBar.buttons = {}
+    end
+    local key = (spec and spec.key) or "none"
+    if modeBar._specKey == key and #modeBar.buttons > 0 then return end
+    modeBar._specKey = key
+    for _, b in ipairs(modeBar.buttons) do b:Hide(); b:SetParent(nil) end
+    wipe(modeBar.buttons)
+
+    -- Auto + the spec's base modes (drop the auto-only execute variants).
+    local defs = { { value = "auto", text = "Auto" } }
+    local modes = PRIO.Cond and PRIO.Cond.SpecModes and PRIO.Cond.SpecModes(spec) or {}
+    for _, m in ipairs(modes) do
+        if not tostring(m.value):find("_execute") then defs[#defs + 1] = m end
+    end
+
+    local font = PRIO.db.font or "Fonts\\FRIZQT__.TTF"
+    local BW, BH, GAP = 44, 18, 4
+    modeBar:SetSize(#defs * BW + (#defs - 1) * GAP, BH)
+    local x = 0
+    for _, d in ipairs(defs) do
+        local b = CreateFrame("Button", nil, modeBar, "BackdropTemplate")
+        b:SetSize(BW, BH); b:SetPoint("LEFT", x, 0)
+        b:SetBackdrop({ bgFile = WHITE, edgeFile = WHITE, edgeSize = 1 })
+        b.text = b:CreateFontString(nil, "OVERLAY"); b.text:SetPoint("CENTER")
+        pcall(b.text.SetFont, b.text, font, 11, "OUTLINE"); b.text:SetText(d.text)
+        b.value = d.value
+        b:SetScript("OnClick", function()
+            PRIO.db.mode = d.value
+            if PRIO.Tick then PRIO:Tick() end
+            Display:UpdateModeButtons()
+        end)
+        modeBar.buttons[#modeBar.buttons + 1] = b
+        x = x + BW + GAP
+    end
+    modeBar:ClearAllPoints()
+    modeBar:SetPoint("TOP", container, "BOTTOM", 0, -18)
 end
 
 function Display:Hide()
     if container then container:Hide() end
+    if modeBar then modeBar:Hide() end
 end
 
 -- Called by Options when geometry settings change.

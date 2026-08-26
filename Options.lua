@@ -345,15 +345,6 @@ function Pages.rotation()
             function() return db.mode end, function(v) db.mode = v end, AfterChange)
         seg:SetPoint("RIGHT", 0, 0)
     end)
-    if spec then
-        SettingRow("AoE at N+ targets", 30, function(r)
-            db.aoeThreshold = db.aoeThreshold or {}
-            local st = UI.Stepper(r, 90, 1, 10,
-                function() return db.aoeThreshold[spec.key] or spec.aoeAt or 3 end,
-                function(v) db.aoeThreshold[spec.key] = v; AfterChange() end)
-            st:SetPoint("RIGHT", 0, 0)
-        end)
-    end
     if spec and spec.priorityVariants then
         SettingRow("Hero list to edit", 30, function(r)
             local choices = {}
@@ -823,6 +814,7 @@ function Pages.general()
     tog("Enabled", "enabled")
     tog("Lock frame", "locked", function() if PRIO.Display then PRIO.Display:ApplyLock() end end)
     tog("Show out of combat", "showOOC")
+    tog("Mode buttons under display", "showModeButtons", function() if PRIO.Display then PRIO.Display:Refresh() end end)
     tog("Opener at pull", "useOpener")
     tog("Pre-combat reminders", "showPrecombat")
     tog("Advance primary while casting", "advanceWhileCasting")
@@ -849,8 +841,16 @@ function Pages.general()
         s:SetPoint("RIGHT", 0, 0)
     end)
     SettingRow("AoE at (enemies)", 26, function(r)
-        local s = UI.Slider(r, 200, 3, 10, 1, function() return db.aoeAt end,
-            function(v) db.aoeAt = v end, AfterChange)
+        -- Per-spec threshold (specs like Arms default to 2 and drop the cleave tier);
+        -- falls back to the global for the current spec.
+        local sp = CurrentSpec()
+        local s = UI.Slider(r, 200, 2, 10, 1,
+            function() return (sp and db.aoeThreshold and db.aoeThreshold[sp.key])
+                or (sp and sp.aoeAt) or db.aoeAt end,
+            function(v)
+                if sp then db.aoeThreshold = db.aoeThreshold or {}; db.aoeThreshold[sp.key] = v
+                else db.aoeAt = v end
+            end, AfterChange)
         s:SetPoint("RIGHT", 0, 0)
     end)
 

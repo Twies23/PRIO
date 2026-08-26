@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.63", {
+        "Optional clickable Auto / ST / AoE buttons under the display (Behavior -> Mode buttons) to hot-swap mode in combat. Removed the duplicate AoE threshold from Priorities -- it's now the per-spec slider in Behavior.",
+    } },
     { "0.2.62", {
         "Openers are now configurable: Options -> Opener lets you reorder, add, and remove opener steps per spec, with reset-to-default. Saved with your profiles.",
     } },
