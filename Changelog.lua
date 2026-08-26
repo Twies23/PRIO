@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.3.24", {
+        "Fix: a couple of Outlaw default conditions showed blank in the editor (RtB needs reroll and Opportunity >=). They used internal, non-editable condition types; they now use the proper preset / Opportunity >= N forms, so every default condition opens and edits cleanly. Reset an Outlaw list to default to pick up the fix.",
+    } },
     { "0.3.23", {
         "Outlaw tuned defaults: Killing Spree fires right after Adrenaline Rush; Pistol Shot is two lines (dump at 6 charges, or spend at low CP); AoE Blade Flurry has a dedicated recast line for 4+ targets at low CP. If you customized Outlaw, hit Reset to default to pick these up.",
         "Opener matches Icy Veins 12.1: Adrenaline Rush -> Roll the Bones -> Slice and Dice, then build and Between the Eyes at 6.",

@@ -84,8 +84,9 @@ local function stacksMin(id, n) return { type = "stacksMin", spell = id, v = n }
 local function stacksMax(id, n) return { type = "stacksMax", spell = id, v = n } end
 local function glow(id)      return { type = "glowing", spell = id } end            -- button proc glow
 local function enemiesMin(n) return { type = "enemiesMin", v = n } end               -- nameplate count >= n
-local function predOppMin(n) return { type = "predStackMin", spell = ID_OPPORTUNITY, v = n } end  -- predicted Opportunity charges
 local function lastCast(id)  return { type = "lastCast", spell = id } end            -- previous cast was this
+local function oppMin(n)     return { type = "oppStacksMin", v = n } end             -- Opportunity charges >= n (editable)
+local function preset(key)   return { type = "preset:" .. key } end                  -- named condPreset (editable chip)
 
 --------------------------------------------------------------------------------
 -- Trickster priority (Wowhead 12.1). Combo-point gates are exact; RtB stage reads
@@ -111,7 +112,7 @@ local function rtbReroll() return OR(buffDown(ID_ROLLBONES), predStage2False()) 
 -- Default lists = user-tuned (0.3.23). Sinister Strike as the bottom filler is CORRECT:
 -- Outlaw doesn't pool Energy, so it's the baseline builder you fall back to (Icy Veins).
 local st = {
-    { spell = "RollTheBones",  cond = rtbReroll() },                                 -- reroll: nothing up, or inferred stage 1
+    { spell = "RollTheBones",  cond = preset("rtbReroll") },                          -- reroll: nothing up, or inferred stage 1
     { spell = "Preparation",   cond = AND(cdDown(ID_BTE), cdDown(ID_ADRENALINE), cdDown(ID_KILLSPREE)) },
     { spell = "AdrenalineRush", cond = cpMax(2) },                                  -- on CD at <=2 CP
     { spell = "KillingSpree",  cond = lastCast(ID_ADRENALINE) },                    -- right after Adrenaline Rush
@@ -119,15 +120,15 @@ local st = {
     { spell = "BladeRush" },                                                        -- on CD
     { spell = "BetweenTheEyes", cond = cpMin(6) },                                  -- finisher at >=6 CP
     { spell = "Dispatch",      cond = cpMin(6) },                                   -- finisher at >=6 CP
-    { spell = "PistolShot",    cond = predOppMin(6) },                             -- dump at cap (6 tracked charges)
-    { spell = "PistolShot",    cond = AND(glow(ID_PISTOLSHOT), cpMax(3)) },        -- or spend at low CP (glow = Opportunity up)
+    { spell = "PistolShot",    cond = oppMin(6) },                                  -- dump at cap (6 tracked charges)
+    { spell = "PistolShot",    cond = AND(preset("oppUp"), cpMax(3)) },            -- or spend at low CP (Opportunity up)
     { spell = "SinisterStrike", cond = cpMax(5) },                                  -- baseline builder at <=5 CP
 }
 
 local aoe = {
     { spell = "BladeFlurry",   cond = buffDown(ID_BLADEFLURRY) },                   -- put the cleave buff up
     { spell = "BladeFlurry",   cond = AND(buffUp(ID_BLADEFLURRY), enemiesMin(4), cpMax(4)) }, -- recast on 4+ at low CP
-    { spell = "RollTheBones",  cond = rtbReroll() },
+    { spell = "RollTheBones",  cond = preset("rtbReroll") },
     { spell = "Preparation",   cond = AND(cdDown(ID_BTE), cdDown(ID_ADRENALINE),
                                           cdDown(ID_KILLSPREE), cdDown(ID_BLADERUSH)) },
     { spell = "AdrenalineRush", cond = cpMax(2) },
@@ -136,8 +137,8 @@ local aoe = {
     { spell = "BladeRush" },
     { spell = "BetweenTheEyes", cond = cpMin(6) },
     { spell = "Dispatch",      cond = cpMin(6) },
-    { spell = "PistolShot",    cond = predOppMin(6) },                             -- dump at cap
-    { spell = "PistolShot",    cond = AND(glow(ID_PISTOLSHOT), cpMax(3)) },        -- or spend at low CP
+    { spell = "PistolShot",    cond = oppMin(6) },                                  -- dump at cap
+    { spell = "PistolShot",    cond = AND(preset("oppUp"), cpMax(3)) },            -- or spend at low CP
     { spell = "SinisterStrike", cond = cpMax(5) },
 }
 

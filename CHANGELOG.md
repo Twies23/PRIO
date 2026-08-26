@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.3.24
+- **Fix:** a couple of Outlaw default conditions showed blank when you opened them in the editor ("RtB needs reroll" and "Opportunity ≥"). They were built from internal condition types that aren't user-editable; they now use the proper preset / "Opportunity ≥ N" forms, so every default condition opens and edits cleanly. (Reset an Outlaw list to default to pick up the fixed versions.)
+
 ## 0.3.23
 **Outlaw — tuned defaults + opener.**
 - The shipped ST and AoE priorities are now the tuned lists: **Killing Spree** fires right after Adrenaline Rush; **Pistol Shot** is two lines (dump at 6 charges, or spend at low combo points); **Blade Flurry** in AoE has a dedicated recast line for 4+ targets at low combo points. (If you'd customized Outlaw, hit "Reset to default" to pick these up.)
