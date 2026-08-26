@@ -173,23 +173,47 @@ test("opener: custom db override wins, else spec default", function()
     H.reset(); H.rebind()
 end)
 
--- Opener gate: an extra db.openerConds condition must pass for the opener to start.
-test("opener gate condition blocks / allows the opener", function()
+-- Opener "require all cooldowns" gate: default = any signature CD ready; opt-in = all.
+test("opener require-all gate", function()
     H.reset(); H.S.specID = 71; H.rebind()
     H.db.useOpener = true
+    local AVATAR, CS = 107574, 167105
 
+    -- Default (any): Avatar ready is enough even if Colossus Smash is down.
+    H.S.ready[CS] = false
     H.Engine:StartOpener()
-    truthy(H.Engine.openerActive, "no gate -> opener starts on a fresh pull")
+    truthy(H.Engine.openerActive, "any signature CD ready -> opener starts")
 
-    H.db.openerConds = { [H.armsSpec.key] = { op = "and", clauses = { { type = "talentYes", spell = 999999 } } } }
+    -- Require all: Colossus Smash down blocks it.
+    H.db.openerRequireAll = { [H.armsSpec.key] = true }
     H.Engine:StartOpener()
-    falsy(H.Engine.openerActive, "failing gate condition blocks the opener")
+    falsy(H.Engine.openerActive, "require-all + a CD down -> opener blocked")
 
-    H.db.openerConds = { [H.armsSpec.key] = { op = "and", clauses = { { type = "cdReady", spell = 107574 } } } }
+    -- Require all satisfied.
+    H.S.ready[CS] = true
     H.Engine:StartOpener()
-    truthy(H.Engine.openerActive, "passing gate condition allows the opener")
+    truthy(H.Engine.openerActive, "require-all + all ready -> opener starts")
 
-    H.db.openerConds = nil; H.db.useOpener = nil
+    H.db.openerRequireAll = nil; H.db.useOpener = nil
+    H.reset(); H.rebind()
+end)
+
+-- Per-mode openers: ST vs AoE picked by pull size; custom override is per mode.
+test("opener picks ST vs AoE by pull size", function()
+    H.reset(); H.S.specID = 71; H.rebind()
+    -- 1 target -> ST opener default.
+    eq(H.Engine:ActiveOpener("st"), H.armsSpec.opener)
+    -- AoE opener default is spec.openerAoe.
+    eq(H.Engine:ActiveOpener("aoe"), H.armsSpec.openerAoe)
+    -- StartOpener sets openerMode from enemy count (aoeAt = 2 for Arms).
+    H.db.useOpener = true
+    H.S.enemies = 1; H.Engine:StartOpener(); eq(H.Engine.openerMode, "st")
+    H.S.enemies = 3; H.Engine:StartOpener(); eq(H.Engine.openerMode, "aoe")
+    -- Per-mode custom override.
+    H.db.customOpeners = { [H.armsSpec.key] = { aoe = { "Bladestorm" } } }
+    eq(H.Engine:ActiveOpener("aoe")[1], "Bladestorm")
+    eq(H.Engine:ActiveOpener("st"), H.armsSpec.opener, "st still default when only aoe customized")
+    H.db.customOpeners = nil; H.db.useOpener = nil
     H.reset(); H.rebind()
 end)
 

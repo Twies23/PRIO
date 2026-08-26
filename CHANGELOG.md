@@ -1,5 +1,10 @@
 # PRIO Changelog
 
+## 0.2.68 (alpha)
+- **Separate ST and AoE openers.** Each spec now has an ST opener and an AoE opener, and PRIO picks which to play from the pull's enemy count. Options → Opener has an **ST / AoE** switch so you can edit each independently (Arms ships with an AoE opener: Rend → Sweeping Strikes → Avatar → Colossus Smash → Bladestorm → Cleave → Mortal Strike).
+- **Simpler opener gating.** Replaced the opener condition editor with a single checkbox, **"Only when all cooldowns are ready"** — off (default) means the opener plays when any signature cooldown is up; on means it waits until they all are.
+
+
 ## 0.2.67 (alpha)
 - **Corrected the Arms setup checklist.** It now matches what PRIO actually reads: it asks you to track **Rend** (missing/refresh) and **Colossus Smash** (its debuff window) in the Cooldown Manager, keeps the optional Rend pandemic alert, and drops the stale requests to track Sudden Death, Imminent Demise, Collateral Damage, and Executioner's Precision. Those now show as **Automatic** — Sudden Death / Imminent Demise / Collateral Damage are read from the Execute / Bladestorm / Cleave button glows, and Executioner's Precision is predicted from your casts, so none of them need tracking.
 

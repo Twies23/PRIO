@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.68", {
+        "Openers are now split into ST and AoE (PRIO picks by pull size, editable separately in Options -> Opener). Replaced the opener condition with a simple \"only when all cooldowns are ready\" checkbox.",
+    } },
     { "0.2.67", {
         "Fixed the Arms setup checklist: it now asks you to track Rend and Colossus Smash (what PRIO actually reads), and marks Sudden Death / Imminent Demise / Collateral Damage / Executioner's Precision as Automatic (glow / predicted -- no tracking needed).",
     } },

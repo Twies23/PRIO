@@ -578,34 +578,53 @@ PRIO:On("PLAYER_TALENT_UPDATE", function() Engine:RefreshTalentFlags() end)
 --------------------------------------------------------------------------------
 -- Hardcoded opener
 --------------------------------------------------------------------------------
--- The effective opener sequence: the user's custom copy (db.customOpeners[specKey])
--- if present, else the spec default. A list of spell keys.
-function Engine:ActiveOpener()
-    if not spec then return nil end
-    local co = PRIO.db.customOpeners
-    if co and co[spec.key] then return co[spec.key] end
+-- Per-mode opener sequences (ST / AoE). Custom copy in db.customOpeners[specKey][mode]
+-- wins; else the spec default (spec.openerAoe for aoe, spec.opener otherwise). A legacy
+-- flat array in customOpeners[specKey] is treated as the ST opener.
+local function CustomOpener(key, mode)
+    local co = PRIO.db.customOpeners and PRIO.db.customOpeners[key]
+    if not co then return nil end
+    if co[1] ~= nil then return (mode == "st") and co or nil end
+    return co[mode]
+end
+local function DefaultOpener(mode)
+    if mode == "aoe" and spec.openerAoe then return spec.openerAoe end
     return spec.opener
 end
+function Engine:ActiveOpener(mode)
+    if not spec then return nil end
+    mode = mode or self.openerMode or "st"
+    return CustomOpener(spec.key, mode) or DefaultOpener(mode)
+end
 
--- Begin the opener at combat start, but only on a "fresh" pull (a big cooldown is
--- up). Skips any leading steps already pre-cast (on cooldown / no charge).
+-- Begin the opener at combat start. Picks the ST/AoE opener from the pull's enemy
+-- count, and only plays it when a signature cooldown is ready (ANY by default, or ALL
+-- when "require all" is set). Skips leading steps already pre-cast.
 function Engine:StartOpener()
     self.openerActive = false
+    if not (PRIO.db.useOpener and spec) then return end
+    local enemies = API.EnemyCount()
+    self.openerMode = (enemies >= self:AoeThreshold(spec)) and "aoe" or "st"
     local op = self:ActiveOpener()
-    if not (PRIO.db.useOpener and spec and op and #op > 0) then return end
-    -- Fresh pull = one of the spec's signature cooldowns is ready.
-    local fresh = false
-    for _, key in ipairs(spec.openerReady or {}) do
-        local sid = spec.spells[key]
-        if sid and API.IsReady(sid) then fresh = true; break end
+    if not (op and #op > 0) then return end
+    -- Fresh-pull gate on the spec's signature cooldowns.
+    local ready = spec.openerReady or {}
+    local requireAll = PRIO.db.openerRequireAll and PRIO.db.openerRequireAll[spec.key]
+    local ok
+    if requireAll then
+        ok = true
+        for _, key in ipairs(ready) do
+            local sid = spec.spells[key]
+            if sid and API.IsKnown(sid) and not API.IsReady(sid) then ok = false; break end
+        end
+    else
+        ok = false
+        for _, key in ipairs(ready) do
+            local sid = spec.spells[key]
+            if sid and API.IsReady(sid) then ok = true; break end
+        end
     end
-    if not fresh then return end
-    -- Optional user condition gating whether the opener plays at all.
-    local oc = PRIO.db.openerConds and PRIO.db.openerConds[spec.key]
-    if oc and PRIO.Cond then
-        local S = self:CurrentState()
-        if S and not PRIO.Cond.Eval(oc, S, nil) then return end
-    end
+    if not ok then return end
     local idx = 1
     while idx <= #op do
         local sid = spec.spells[op[idx]]

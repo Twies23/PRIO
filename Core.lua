@@ -77,10 +77,12 @@ PRIO.defaults = {
     -- Custom priority lists: customPriorities[specKey][mode] = { {spell=id, cond=, off=}, ... }
     -- When present for a spec/mode, it replaces the built-in default entirely.
     customPriorities = {},
-    -- Custom openers: customOpeners[specKey] = { "SpellKey", ... }. Replaces spec.opener.
+    -- Custom openers: customOpeners[specKey] = { st = {"Key",...}, aoe = {...} }. Per-mode;
+    -- a legacy flat array is read as the ST opener. Replaces spec.opener / spec.openerAoe.
     customOpeners = {},
-    -- Opener gate conditions: openerConds[specKey] = <cond group>. Extra "when to use".
-    openerConds = {},
+    -- Opener gate: openerRequireAll[specKey] = true -> only open when ALL signature
+    -- cooldowns are ready (default: any one is enough).
+    openerRequireAll = {},
 }
 
 --------------------------------------------------------------------------------
@@ -142,7 +144,7 @@ function PRIO:SaveProfile(name)
     for _, k in ipairs(self.PROFILE_KEYS) do p[k] = self.db[k] end
     p.customPriorities = CopyTable(self.db.customPriorities or {})
     p.customOpeners = CopyTable(self.db.customOpeners or {})
-    p.openerConds = CopyTable(self.db.openerConds or {})
+    p.openerRequireAll = CopyTable(self.db.openerRequireAll or {})
     self.db.profiles[name] = p
     print("|cff" .. (self.UI and self.UI.accentHex or "0cd29f") .. "PRIO|r: saved profile \"" .. name .. "\".")
 end
@@ -153,7 +155,7 @@ function PRIO:ApplyProfile(name)
     for _, k in ipairs(self.PROFILE_KEYS) do if p[k] ~= nil then self.db[k] = p[k] end end
     if p.customPriorities then self.db.customPriorities = CopyTable(p.customPriorities) end
     if p.customOpeners then self.db.customOpeners = CopyTable(p.customOpeners) end
-    if p.openerConds then self.db.openerConds = CopyTable(p.openerConds) end
+    if p.openerRequireAll then self.db.openerRequireAll = CopyTable(p.openerRequireAll) end
     if self.UI then self.UI.ApplyAccent() end
     if self.RecolorMinimapButton then self.RecolorMinimapButton() end
     if self.Display and self.Display.Refresh then self.Display:Refresh() end
