@@ -504,6 +504,25 @@ SlashCmdList.PRIO = function(msg)
         print("|cff0cd29fPRIO|r ssdelay: " .. (f.armed
             and "|cff0cd29fARMED|r -- cast Sinister Strike on a dummy; watch the ms timings"
             or "off"))
+    elseif msg == "usable" then
+        -- For each rotation ability: the game's IsSpellUsable (usable + insufficientPower)
+        -- and PRIO's recommend decision. If an ability you expect is usable=false with
+        -- noPower=false, it's a HARD block (range/form) -- not energy. Run IN COMBAT.
+        local API = PRIO.API
+        local id = API.GetSpecID(); local spec = id and PRIO.specs and PRIO.specs[id]
+        if not spec then print("|cff0cd29fPRIO|r: no supported spec active."); return end
+        print(("|cff0cd29fPRIO|r usable check (%s):")
+            :format(InCombatLockdown() and "|cff0cd29fin combat|r" or "|cffe0a03aOOC|r"))
+        for _, key in ipairs(spec.pickable or {}) do
+            local sid = spec.spells[key]
+            if sid and C_Spell and C_Spell.IsSpellUsable then
+                local ok, u, np = pcall(C_Spell.IsSpellUsable, sid)
+                if type(u) == "table" then np = u.insufficientPower; u = u.isUsable end
+                local rec = API.UsableOrNoPower(sid)
+                print(("  |cffbbbbbb%-16s|r usable=%s noPower=%s  |cff%s recommend=%s|r")
+                    :format(key, tostring(u), tostring(np), rec and "0cd29f" or "e0685a", tostring(rec)))
+            end
+        end
     elseif msg == "setup" then
         if PRIO.Setup then PRIO.Setup:Toggle() end
     elseif msg == "changelog" or msg == "changes" then

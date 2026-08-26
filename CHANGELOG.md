@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.3.27
+- The low-energy "keep recommending it" behavior already covers **Pistol Shot** and **Blade Flurry** too — it's applied to every ability, not just finishers (confirmed with tests).
+- New `/prio usable` command: for each rotation ability it prints the game's usable / insufficient-power flags and PRIO's recommend decision — handy if something you expect still isn't showing (it'll tell you whether it's an energy block or a real one like range).
+
 ## 0.3.26
 - **Low energy no longer collapses to Sinister Strike.** When a spender (a finisher, or an empowered Pistol Shot) is unusable *only* because you're short on energy, PRIO now keeps recommending it — you'll press it the instant energy ticks up — instead of falling back to the cheapest builder. It uses the game's own "insufficient power" flag as the cue, so there's no energy modeling; abilities that are genuinely unusable (out of range, wrong form) still don't show. (The queue also already predicts Killing Spree right after Adrenaline Rush when both are ready.)
 

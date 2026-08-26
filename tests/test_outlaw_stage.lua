@@ -143,4 +143,25 @@ test("outlaw: a spender blocked only by low energy still shows (no collapse to S
        "Dispatch (blocked only by energy) is recommended, not the fallback Sinister Strike")
 end)
 
+test("outlaw: Pistol Shot blocked only by energy still shows when it's the priority", function()
+    setOutlaw()
+    H.S.power[COMBO] = 2                                   -- low CP -> the "glow + <=3 CP" line
+    H.S.auras[ROLLBONES] = true                            -- roll active
+    H.S.ready[13750] = false; H.S.ready[271877] = false; H.S.ready[51690] = false  -- AR/BladeRush/KS on CD
+    H.S.glows[185763] = true                               -- Opportunity up (glow)
+    H.S.usable = { [185763] = false }; H.S.usableNoPower = { [185763] = true }     -- energy-blocked only
+    H.rebind(); H.Engine.P.predFlags = { rtbStage2 = true }
+    local r = H.Engine:Evaluate()
+    eq(r and r.primary and r.primary.name, "Spell185763", "Pistol Shot shows despite low energy")
+end)
+
+test("outlaw AoE: Blade Flurry blocked only by energy still shows", function()
+    setOutlaw()
+    H.S.power[COMBO] = 2; H.S.enemies = 3                  -- AoE mode
+    H.S.usable = { [13877] = false }; H.S.usableNoPower = { [13877] = true }        -- energy-blocked only
+    H.rebind()
+    local r = H.Engine:Evaluate()
+    eq(r and r.primary and r.primary.name, "Spell13877", "Blade Flurry shows despite low energy")
+end)
+
 H.reset(); H.rebind()   -- restore Windwalker for later suites

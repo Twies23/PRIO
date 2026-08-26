@@ -11,6 +11,10 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.3.27", {
+        "The low-energy 'keep recommending it' behavior already covers Pistol Shot and Blade Flurry too -- it's applied to every ability, not just finishers (confirmed with tests).",
+        "New /prio usable: for each rotation ability it prints the game's usable / insufficient-power flags and PRIO's recommend decision -- handy if something you expect still isn't showing (energy block vs a real one like range).",
+    } },
     { "0.3.26", {
         "Low energy no longer collapses to Sinister Strike. When a spender is unusable ONLY because you're short on energy, PRIO keeps recommending it (you'll press it the instant energy ticks up) instead of falling back to the cheapest builder. Uses the game's own insufficient-power flag as the cue -- no energy modeling; genuinely unusable abilities (range, form) still don't show.",
     } },
