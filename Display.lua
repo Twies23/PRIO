@@ -114,6 +114,27 @@ function Display:EnsureCreated()
     container.title:SetPoint("BOTTOM", icons.primary, "TOP", 0, 8)
     container.title:SetJustifyH("CENTER")
 
+    -- Advisory alert banner (gold, pulsing), floating above the strip. Shown when the
+    -- engine returns an alert (e.g. "Keep It Rolling ready -- check your roll"). Purely
+    -- an indicator; the player decides.
+    local alert = CreateFrame("Frame", "PRIOAlert", container, "BackdropTemplate")
+    alert:SetBackdrop({ bgFile = WHITE, edgeFile = WHITE, edgeSize = 1 })
+    alert:SetBackdropColor(0, 0, 0, 0.85)
+    alert:SetBackdropBorderColor(gold[1], gold[2], gold[3], 0.9)
+    alert:SetPoint("BOTTOM", container, "TOP", 0, 26)
+    alert:SetFrameStrata("HIGH")
+    alert.icon = alert:CreateTexture(nil, "ARTWORK")
+    alert.icon:SetSize(22, 22); alert.icon:SetPoint("LEFT", 5, 0)
+    alert.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+    alert.text = alert:CreateFontString(nil, "OVERLAY")
+    alert.text:SetPoint("LEFT", alert.icon, "RIGHT", 6, 0)
+    alert.text:SetTextColor(gold[1], gold[2], gold[3])
+    alert:SetScript("OnUpdate", function(self)
+        self:SetAlpha(0.72 + 0.28 * (0.5 + 0.5 * math.sin(GetTime() * 4)))
+    end)
+    alert:Hide()
+    container.alert = alert
+
 
     self:ApplyPoint()
     self:ApplyLock()
@@ -170,6 +191,7 @@ function Display:ApplyFonts()
         if fs then pcall(fs.SetFont, fs, font, size or 12, "OUTLINE") end
     end
     setf(container.title, db.titleSize)
+    if container.alert then setf(container.alert.text, db.titleSize) end
     setf(icons.primary.kb, db.keybindSize)
     setf(icons.primary.name, db.nameSize)
     for i = 1, MAX_ICONS - 1 do
@@ -243,6 +265,19 @@ function Display:Render(result)
         container.title:Show()
     else
         container.title:Hide()
+    end
+
+    -- Advisory alert banner (first active alert; gold, pulsing).
+    local al = result.alerts and result.alerts[1]
+    if al and PRIO.db.showAlerts ~= false and container.alert then
+        local a = container.alert
+        a.text:SetText(al.text or "")
+        if al.texture then a.icon:SetTexture(al.texture); a.icon:Show() else a.icon:Hide() end
+        local tw = (a.text:GetStringWidth() or 120) + (al.texture and 33 or 12) + 10
+        a:SetSize(tw, 28)
+        a:Show()
+    elseif container.alert then
+        container.alert:Hide()
     end
 
     -- Optional clickable mode buttons under the strip.
@@ -351,6 +386,7 @@ end
 
 function Display:Hide()
     if container then container:Hide() end
+    if container and container.alert then container.alert:Hide() end
     if modeBar then modeBar:Hide() end
 end
 

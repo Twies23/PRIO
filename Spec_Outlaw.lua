@@ -99,15 +99,13 @@ local function predStage2False() return { type = "predFalse", key = "rtbStage2" 
 local function predStage2True()  return { type = "predTrue",  key = "rtbStage2" } end
 -- Reroll: no roll active, OR the current roll was inferred to be stage 1.
 local function rtbReroll() return OR(buffDown(ID_ROLLBONES), predStage2False()) end
--- Keep It Rolling: on cooldown once we've CONFIRMED a good roll (stage 2+). We can't
--- read stage 3 (Restless Blades touches only secret cooldowns), so "stage 2+ confirmed"
--- is the best readable trigger -- and it's strictly better than firing on any roll,
--- since it never extends a stage-1 roll we're about to reroll.
-local function rtbKeep()   return AND(buffUp(ID_ROLLBONES), predStage2True()) end
+-- Keep It Rolling is NOT auto-suggested. Whether it's worth extending depends on the
+-- exact stage (2 vs 3 vs Jackpot), which we can't read -- but YOU can see it on the
+-- buff. So instead of guessing, PRIO ALERTS when KiR is ready and the roll is a
+-- confirmed good one (stage 2+), and leaves the call to you (see spec.alerts).
 
 local st = {
     { spell = "RollTheBones",  cond = rtbReroll() },                                 -- reroll: nothing up, or inferred stage 1
-    { spell = "KeepItRolling", cond = rtbKeep() },                                  -- Keep It Rolling on CD while a roll is up
     { spell = "Preparation",   cond = AND(cdDown(ID_BTE), cdDown(ID_ADRENALINE), cdDown(ID_KILLSPREE)) },
     { spell = "AdrenalineRush", cond = cpMax(2) },                                  -- on CD at <=2 CP
     { spell = "KillingSpree" },                                                     -- follows Adrenaline Rush
@@ -123,7 +121,6 @@ local st = {
 local aoe = {
     { spell = "BladeFlurry",   cond = buffDown(ID_BLADEFLURRY) },                   -- keep the cleave buff up
     { spell = "RollTheBones",  cond = rtbReroll() },
-    { spell = "KeepItRolling", cond = rtbKeep() },
     { spell = "Preparation",   cond = AND(cdDown(ID_BTE), cdDown(ID_ADRENALINE),
                                           cdDown(ID_KILLSPREE), cdDown(ID_BLADERUSH)) },
     { spell = "AdrenalineRush", cond = cpMax(2) },
@@ -163,6 +160,17 @@ local spec = {
         doubleMarker = { aura = ID_OPPORTUNITY },
     },
 
+    -- ALERTS: advisory nudges, not auto-suggestions. Keep It Rolling's value depends on
+    -- the exact stage (2 vs 3 vs Jackpot) -- which PRIO can't read but YOU can see on the
+    -- buff -- so when it's ready on a confirmed good roll, PRIO prompts you to check and
+    -- extend rather than pressing it for you.
+    alerts = {
+        { key = "keepItRolling",
+          when = AND(cdReady(ID_KEEPROLLING), buffUp(ID_ROLLBONES), predStage2True()),
+          text = "Keep It Rolling ready \226\128\148 check your roll & extend if it's strong",
+          spell = "KeepItRolling" },
+    },
+
     -- Blade Flurry at 2+; no distinct cleave tier, so AoE mode covers 2+.
     cleaveAt = 2,
     aoeAt    = 2,
@@ -179,7 +187,7 @@ local spec = {
         { key = "maxCP",     label = "Max combo points (>=6)", clause = cpMin(6) },
         { key = "lowCP",     label = "Low combo points (<=2)", clause = cpMax(2) },
         { key = "rtbReroll", label = "RtB needs reroll",       clause = rtbReroll() },
-        { key = "rtbActive", label = "RtB roll active",        clause = rtbKeep() },
+        { key = "rtbGood",   label = "RtB good roll (2+)",     clause = AND(buffUp(ID_ROLLBONES), predStage2True()) },
         { key = "opp6",      label = "Opportunity (6)",        clause = stacksMin(ID_OPPORTUNITY, 6) },
         { key = "opp3",      label = "Opportunity (3+)",       clause = stacksMin(ID_OPPORTUNITY, 3) },
     },

@@ -15,6 +15,7 @@ local function setOutlaw()
     H.reset(); H.S.specID = 260
     H.S.power[COMBO] = 0; H.S.powerMax[COMBO] = 6
     H.S.stacks[OPP] = 0            -- Opportunity not up by default
+    H.S.tracked[ROLLBONES] = true  -- RtB tracked as a bar (buffActive needs a tracked frame)
     H.rebind()
 end
 
@@ -82,6 +83,21 @@ test("outlaw stage: not measured until the window closes", function()
     H.S.now = H.S.now + 0.5                       -- now past the window
     H.Engine:CurrentState()
     eq(H.Engine.P.predFlags.rtbStage2, false, "measured once the window closes")
+end)
+
+test("outlaw alert: Keep It Rolling advisory fires only on a confirmed good roll", function()
+    setOutlaw()
+    H.S.auras[ROLLBONES] = true                   -- a roll is active
+    observeSS(0, 2)                               -- confirm stage 2+ (single strike, +extra CP)
+    eq(H.Engine.P.predFlags.rtbStage2, true, "roll confirmed good")
+    local r = H.Engine:Evaluate()
+    truthy(r and r.alerts and #r.alerts >= 1, "KiR alert present on a good roll")
+
+    setOutlaw()
+    H.S.auras[ROLLBONES] = true
+    observeSS(0, 1)                               -- stage 1 roll
+    local r2 = H.Engine:Evaluate()
+    falsy(r2 and r2.alerts, "no KiR alert on a stage-1 roll")
 end)
 
 H.reset(); H.rebind()   -- restore Windwalker as the active spec for later suites

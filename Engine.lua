@@ -1426,12 +1426,30 @@ function Engine:Evaluate()
     end
 
     if #picks == 0 then return nil end
+
+    -- ALERTS: advisory nudges for decisions PRIO can't make for you (e.g. Keep It
+    -- Rolling is ready and we've CONFIRMED a good roll, but only you can see whether
+    -- it's a stage 3 / Jackpot worth extending). Each spec.alert = { when=<cond>, text,
+    -- spell }; evaluated against the live state. Conditions should use live signals
+    -- (cooldown/buff/predicted flags), not the look-ahead resource which S now holds.
+    local alerts
+    if spec.alerts and PRIO.db.showAlerts ~= false then
+        for _, a in ipairs(spec.alerts) do
+            if a.when == nil or PRIO.Cond.Eval(a.when, S, nil) then
+                alerts = alerts or {}
+                local sid = a.spell and spec.spells[a.spell]
+                alerts[#alerts + 1] = { text = a.text, texture = sid and API.SpellTexture(sid) or nil }
+            end
+        end
+    end
+
     return {
         specLabel = spec.label or "",
         modeLabel = MODE_LABEL[mode] or mode,
         title     = (spec.label or "") .. "  ·  " .. (MODE_LABEL[mode] or mode),
         primary   = picks[1],
         queue     = { unpack(picks, 2) },
+        alerts    = alerts,
         debug     = {
             mode        = mode,
             enemies     = enemies,

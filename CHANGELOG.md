@@ -1,5 +1,10 @@
 # PRIO Changelog
 
+## 0.3.7
+**Advisory alerts — and a smarter Keep It Rolling.**
+- New alert banner: PRIO can now surface a pulsing prompt above the strip for a decision it can't make for you. First use: **Keep It Rolling**. Since only you can see whether your roll is a stage 3 / Jackpot worth extending, PRIO no longer auto-presses it — instead, when Keep It Rolling is ready on a confirmed good roll (stage 2+), it shows *"Keep It Rolling ready — check your roll & extend if it's strong,"* and leaves the call to you.
+- (Requires Roll the Bones tracked as a bar in your Cooldown Manager — same as the reroll logic.)
+
 ## 0.3.6
 **Outlaw Roll the Bones — sharper roll detection using Opportunity.**
 - Sinister Strike awards a combo point per strike and, on its double-strike, grants Opportunity. PRIO now reads that Opportunity gain to know whether the strike doubled — so it interprets the combo-point yield exactly: a yield equal to the number of strikes means no Roll-the-Bones bonus (stage 1 → reroll), and more means the roll is good (stage 2+, now positively confirmed, not just assumed).
