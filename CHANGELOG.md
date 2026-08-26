@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.61 (alpha)
+- **New tuned Slayer default lists.** The Slayer single-target list is rebuilt, and the AoE, ST-Execute, and AoE-Execute lists now share one tuned list. Reset Arms lists to default to pick them up. (Colossus defaults are unchanged — those weren't part of this pass.)
+
+
 ## 0.2.60 (alpha)
 - **Arms execute-phase lists, auto-swapped.** ST and AoE each now have an **Execute** variant, and PRIO switches to it automatically when the latched "in execute range" signal is on — Execute becomes the main spender (the bare Execute line self-gates on rage via usability). Out of range it swaps straight back.
 - **Dropped the Cleave tier for Arms.** It's now just **ST** (1 target) and **AoE** (2+), and the AoE threshold is **configurable** — Options → *AoE at N+ targets* (default 2). Other specs (Elemental, etc.) keep their ST/Cleave/AoE unchanged.

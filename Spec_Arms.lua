@@ -59,6 +59,8 @@ local function predMin(id, n) return { type = "predStackMin", spell = id, v = n 
 -- lists and the condition editor show ("Sudden Death up", etc.) -- the raw glow /
 -- predicted-stack types are never exposed to the user.
 local function preset(key) return { type = "preset:" .. key } end
+local function debuffDown(id) return { type = "debuffMissing", spell = id } end  -- enemy missing debuff
+local function lastCastNot(id) return { type = "lastCastNot", spell = id } end   -- didn't just cast
 
 local API = PRIO.API
 
@@ -73,46 +75,34 @@ local API = PRIO.API
 --   "Collateral Damage (3)" = Cleave glows           (845)
 --   "Exec. Precision (2)"   = predicted counter (Execute casts, reset by Mortal Strike)
 
--- Slayer single target: Sudden Death Execute, Bladestorm at 3 Imminent Demise during
--- Colossus Smash, Heroic Strike proc, Mortal Strike at 2 Executioner's Precision.
+-- Slayer single target (user-tuned default, 0.2.61).
 local slayer_st = {
-    { spell = "Cleave", cond = AND(refreshable(ID_REND), cdReady(ID_COLOSSUS_DBF)) }, -- refresh Rend before Colossus Smash
-    { spell = "Avatar" },                                 -- on CD
-    { spell = "ThunderousRoar" },                         -- talent CD
-    { spell = "ChampionsSpear" },                         -- talent CD
-    { spell = "ColossusSmash" },                          -- on CD (smart-swaps to Warbreaker if talented)
-    { spell = "Ravager" },                                -- talent: with Colossus Smash
-    { spell = "Execute", cond = preset("suddenDeath") },  -- Sudden Death proc
-    { spell = "Bladestorm", cond = AND(preset("immDemise3"), buffUp(ID_COLOSSUS_DBF)) }, -- 3 Imminent Demise, during Colossus Smash
-    { spell = "HeroicStrike" },                           -- Slayer proc (when available)
-    { spell = "MortalStrike", cond = preset("execPrec2") }, -- 2 Executioner's Precision
+    { spell = "Cleave", cond = debuffDown(ID_REND) },                                     -- enemy no Rend debuff
+    { spell = "Cleave", cond = AND(lastCastNot(845), cdReady(ID_COLOSSUS_DBF)) },         -- not just Cleave AND Colossus Smash ready
+    { spell = "Avatar" },
+    { spell = "ColossusSmash" },
+    { spell = "Execute", cond = AND(cdReady(ID_BLADESTORM), stacksMax(ID_IMMINENT, 3)) }, -- Bladestorm ready AND Imminent Demise <= 3
+    { spell = "Bladestorm", cond = buffUp(ID_COLOSSUS_DBF) },                             -- Colossus Smash buff
+    { spell = "HeroicStrike" },
     { spell = "MortalStrike" },
+    { spell = "Execute", cond = preset("suddenDeath") },                                  -- Sudden Death up
     { spell = "Overpower" },
-    { spell = "Cleave", cond = OR(buffDown(ID_REND), refreshable(ID_REND)) }, -- keep Rend up
-    { spell = "Execute" },                                -- filler (usable in execute range)
-    { spell = "Slam" },                                   -- filler
+    { spell = "Cleave", cond = refreshable(ID_REND) },                                    -- Rend in pandemic
+    { spell = "Slam" },
 }
 
--- Slayer AoE (3+): Sweeping Strikes + Cleave-heavy. Cleave at 3 Collateral Damage;
--- Bladestorm at 3 Imminent Demise; Execute on the Sudden Death proc.
-local slayer_aoe = {
-    { spell = "SweepingStrikes" },                        -- on CD
-    { spell = "Cleave", cond = buffDown(ID_REND) },       -- early, to apply Rend
+-- Slayer shared list for AoE, ST-Execute, and AoE-Execute (user-tuned default, 0.2.61):
+-- the user set all three to the same list.
+local slayer_exec = {
+    { spell = "Cleave", cond = AND(refreshable(ID_REND), cdReady(ID_COLOSSUS_DBF)) }, -- Rend in pandemic AND Colossus Smash ready
     { spell = "Avatar" },
-    { spell = "ThunderousRoar" },
-    { spell = "ChampionsSpear" },
     { spell = "ColossusSmash" },
-    { spell = "Ravager" },
-    { spell = "Cleave", cond = preset("collateral3") },   -- 3 Collateral Damage
-    { spell = "Bladestorm", cond = preset("immDemise3") }, -- 3 Imminent Demise
-    { spell = "Execute", cond = preset("suddenDeath") },  -- Sudden Death proc
-    { spell = "MortalStrike", cond = preset("execPrec2") }, -- 2 Executioner's Precision
-    { spell = "Cleave" },                                 -- main AoE spender
-    { spell = "Overpower", cond = chargesMin(7384, 2) },  -- with 2 charges
+    { spell = "HeroicStrike" },
+    { spell = "Bladestorm", cond = buffUp(ID_COLOSSUS_DBF) },                         -- Colossus Smash buff
+    { spell = "MortalStrike", cond = refreshable(ID_REND) },                          -- Rend in pandemic
+    { spell = "Execute", cond = preset("suddenDeath") },                              -- Sudden Death up
     { spell = "Overpower" },
-    { spell = "MortalStrike" },
-    { spell = "Execute" },                                -- filler (execute range)
-    { spell = "Slam" },                                   -- filler
+    { spell = "Execute" },
 }
 
 -- Colossus single target: Demolish inside the Colossus Smash window (Colossal Might
@@ -160,23 +150,6 @@ local colossus_aoe = {
 -- self-gates on usability (i.e. enough rage), covering the "Execute at >40 rage" intent
 -- without a readable rage value.
 
-local slayer_st_execute = {
-    { spell = "Cleave", cond = AND(refreshable(ID_REND), cdReady(ID_COLOSSUS_DBF)) }, -- maintain Rend
-    { spell = "Avatar" },
-    { spell = "ThunderousRoar" },
-    { spell = "ChampionsSpear" },
-    { spell = "ColossusSmash" },
-    { spell = "Ravager" },
-    { spell = "HeroicStrike" },
-    { spell = "Bladestorm", cond = AND(preset("immDemise3"), buffUp(ID_COLOSSUS_DBF)) }, -- 3 ImmDemise, during CS
-    { spell = "MortalStrike", cond = preset("execPrec2") }, -- 2 Executioner's Precision
-    { spell = "Execute", cond = preset("suddenDeath") },    -- free Sudden Death proc
-    { spell = "Execute" },                                  -- main spender (usable => enough rage)
-    { spell = "Overpower" },
-    { spell = "MortalStrike" },
-    { spell = "Slam" },
-}
-
 local colossus_st_execute = {
     { spell = "Cleave", cond = AND(refreshable(ID_REND), cdReady(ID_COLOSSUS_DBF)) }, -- maintain Rend
     { spell = "Avatar" },
@@ -188,25 +161,6 @@ local colossus_st_execute = {
     { spell = "MortalStrike", cond = preset("execPrec2") },
     { spell = "Execute", cond = preset("suddenDeath") },
     { spell = "Execute" },
-    { spell = "Overpower" },
-    { spell = "MortalStrike" },
-    { spell = "Slam" },
-}
-
-local slayer_aoe_execute = {
-    { spell = "SweepingStrikes" },
-    { spell = "Cleave", cond = buffDown(ID_REND) },
-    { spell = "Avatar" },
-    { spell = "ThunderousRoar" },
-    { spell = "ChampionsSpear" },
-    { spell = "ColossusSmash" },
-    { spell = "Ravager" },
-    { spell = "Cleave", cond = preset("collateral3") },   -- 3 Collateral Damage
-    { spell = "Bladestorm", cond = preset("immDemise3") }, -- 3 Imminent Demise
-    { spell = "MortalStrike", cond = preset("execPrec2") },
-    { spell = "Execute", cond = preset("suddenDeath") },
-    { spell = "Execute" },                                -- spender
-    { spell = "Cleave" },                                 -- AoE spender
     { spell = "Overpower" },
     { spell = "MortalStrike" },
     { spell = "Slam" },
@@ -234,8 +188,8 @@ local colossus_aoe_execute = {
 -- No Cleave tier: Arms uses ST (1 target) and AoE (2+, configurable), each with an
 -- execute-phase variant the engine swaps in automatically.
 local heroLists = {
-    slayer   = { st = slayer_st,   aoe = slayer_aoe,
-                 st_execute = slayer_st_execute,   aoe_execute = slayer_aoe_execute },
+    slayer   = { st = slayer_st,   aoe = slayer_exec,
+                 st_execute = slayer_exec,   aoe_execute = slayer_exec },
     colossus = { st = colossus_st, aoe = colossus_aoe,
                  st_execute = colossus_st_execute, aoe_execute = colossus_aoe_execute },
 }

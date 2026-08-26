@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.61", {
+        "Rebuilt the Slayer Arms default lists to the tuned versions (ST, plus a shared list for AoE / ST-Execute / AoE-Execute). Reset Arms lists to default to pick them up. Colossus unchanged.",
+    } },
     { "0.2.60", {
         "Arms now auto-swaps to execute-phase priority lists in execute range (ST/AoE each get an Execute variant). Dropped the Cleave tier -- AoE now starts at 2 targets, configurable in Options (AoE at N+). Reset Arms lists to default.",
     } },
