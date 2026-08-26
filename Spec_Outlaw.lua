@@ -49,7 +49,7 @@ local ID_OPPORTUNITY = 279876  -- Opportunity (stacks: 3 / 6 gates)
 local ID_LOADEDDICE = 256170
 local ID_UNSEENBLADE = 441146  -- Trickster
 local ID_FLAWLESS   = 441321   -- Flawless Form (Trickster)
-local ID_ZEROIN     = 1259485  -- best-guess 4pc / BtE buff (VERIFY)
+local ID_FANGSTRIKE = 1301405  -- Fang Strike: 4pc tier buff -> next Dispatch is free/empowered
 local ID_VANISH     = 1856
 local ID_AMBUSH     = 8676
 local ID_GHOSTLY    = 196937
@@ -111,7 +111,7 @@ local st = {
     { spell = "Preparation",   cond = AND(cdDown(ID_BTE), cdDown(ID_ADRENALINE), cdDown(ID_KILLSPREE)) },
     { spell = "AdrenalineRush", cond = cpMax(2) },                                  -- on CD at <=2 CP
     { spell = "KillingSpree" },                                                     -- follows Adrenaline Rush
-    { spell = "Dispatch",      cond = buffUp(ID_ZEROIN) },                          -- 4pc proc (VERIFY buff)
+    { spell = "Dispatch",      cond = buffUp(ID_FANGSTRIKE) },                       -- free Dispatch (4pc Fang Strike up)
     { spell = "BladeRush" },                                                        -- on CD
     { spell = "BetweenTheEyes", cond = cpMin(6) },                                  -- finisher at >=6 CP
     { spell = "Dispatch",      cond = cpMin(6) },                                   -- finisher at >=6 CP
@@ -128,7 +128,7 @@ local aoe = {
                                           cdDown(ID_KILLSPREE), cdDown(ID_BLADERUSH)) },
     { spell = "AdrenalineRush", cond = cpMax(2) },
     { spell = "KillingSpree" },
-    { spell = "Dispatch",      cond = buffUp(ID_ZEROIN) },
+    { spell = "Dispatch",      cond = buffUp(ID_FANGSTRIKE) },                       -- free Dispatch (4pc Fang Strike up)
     { spell = "BladeRush" },
     { spell = "BetweenTheEyes", cond = cpMin(6) },
     { spell = "Dispatch",      cond = cpMin(6) },
@@ -206,6 +206,7 @@ local spec = {
         { key = "rtbReroll", label = "RtB needs reroll",       clause = rtbReroll() },
         { key = "rtbGood",   label = "RtB good roll (2+)",     clause = AND(buffUp(ID_ROLLBONES), predStage2True()) },
         { key = "oppUp",     label = "Opportunity up (glow)",  clause = glow(ID_PISTOLSHOT) },
+        { key = "fangStrike", label = "Fang Strike (4pc)",     clause = buffUp(ID_FANGSTRIKE) },
     },
 
     auras = {
@@ -214,6 +215,7 @@ local spec = {
         Opportunity    = ID_OPPORTUNITY,
         AdrenalineRush = ID_ADRENALINE,
         BetweenTheEyes = ID_BTE,
+        FangStrike     = ID_FANGSTRIKE,
         RollTheBones   = ID_ROLLBONES,
         RtBOneOfAKind  = ID_RTB_S1,
         RtBDoubleTrouble = ID_RTB_S2,
@@ -236,6 +238,8 @@ local spec = {
           hint = "Track Between the Eyes so its debuff window reads." },
         { kind = "info", label = "Combo Points",
           hint = "No tracking needed -- combo points are a discrete resource PRIO reads directly, so finisher / builder combo-point gates are exact." },
+        { kind = "trackedAura", label = "Fang Strike tracked (4-set)", spell = ID_FANGSTRIKE,
+          hint = "Only if you have the 4-piece tier set: track Fang Strike so PRIO can suggest the free Dispatch while it's up. Harmless to skip if you don't have the set." },
     },
 
     spells = {

@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.3.14
+- Outlaw: the "free Dispatch" line now correctly keys off the real 4-set buff, **Fang Strike** (was a placeholder). If you have the 4-piece tier set, track Fang Strike and PRIO will suggest the free Dispatch while it's up. Harmless if you don't have the set.
+
 ## 0.3.13
 **Outlaw — finalized rotations + tidied debug.**
 - Single-target and AoE priorities locked to the Trickster guide, top to bottom. AoE also recasts Blade Flurry at ≤4 combo points on 4+ targets.

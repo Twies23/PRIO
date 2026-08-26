@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.3.14", {
+        "Outlaw: the free-Dispatch line now keys off the real 4-set buff, Fang Strike (was a placeholder). With the 4-piece set, track Fang Strike and PRIO suggests the free Dispatch while it's up. Harmless without the set.",
+    } },
     { "0.3.13", {
         "Outlaw single-target and AoE priorities locked to the Trickster guide, top to bottom. AoE also recasts Blade Flurry at <=4 combo points on 4+ targets.",
         "Rotation Debug tidied: dropped the exploratory Roll-the-Bones probes, and Opportunity now shows up / down instead of a stack number.",
