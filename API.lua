@@ -550,29 +550,100 @@ function API.AuraStackCount(spellID)
     if not frame then return nil end
     local active = API.IsAuraActive(spellID)
     if active == false then return 0 end
-    -- The Applications fontstring lives in different places by viewer type (BuffIcon:
-    -- frame.Applications.Applications; BuffBar: an icon sub-frame). Try the known spots
-    -- inside one pcall so an unexpected layout degrades to "1 stack" instead of erroring.
+
+    -- PRIMARY: the aura's own .applications, if it reads clean (guarded for secret in
+    -- API.AuraStacks). Some stacking buffs expose this even in combat -- when they do
+    -- it's exact, so prefer it over the rendered-text heuristic.
+    local direct = API.AuraStacks(spellID)
+    if direct and direct > 0 then return direct end
+
+    -- FALLBACK: read the number Blizzard renders on the Cooldown Viewer item frame.
+    -- It lives in different spots by viewer type, so scan the known named fields AND
+    -- any FontString region on the frame or its direct children for numeric text.
     local ok, n = pcall(function()
-        local spots = {}
-        local af = rawget and frame.Applications or frame.Applications
-        if af then spots[#spots + 1] = af.Applications; spots[#spots + 1] = af end
-        if frame.Icon and frame.Icon.Applications then spots[#spots + 1] = frame.Icon.Applications end
-        if frame.Bar and frame.Bar.Applications then spots[#spots + 1] = frame.Bar.Applications end
-        for _, fs in ipairs(spots) do
-            if type(fs) == "table" and fs.GetText then
+        local best = nil
+        local function consider(fs)
+            if type(fs) == "table" and fs.GetText and fs.GetObjectType and fs:GetObjectType() == "FontString" then
                 local txt = fs:GetText()
                 if type(txt) == "string" and txt ~= "" then
                     local num = tonumber((txt:gsub("%D", "")))
-                    if num then return num end
+                    if num and (not best or num > best) then best = num end
                 end
             end
         end
-        return nil
+        -- Named spots first (fast path for the common BuffIcon/BuffBar layouts).
+        local af = frame.Applications
+        if af then consider(af); if type(af) == "table" then consider(af.Applications) end end
+        if frame.Icon and frame.Icon.Applications then consider(frame.Icon.Applications) end
+        if frame.Bar and frame.Bar.Applications then consider(frame.Bar.Applications) end
+        if frame.Count then consider(frame.Count) end
+        -- Then sweep regions on the frame and one level of child frames.
+        if frame.GetRegions then for _, r in ipairs({ frame:GetRegions() }) do consider(r) end end
+        if frame.GetChildren then
+            for _, ch in ipairs({ frame:GetChildren() }) do
+                if ch.GetRegions then for _, r in ipairs({ ch:GetRegions() }) do consider(r) end end
+                consider(ch.Applications)
+            end
+        end
+        return best
     end)
     if ok and n then return n end
-    if active == true then return 1 end       -- up, but Blizzard drew no number = 1 stack
+    if active == true then return 1 end       -- up, but no readable count = assume 1 stack
     return nil
+end
+
+-- Diagnostic: dump everything we can learn about a buff's stack count, so we can see
+-- in-game which source is readable. Prints: the raw .applications (and whether it's
+-- secret), IsAuraActive, what AuraStackCount resolves to, and every FontString text
+-- found on the tracked frame + its children. Drives /prio stackprobe.
+function API.StackProbe(spellID)
+    local out = {}
+    local frame = trackedFrames[spellID]
+    out[#out + 1] = ("tracked=%s active=%s stackCount=%s")
+        :format(tostring(frame ~= nil), tostring(API.IsAuraActive(spellID)),
+                tostring(API.AuraStackCount(spellID)))
+
+    -- Raw .applications from C_UnitAuras (player then target), with secret status.
+    local function dumpApplications(unit, d)
+        if type(d) ~= "table" then return end
+        local a = d.applications
+        local secret = IsSecret(a)
+        out[#out + 1] = ("  %s .applications=%s secret=%s")
+            :format(unit, secret and "<secret>" or tostring(a), tostring(secret))
+    end
+    if C_UnitAuras and C_UnitAuras.GetPlayerAuraBySpellID then
+        local ok, d = pcall(C_UnitAuras.GetPlayerAuraBySpellID, spellID)
+        if ok then dumpApplications("player", d) end
+    end
+
+    -- Every FontString text on the frame + one level of children (this is where the
+    -- rendered count lives; shows us the exact field to read).
+    if frame then
+        local seen = {}
+        local function sweep(f, tag)
+            if not f or seen[f] then return end
+            seen[f] = true
+            if f.GetRegions then
+                local ok, regions = pcall(function() return { f:GetRegions() } end)
+                if ok then
+                    for _, r in ipairs(regions) do
+                        if type(r) == "table" and r.GetObjectType and r:GetObjectType() == "FontString" then
+                            local t = r.GetText and r:GetText()
+                            if type(t) == "string" and t ~= "" then
+                                out[#out + 1] = ("  %s FontString=%q"):format(tag, t)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        sweep(frame, "frame")
+        if frame.GetChildren then
+            local ok, kids = pcall(function() return { frame:GetChildren() } end)
+            if ok then for i, ch in ipairs(kids) do sweep(ch, "child" .. i) end end
+        end
+    end
+    return table.concat(out, "\n")
 end
 
 -- Pandemic / "is refreshable" read, secret-safe. Blizzard's Cooldown Viewer computes

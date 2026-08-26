@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.49", {
+        "Buff stack counts now read the aura's own applications value first (exact when readable), then fall back to the Cooldown Viewer number -- fixes stacks stuck showing x1 (e.g. Imminent Demise). Added /prio stackprobe to diagnose stack reads live.",
+    } },
     { "0.2.48", {
         "New Arms debug window (/prio rotdebug): per-ability cooldown + usable state, and Sudden Death / Imminent Demise / Executioner's Precision buff + stack readouts, for tuning the rotation live.",
     } },

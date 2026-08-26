@@ -346,6 +346,31 @@ SlashCmdList.PRIO = function(msg)
         if PRIO.Debug then PRIO.Debug:Toggle() end
     elseif msg == "rotdebug" or msg == "rotation" then
         if PRIO.RotationDebug then PRIO.RotationDebug:Toggle() end
+    elseif msg == "stackprobe" then
+        -- Diagnose stack-count reads: for each buff in the spec's rotationDebug (else
+        -- its auras), dump raw .applications + rendered FontStrings. Run IN COMBAT with
+        -- the stacks actually up.
+        local API = PRIO.API
+        local id = API.GetSpecID()
+        local spec = id and PRIO.specs and PRIO.specs[id]
+        if not (spec and API.StackProbe) then
+            print("|cff0cd29fPRIO|r: no supported spec / probe unavailable.")
+            return
+        end
+        local list = {}
+        if spec.rotationDebug and spec.rotationDebug.buffs then
+            for _, b in ipairs(spec.rotationDebug.buffs) do
+                list[#list + 1] = { b.label or "?", b.spell }
+            end
+        elseif spec.auras then
+            for name, sid in pairs(spec.auras) do list[#list + 1] = { name, sid } end
+        end
+        print(("|cff0cd29fPRIO|r stack probe (%s):")
+            :format(InCombatLockdown() and "|cff0cd29fin combat|r" or "|cffe0a03aOUT of combat|r"))
+        for _, b in ipairs(list) do
+            print(("|cffffffff%s|r #%s"):format(b[1], tostring(b[2])))
+            print(API.StackProbe(b[2]))
+        end
     elseif msg == "spells" then
         local API = PRIO.API
         local id = API.GetSpecID()

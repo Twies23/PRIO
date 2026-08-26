@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.49 (alpha)
+- **Fixed buff stack counts reading as x1** when they were actually higher (e.g. Imminent Demise at 3). Stack reads now try the aura's own applications value first — exact when it reads clean — and only fall back to the Cooldown Viewer's rendered number (now scanned more thoroughly) when it doesn't. Added **`/prio stackprobe`**: a diagnostic that dumps, for each tracked buff, the raw applications value (and whether it's a secret value) plus any number the Cooldown Viewer renders — run it in combat with the stacks up to see exactly what's readable.
+
+
 ## 0.2.48 (alpha)
 - **New Arms rotation debug window** — open it with `/prio rotdebug` (or `/prio rotation`). It's a focused, second window separate from the main `/prio debug`, showing exactly the raw signals the rotation gates read: for **Cleave, Avatar, Colossus Smash, Execute, Bladestorm, Heroic Strike, Mortal Strike, Overpower, Slam** it shows cooldown-ready + usable state; for **Sudden Death, Imminent Demise, Executioner's Precision** it shows active state + stack count. If a buff shows "untracked," that's the signal to track it (or fix its ID) so the rotation reads it. Built for live rotation tuning.
 
