@@ -893,6 +893,25 @@ function API.AuraStacks(spellID)
     return nil
 end
 
+-- Which source the stack count came from, for the Rotation Debug window. Returns:
+--   count(number|nil), source("appl"|"appl-secret"|"cdm"|"assumed"|nil)
+-- "appl" = clean .applications (exact); "appl-secret" = .applications exists but is a
+-- protected value (so we fell back); "cdm" = read the Cooldown Viewer rendered number;
+-- "assumed" = active but no readable count (defaulted to 1).
+function API.AuraStackSource(spellID)
+    local active = API.IsAuraActive(spellID)
+    if active == false then return 0, nil end
+    local d = playerAura(spellID)
+    local applSecret = d and IsSecret(d.applications) or false
+    local clean = API.AuraStacks(spellID)
+    if clean and clean > 0 then return clean, "appl" end
+    local n = API.AuraStackCount(spellID)   -- runs the CDM fontstring fallback
+    if applSecret then return n, "appl-secret" end
+    if n and n > 1 then return n, "cdm" end
+    if active == true then return n or 1, "assumed" end
+    return n, nil
+end
+
 -- Seconds remaining if readable (expirationTime is a clean, non-secret number), else nil.
 function API.AuraRemaining(spellID)
     local d = playerAura(spellID)

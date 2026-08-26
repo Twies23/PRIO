@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.50", {
+        "Rotation Debug buff rows now show where each stack count came from (appl / cdm / appl-secret / assumed), so you can see live whether the exact count reads clean or is a protected value.",
+    } },
     { "0.2.49", {
         "Buff stack counts now read the aura's own applications value first (exact when readable), then fall back to the Cooldown Viewer number -- fixes stacks stuck showing x1 (e.g. Imminent Demise). Added /prio stackprobe to diagnose stack reads live.",
     } },

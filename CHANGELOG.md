@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.50 (alpha)
+- **Rotation Debug buff rows now show the stack-count source.** Each active buff shows a small tag after the count telling you where it came from: `appl` (the aura's exact applications value — clean), `cdm` (the Cooldown Viewer's rendered number), `appl-secret` (the applications value is a protected/secret value, so we fell back — shown amber), or `assumed` (active but no readable count, defaulted to 1 — amber). This makes it visible, right in the window, whether stacks like Imminent Demise read exactly or need a different source.
+
+
 ## 0.2.49 (alpha)
 - **Fixed buff stack counts reading as x1** when they were actually higher (e.g. Imminent Demise at 3). Stack reads now try the aura's own applications value first — exact when it reads clean — and only fall back to the Cooldown Viewer's rendered number (now scanned more thoroughly) when it doesn't. Added **`/prio stackprobe`**: a diagnostic that dumps, for each tracked buff, the raw applications value (and whether it's a secret value) plus any number the Cooldown Viewer renders — run it in combat with the stacks up to see exactly what's readable.
 

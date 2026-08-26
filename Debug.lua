@@ -473,15 +473,22 @@ local function abilityText(sid)
     return cd .. "  |cff5a6a76/|r  " .. us
 end
 
+-- Shows active + stack count + WHERE the count came from, so we can see live whether
+-- the exact .applications value reads clean or is a secret value we had to fall back on.
+local srcColor = {
+    ["appl"]        = "5a6a76",   -- clean exact read (grey, all good)
+    ["cdm"]         = "5a6a76",   -- Cooldown Viewer rendered number
+    ["appl-secret"] = "e0a03a",   -- .applications is protected -> need another source
+    ["assumed"]     = "e0a03a",   -- active but no readable count -> defaulted to 1
+}
 local function buffText(sid)
     local a = API.IsAuraActive(sid)
     if a == nil then return "|cffe0a03auntracked|r" end
     if a ~= true then return "|cffe0685agone|r" end
-    local s = API.AuraStackCount and API.AuraStackCount(sid)
-    if s and s > 0 then
-        return ("|cff0cd29factive|r  |cff9fb0be\195\151%d|r"):format(s)
-    end
-    return "|cff0cd29factive|r"
+    local n, src = API.AuraStackSource and API.AuraStackSource(sid)
+    local stack = (n and n > 0) and (" |cff9fb0be\195\151" .. n .. "|r") or ""
+    local tag = src and ("  |cff" .. (srcColor[src] or "5a6a76") .. src .. "|r") or ""
+    return "|cff0cd29factive|r" .. stack .. tag
 end
 
 function RotationDebug:Update()
