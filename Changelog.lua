@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.57", {
+        "Renamed the debuff conditions to \"Enemy has debuff\" / \"Enemy missing debuff\" for clarity.",
+    } },
     { "0.2.56", {
         "Arms conditions now read as named choices -- \"Sudden Death up\", \"Imminent Demise (3)\", \"Collateral Damage (3)\", \"Exec. Precision (2)\" -- instead of raw proc-glow. Added \"Has debuff\" / \"Missing debuff\". Reset Arms lists to default.",
     } },

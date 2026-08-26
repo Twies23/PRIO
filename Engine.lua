@@ -40,8 +40,8 @@ PRIO.Cond = Cond
 Cond.types = {
     { value = "buffActive",  text = "Has buff",       needsSpell = true, target = "buff" },
     { value = "buffMissing", text = "Missing buff",   needsSpell = true, target = "buff" },
-    { value = "debuffActive",  text = "Has debuff",     needsSpell = true, target = "buff" },
-    { value = "debuffMissing", text = "Missing debuff", needsSpell = true, target = "buff" },
+    { value = "debuffActive",  text = "Enemy has debuff",     needsSpell = true, target = "buff" },
+    { value = "debuffMissing", text = "Enemy missing debuff", needsSpell = true, target = "buff" },
     { value = "cdReady",     text = "Off cooldown",   needsSpell = true, target = "ability" },
     { value = "cdNotReady",  text = "On cooldown",    needsSpell = true, target = "ability" },
     { value = "talentYes",   text = "Talent selected",     needsTalent = true },
@@ -123,8 +123,8 @@ function Cond.ClauseLabel(cl, selfSid)
     local name = SpellShort(cl.spell or selfSid)
     if t == "buffActive" then return name .. " buff"
     elseif t == "buffMissing" then return "no " .. name .. " buff"
-    elseif t == "debuffActive" then return name .. " debuff"
-    elseif t == "debuffMissing" then return "no " .. name .. " debuff"
+    elseif t == "debuffActive" then return "enemy " .. name .. " debuff"
+    elseif t == "debuffMissing" then return "enemy no " .. name .. " debuff"
     elseif t == "cdReady" then return name .. " ready"
     elseif t == "cdNotReady" then return name .. " on CD"
     elseif t == "talentYes" then return (cl.spell and SpellShort(cl.spell) or "talent") .. " talented"

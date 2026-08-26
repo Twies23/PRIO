@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.57 (alpha)
+- **Renamed the debuff conditions to "Enemy has debuff" / "Enemy missing debuff"** — the debuff lives on your target, so the label now says so.
+
+
 ## 0.2.56 (alpha)
 - **Arms conditions are now named, meaningful choices.** Instead of exposing a raw "Proc glowing" option, the condition editor offers spec-specific presets that say what they mean: **Sudden Death up**, **Imminent Demise (3)**, **Imminent Demise (<3)**, **Collateral Damage (3)**, and **Exec. Precision (2)**. Each resolves under the hood to the readable glow/predicted-stack signal, so you pick the *meaning* and never have to know that (say) "Execute glowing" stands for Sudden Death. The Arms default lists use these names too.
 - **Added "Has debuff" / "Missing debuff" conditions** alongside the buff ones, so target debuffs (like Rend) read naturally in the editor.
