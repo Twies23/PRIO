@@ -133,6 +133,30 @@ test("execute range: latch on usable-without-proc, hold, reset", function()
     H.reset(); H.rebind()
 end)
 
+-- Execute overlay: Evaluate swaps ST->ST-Execute / AoE->AoE-Execute when latched,
+-- and AoE kicks in at the (dropped-cleave) threshold of 2.
+test("execute overlay swaps the active mode", function()
+    H.reset(); H.S.specID = 71; H.rebind()
+    H.S.enemies = 1
+
+    -- Out of range -> plain ST.
+    H.S.usableClean[EXECUTE] = false; H.S.glows[EXECUTE] = false
+    eq(H.Engine:Evaluate().debug.mode, "st", "1 target, not in range -> st")
+
+    -- In execute range -> ST (Execute).
+    H.S.usableClean[EXECUTE] = true; H.S.glows[EXECUTE] = false
+    eq(H.Engine:Evaluate().debug.mode, "st_execute", "1 target, in range -> st_execute")
+
+    -- 2 targets: AoE tier (cleave dropped), and in range -> AoE (Execute).
+    H.S.enemies = 2
+    eq(H.Engine:Evaluate().debug.mode, "aoe_execute", "2 targets, in range -> aoe_execute")
+    H.S.usableClean[EXECUTE] = false
+    H.Engine:ResetExecuteRange()
+    eq(H.Engine:Evaluate().debug.mode, "aoe", "2 targets, not in range -> aoe (no cleave tier)")
+
+    H.reset(); H.rebind()
+end)
+
 -- Debuff conditions alias the tracked-aura read (buff logic), debuff-labeled.
 test("debuffActive / debuffMissing read the tracked aura", function()
     H.reset()

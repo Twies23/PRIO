@@ -155,17 +155,89 @@ local colossus_aoe = {
     { spell = "Slam" },                                   -- filler
 }
 
--- 2-target cleave = Sweeping Strikes then the hero's ST list (Arms cleaves its ST
--- rotation onto a second target via Sweeping Strikes).
-local function withSweeping(st)
-    local t = { { spell = "SweepingStrikes" } }
-    for _, e in ipairs(st) do t[#t + 1] = e end
-    return t
-end
+-- EXECUTE-PHASE lists. Auto-swapped in when the latched "In execute range" flag is on
+-- (Engine's execute overlay). Execute becomes the main spender: the bare Execute line
+-- self-gates on usability (i.e. enough rage), covering the "Execute at >40 rage" intent
+-- without a readable rage value.
 
+local slayer_st_execute = {
+    { spell = "Cleave", cond = AND(refreshable(ID_REND), cdReady(ID_COLOSSUS_DBF)) }, -- maintain Rend
+    { spell = "Avatar" },
+    { spell = "ThunderousRoar" },
+    { spell = "ChampionsSpear" },
+    { spell = "ColossusSmash" },
+    { spell = "Ravager" },
+    { spell = "HeroicStrike" },
+    { spell = "Bladestorm", cond = AND(preset("immDemise3"), buffUp(ID_COLOSSUS_DBF)) }, -- 3 ImmDemise, during CS
+    { spell = "MortalStrike", cond = preset("execPrec2") }, -- 2 Executioner's Precision
+    { spell = "Execute", cond = preset("suddenDeath") },    -- free Sudden Death proc
+    { spell = "Execute" },                                  -- main spender (usable => enough rage)
+    { spell = "Overpower" },
+    { spell = "MortalStrike" },
+    { spell = "Slam" },
+}
+
+local colossus_st_execute = {
+    { spell = "Cleave", cond = AND(refreshable(ID_REND), cdReady(ID_COLOSSUS_DBF)) }, -- maintain Rend
+    { spell = "Avatar" },
+    { spell = "ThunderousRoar" },
+    { spell = "ChampionsSpear" },
+    { spell = "ColossusSmash" },
+    { spell = "Ravager" },
+    { spell = "Demolish", cond = buffUp(ID_COLOSSUS_DBF) }, -- Colossus burst in the CS window
+    { spell = "MortalStrike", cond = preset("execPrec2") },
+    { spell = "Execute", cond = preset("suddenDeath") },
+    { spell = "Execute" },
+    { spell = "Overpower" },
+    { spell = "MortalStrike" },
+    { spell = "Slam" },
+}
+
+local slayer_aoe_execute = {
+    { spell = "SweepingStrikes" },
+    { spell = "Cleave", cond = buffDown(ID_REND) },
+    { spell = "Avatar" },
+    { spell = "ThunderousRoar" },
+    { spell = "ChampionsSpear" },
+    { spell = "ColossusSmash" },
+    { spell = "Ravager" },
+    { spell = "Cleave", cond = preset("collateral3") },   -- 3 Collateral Damage
+    { spell = "Bladestorm", cond = preset("immDemise3") }, -- 3 Imminent Demise
+    { spell = "MortalStrike", cond = preset("execPrec2") },
+    { spell = "Execute", cond = preset("suddenDeath") },
+    { spell = "Execute" },                                -- spender
+    { spell = "Cleave" },                                 -- AoE spender
+    { spell = "Overpower" },
+    { spell = "MortalStrike" },
+    { spell = "Slam" },
+}
+
+local colossus_aoe_execute = {
+    { spell = "SweepingStrikes" },
+    { spell = "Cleave", cond = buffDown(ID_REND) },
+    { spell = "Avatar" },
+    { spell = "ThunderousRoar" },
+    { spell = "ChampionsSpear" },
+    { spell = "ColossusSmash" },
+    { spell = "Ravager" },
+    { spell = "Demolish", cond = buffUp(ID_COLOSSUS_DBF) },
+    { spell = "Cleave", cond = preset("collateral3") },
+    { spell = "MortalStrike", cond = preset("execPrec2") },
+    { spell = "Execute", cond = preset("suddenDeath") },
+    { spell = "Execute" },
+    { spell = "Cleave" },
+    { spell = "Overpower" },
+    { spell = "MortalStrike" },
+    { spell = "Slam" },
+}
+
+-- No Cleave tier: Arms uses ST (1 target) and AoE (2+, configurable), each with an
+-- execute-phase variant the engine swaps in automatically.
 local heroLists = {
-    slayer   = { st = slayer_st,   cleave = withSweeping(slayer_st),   aoe = slayer_aoe },
-    colossus = { st = colossus_st, cleave = withSweeping(colossus_st), aoe = colossus_aoe },
+    slayer   = { st = slayer_st,   aoe = slayer_aoe,
+                 st_execute = slayer_st_execute,   aoe_execute = slayer_aoe_execute },
+    colossus = { st = colossus_st, aoe = colossus_aoe,
+                 st_execute = colossus_st_execute, aoe_execute = colossus_aoe_execute },
 }
 
 -- Active hero: Demolish (436358) is the Colossus capstone -- Slayer never has it, so
@@ -183,9 +255,21 @@ local spec = {
     specID   = 71,
     resource = RAGE,
     resourceLabel = "Rage",
+    -- No Cleave tier: AoE at 2+ by default (user-configurable via db.aoeThreshold).
+    -- cleaveAt == aoeAt collapses the middle tier in ResolveMode.
     cleaveAt = 2,
-    aoeAt    = 3,
+    aoeAt    = 2,
     usesPandemic = true,             -- Rend refreshes in its pandemic window
+
+    -- Editor mode tabs (no Cleave) and the execute-phase overlay map: when the latched
+    -- "In execute range" flag is on, the engine swaps st->st_execute, aoe->aoe_execute.
+    modes = {
+        { value = "st",          text = "ST" },
+        { value = "aoe",         text = "AoE" },
+        { value = "st_execute",  text = "ST (Exec)" },
+        { value = "aoe_execute", text = "AoE (Exec)" },
+    },
+    executeMode = { st = "st_execute", aoe = "aoe_execute" },
 
     -- Execute-range detection: Execute (163201) is usable only in execute range or on a
     -- Sudden Death proc, so "usable without the proc glow" => in range (see Engine's

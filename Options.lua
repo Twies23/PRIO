@@ -317,6 +317,14 @@ function Pages.rotation()
     if picker then picker:Hide() end
     wipe(statusRows)
     local spec = CurrentSpec()
+    -- Clamp the edited list to a mode this spec actually offers (specs vary: some drop
+    -- Cleave, some add execute variants).
+    if spec then
+        local modes = Cond.SpecModes(spec)
+        local ok = false
+        for _, m in ipairs(modes) do if m.value == editMode then ok = true; break end end
+        if not ok then editMode = modes[1] and modes[1].value or "st" end
+    end
     local mode = CurrentMode()
     local variant = CurrentVariant(spec)
 
@@ -331,12 +339,21 @@ function Pages.rotation()
         fs:SetText(spec and (spec.label .. " " .. (spec.className or "")) or "Unsupported spec")
     end)
     SettingRow("Live mode (what's shown)", 30, function(r)
-        local seg = UI.Segmented(r, {
-            { value = "auto", text = "Auto" }, { value = "st", text = "ST" },
-            { value = "cleave", text = "Cleave" }, { value = "aoe", text = "AoE" },
-        }, function() return db.mode end, function(v) db.mode = v end, AfterChange)
+        local choices = { { value = "auto", text = "Auto" } }
+        for _, m in ipairs(Cond.SpecModes(spec)) do choices[#choices + 1] = m end
+        local seg = UI.Segmented(r, choices,
+            function() return db.mode end, function(v) db.mode = v end, AfterChange)
         seg:SetPoint("RIGHT", 0, 0)
     end)
+    if spec then
+        SettingRow("AoE at N+ targets", 30, function(r)
+            db.aoeThreshold = db.aoeThreshold or {}
+            local st = UI.Stepper(r, 90, 1, 10,
+                function() return db.aoeThreshold[spec.key] or spec.aoeAt or 3 end,
+                function(v) db.aoeThreshold[spec.key] = v; AfterChange() end)
+            st:SetPoint("RIGHT", 0, 0)
+        end)
+    end
     if spec and spec.priorityVariants then
         SettingRow("Hero list to edit", 30, function(r)
             local choices = {}
@@ -351,10 +368,8 @@ function Pages.rotation()
         end)
     end
     SettingRow("Editing list", 30, function(r)
-        local seg = UI.Segmented(r, {
-            { value = "st", text = "ST" }, { value = "cleave", text = "Cleave" },
-            { value = "aoe", text = "AoE" },
-        }, function() return editMode end, function(v) editMode = v end, function()
+        local seg = UI.Segmented(r, Cond.SpecModes(spec),
+            function() return editMode end, function(v) editMode = v end, function()
             Options:ShowPage("rotation")
         end)
         seg:SetPoint("RIGHT", 0, 0)

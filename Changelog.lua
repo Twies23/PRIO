@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.60", {
+        "Arms now auto-swaps to execute-phase priority lists in execute range (ST/AoE each get an Execute variant). Dropped the Cleave tier -- AoE now starts at 2 targets, configurable in Options (AoE at N+). Reset Arms lists to default.",
+    } },
     { "0.2.59", {
         "New \"In execute range\" detection: since target health is secret, we infer execute phase from Execute being usable without a Sudden Death proc, latched so it rides through rage dips. Watch it in Rotation Debug's Execute range section.",
     } },

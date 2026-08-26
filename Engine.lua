@@ -538,6 +538,7 @@ function Engine:OnSpecChanged()
     spec = id and PRIO.specs and PRIO.specs[id] or nil
     wipe(idToKey)
     self.P = { fsExpire = 0, mote = false, skStacks = 0, maelstrom = 0, charges = {}, assumeActive = {}, auraExpire = {}, cdExpire = {}, stacks = {}, energyEst = nil, energyEstTime = nil }
+    self:ResetExecuteRange()
     if not spec then return end
     if spec.chargeTrack then
         for key, cfg in pairs(spec.chargeTrack) do
@@ -843,16 +844,36 @@ end
 --------------------------------------------------------------------------------
 -- Mode resolution
 --------------------------------------------------------------------------------
-local MODE_LABEL = { st = "Single Target", cleave = "Cleave", aoe = "AoE" }
+local MODE_LABEL = {
+    st = "Single Target", cleave = "Cleave", aoe = "AoE",
+    st_execute = "ST (Execute)", aoe_execute = "AoE (Execute)", cleave_execute = "Cleave (Execute)",
+}
+
+-- Per-spec AoE threshold: a user override (db.aoeThreshold[specKey]) wins, else the
+-- spec default, else the global. Lets a spec drop the cleave tier and expose "AoE at N".
+local function AoeThreshold(specDef)
+    local db = PRIO.db
+    if specDef and db.aoeThreshold and db.aoeThreshold[specDef.key] then
+        return db.aoeThreshold[specDef.key]
+    end
+    return (specDef and specDef.aoeAt) or db.aoeAt or 4
+end
+Engine.AoeThreshold = function(_, s) return AoeThreshold(s or spec) end
 
 function Engine:ResolveMode(enemies)
     local db = PRIO.db
     if db.mode ~= "auto" then return db.mode end
-    local aoeAt   = (spec and spec.aoeAt) or db.aoeAt or 4
+    local aoeAt   = AoeThreshold(spec)
     local cleaveAt = (spec and spec.cleaveAt) or db.cleaveAt or 2
     if enemies >= aoeAt then return "aoe" end
-    if enemies >= cleaveAt then return "cleave" end
+    if cleaveAt < aoeAt and enemies >= cleaveAt then return "cleave" end   -- skip when collapsed
     return "st"
+end
+
+-- The editor mode tabs a spec offers. spec.modes overrides; default is ST/Cleave/AoE.
+function Cond.SpecModes(s)
+    if s and s.modes then return s.modes end
+    return { { value = "st", text = "ST" }, { value = "cleave", text = "Cleave" }, { value = "aoe", text = "AoE" } }
 end
 
 -- Execute-phase detection, LATCHED. Target health is a secret value, so we can't read
@@ -910,13 +931,11 @@ local function BuildState(self, mode, enemies)
         P.fsExpire = now + 18
     end
 
-    local execRange = self:UpdateExecuteRange()        -- refresh the latch once per evaluate
-
     return {
         now       = now,
         mode      = mode,
         enemies   = enemies,
-        execRange = execRange,                         -- latched "in execute range" boolean
+        execRange = self:InExecuteRange(),             -- latched flag (refreshed in Evaluate)
         maelstrom = P.maelstrom or 0,                  -- predicted (synced when readable)
         maelstromMax = P.maelstromMax or (spec and spec.maelstromMax) or 0,
         maelstromReadable = realMs ~= nil,
@@ -1146,6 +1165,11 @@ function Engine:Evaluate()
 
     local enemies = API.EnemyCount()
     local mode    = self:ResolveMode(enemies)
+    -- Execute overlay: refresh the latch, then swap to the mode's execute variant
+    -- (st -> st_execute, aoe -> aoe_execute) while we're in execute range.
+    self:UpdateExecuteRange()
+    local exMode = spec.executeMode and spec.executeMode[mode]
+    if exMode and self:InExecuteRange() then mode = exMode end
     local list    = self:EffectiveList(spec.key, mode)
     local S        = BuildState(self, mode, enemies)
     local db       = PRIO.db

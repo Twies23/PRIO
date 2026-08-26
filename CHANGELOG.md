@@ -1,5 +1,12 @@
 # PRIO Changelog
 
+## 0.2.60 (alpha)
+- **Arms execute-phase lists, auto-swapped.** ST and AoE each now have an **Execute** variant, and PRIO switches to it automatically when the latched "in execute range" signal is on — Execute becomes the main spender (the bare Execute line self-gates on rage via usability). Out of range it swaps straight back.
+- **Dropped the Cleave tier for Arms.** It's now just **ST** (1 target) and **AoE** (2+), and the AoE threshold is **configurable** — Options → *AoE at N+ targets* (default 2). Other specs (Elemental, etc.) keep their ST/Cleave/AoE unchanged.
+- The priority editor's mode tabs are now per-spec, so Arms shows **ST / AoE / ST (Exec) / AoE (Exec)** — each list separately editable.
+- Reset Arms lists to default to pick this up.
+
+
 ## 0.2.59 (alpha)
 - **New "In execute range" detection (latched).** Target health is a secret value, so we can't read "< 35%" directly. Instead we infer it: Execute is only usable in execute range or on a Sudden Death proc, so **usable *without* the proc glow** means you're genuinely in range. Because rage also gates usability, the flag is **latched** — it holds through brief rage dips and only drops after a few seconds out of range (or on target change / combat end). It's exposed as an **"In execute range"** condition and shown live in Rotation Debug's *Execute range* section. Next step: auto-swap to execute-phase priority lists off this signal.
 
