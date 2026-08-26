@@ -47,6 +47,14 @@ local function cdReady(id)  return { type = "cdReady",     spell = id } end
 local function stacksMin(id, n) return { type = "stacksMin", spell = id, v = n } end
 local function stacksMax(id, n) return { type = "stacksMax", spell = id, v = n } end
 local function chargesMin(id, n) return { type = "chargesMin", spell = id, v = n } end
+-- Proc-glow reads (secret-safe boolean stand-ins for stacks we can't read):
+--   Execute glow    = Sudden Death proc up
+--   Bladestorm glow = Imminent Demise at 3
+--   Cleave glow     = Collateral Damage at 3
+local function glowing(id)    return { type = "glowing",    spell = id } end
+local function notGlowing(id) return { type = "notGlowing", spell = id } end
+-- Predicted stack count (our own cast counter; Executioner's Precision):
+local function predMin(id, n) return { type = "predStackMin", spell = id, v = n } end
 
 local API = PRIO.API
 
@@ -55,8 +63,14 @@ local API = PRIO.API
 -- Demolish burst window. Cleave (2-target) = Sweeping Strikes + the hero's ST list.
 --------------------------------------------------------------------------------
 
--- Slayer single target: Sudden Death procs, Imminent Demise pre-Bladestorm Execute,
--- Bladestorm during Colossus Smash, Heroic Strike (Slayer proc). No Demolish.
+-- Readable signals used below (all secret-safe):
+--   glowing(Execute)    = Sudden Death proc up          (163201)
+--   glowing(Bladestorm) = Imminent Demise at 3 stacks   (227847)
+--   glowing(Cleave)     = Collateral Damage at 3 stacks (845)
+--   predMin(ExecPrec,2) = Executioner's Precision at 2  (predicted from Execute casts)
+
+-- Slayer single target: Sudden Death Execute (glow), Bladestorm at 3 Imminent Demise
+-- during Colossus Smash (glow), Heroic Strike proc, Mortal Strike at 2 Exec Precision.
 local slayer_st = {
     { spell = "Cleave", cond = AND(refreshable(ID_REND), cdReady(ID_COLOSSUS_DBF)) }, -- refresh Rend before Colossus Smash
     { spell = "Avatar" },                                 -- on CD
@@ -64,18 +78,19 @@ local slayer_st = {
     { spell = "ChampionsSpear" },                         -- talent CD
     { spell = "ColossusSmash" },                          -- on CD (smart-swaps to Warbreaker if talented)
     { spell = "Ravager" },                                -- talent: with Colossus Smash
-    { spell = "Execute", cond = stacksMin(ID_SUDDENDEATH, 2) }, -- 2 stacks Sudden Death
-    { spell = "Execute", cond = AND(stacksMax(ID_IMMINENT, 2), cdReady(ID_BLADESTORM)) }, -- before Bladestorm, <3 Imminent Demise
-    { spell = "Bladestorm", cond = buffUp(ID_COLOSSUS_DBF) }, -- during Colossus Smash
+    { spell = "Execute", cond = glowing(163201) },        -- Sudden Death proc (Execute glows)
+    { spell = "Bladestorm", cond = AND(glowing(ID_BLADESTORM), buffUp(ID_COLOSSUS_DBF)) }, -- 3 Imminent Demise, during Colossus Smash
     { spell = "HeroicStrike" },                           -- Slayer proc (when available)
+    { spell = "MortalStrike", cond = predMin(ID_EXECPREC, 2) }, -- 2 Executioner's Precision
     { spell = "MortalStrike" },
-    { spell = "Execute", cond = buffUp(ID_SUDDENDEATH) }, -- during Sudden Death
     { spell = "Overpower" },
     { spell = "Cleave", cond = OR(buffDown(ID_REND), refreshable(ID_REND)) }, -- keep Rend up
+    { spell = "Execute" },                                -- filler (usable in execute range)
     { spell = "Slam" },                                   -- filler
 }
 
--- Slayer AoE (3+): Sweeping Strikes + Cleave-heavy, Bladestorm on CD.
+-- Slayer AoE (3+): Sweeping Strikes + Cleave-heavy. Cleave glows at 3 Collateral Damage;
+-- Bladestorm glows at 3 Imminent Demise; Execute on the Sudden Death proc.
 local slayer_aoe = {
     { spell = "SweepingStrikes" },                        -- on CD
     { spell = "Cleave", cond = buffDown(ID_REND) },       -- early, to apply Rend
@@ -84,20 +99,20 @@ local slayer_aoe = {
     { spell = "ChampionsSpear" },
     { spell = "ColossusSmash" },
     { spell = "Ravager" },
-    { spell = "Cleave", cond = stacksMin(ID_COLLATERAL, 3) }, -- 3 stacks Collateral Damage
-    { spell = "Bladestorm" },
-    { spell = "Execute", cond = stacksMin(ID_SUDDENDEATH, 2) },
+    { spell = "Cleave", cond = glowing(845) },            -- 3 Collateral Damage (Cleave glows)
+    { spell = "Bladestorm", cond = glowing(ID_BLADESTORM) }, -- 3 Imminent Demise
+    { spell = "Execute", cond = glowing(163201) },        -- Sudden Death proc
+    { spell = "MortalStrike", cond = predMin(ID_EXECPREC, 2) }, -- 2 Executioner's Precision
     { spell = "Cleave" },                                 -- main AoE spender
     { spell = "Overpower", cond = chargesMin(7384, 2) },  -- with 2 charges
-    { spell = "Execute", cond = buffUp(ID_SUDDENDEATH) },
     { spell = "Overpower" },
     { spell = "MortalStrike" },
-    { spell = "Execute" },
+    { spell = "Execute" },                                -- filler (execute range)
     { spell = "Slam" },                                   -- filler
 }
 
 -- Colossus single target: Demolish inside the Colossus Smash window (Colossal Might
--- payoff), no Bladestorm weave, no Heroic Strike / Imminent Demise lines.
+-- payoff), no Bladestorm weave.
 local colossus_st = {
     { spell = "Cleave", cond = AND(refreshable(ID_REND), cdReady(ID_COLOSSUS_DBF)) }, -- refresh Rend before Colossus Smash
     { spell = "Avatar" },                                 -- on CD
@@ -106,11 +121,12 @@ local colossus_st = {
     { spell = "ColossusSmash" },                          -- on CD (smart-swaps to Warbreaker if talented)
     { spell = "Ravager" },                                -- talent: with Colossus Smash
     { spell = "Demolish", cond = buffUp(ID_COLOSSUS_DBF) }, -- Colossus: spend inside the Colossus Smash window
-    { spell = "Execute", cond = stacksMin(ID_SUDDENDEATH, 2) }, -- 2 stacks Sudden Death
+    { spell = "Execute", cond = glowing(163201) },        -- Sudden Death proc
+    { spell = "MortalStrike", cond = predMin(ID_EXECPREC, 2) }, -- 2 Executioner's Precision
     { spell = "MortalStrike" },
-    { spell = "Execute", cond = buffUp(ID_SUDDENDEATH) }, -- during Sudden Death
     { spell = "Overpower" },
     { spell = "Cleave", cond = OR(buffDown(ID_REND), refreshable(ID_REND)) }, -- keep Rend up
+    { spell = "Execute" },                                -- filler (execute range)
     { spell = "Slam" },                                   -- filler
 }
 
@@ -124,14 +140,14 @@ local colossus_aoe = {
     { spell = "ColossusSmash" },
     { spell = "Ravager" },
     { spell = "Demolish", cond = buffUp(ID_COLOSSUS_DBF) }, -- Colossus burst inside Colossus Smash
-    { spell = "Cleave", cond = stacksMin(ID_COLLATERAL, 3) }, -- 3 stacks Collateral Damage
-    { spell = "Execute", cond = stacksMin(ID_SUDDENDEATH, 2) },
+    { spell = "Cleave", cond = glowing(845) },            -- 3 Collateral Damage
+    { spell = "Execute", cond = glowing(163201) },        -- Sudden Death proc
+    { spell = "MortalStrike", cond = predMin(ID_EXECPREC, 2) }, -- 2 Executioner's Precision
     { spell = "Cleave" },                                 -- main AoE spender
     { spell = "Overpower", cond = chargesMin(7384, 2) },  -- with 2 charges
-    { spell = "Execute", cond = buffUp(ID_SUDDENDEATH) },
     { spell = "Overpower" },
     { spell = "MortalStrike" },
-    { spell = "Execute" },
+    { spell = "Execute" },                                -- filler (execute range)
     { spell = "Slam" },                                   -- filler
 }
 
@@ -175,6 +191,14 @@ local spec = {
         { key = "slayer",   label = "Slayer" },
         { key = "colossus", label = "Colossus" },
     },
+
+    -- Predicted stack tracking (no readable count): Executioner's Precision gains a
+    -- stack on every Execute (cap 2) and is consumed by Mortal Strike. Keyed by the
+    -- buff's aura ID so predMin(ID_EXECPREC, n) reads it.
+    stackTrack = {
+        [ID_EXECPREC] = { max = 2, gen = { "Execute" }, reset = { "MortalStrike" } },
+    },
+    condTags = { predstack = true },   -- offer the "Pred. stacks" condition in the editor
 
     -- Relevant buffs/debuffs (selectable in the condition editor regardless of build).
     auras = {
@@ -292,6 +316,10 @@ local spec = {
             { label = "Sudden Death",           spell = ID_SUDDENDEATH },
             { label = "Imminent Demise",        spell = ID_IMMINENT },
             { label = "Executioner's Precision", spell = ID_EXECPREC },
+        },
+        -- Predicted counters (advanced by our casts; no readable aura count).
+        predStacks = {
+            { label = "Exec. Precision (pred)", spell = ID_EXECPREC },
         },
         -- Proc-glow probes: testing whether the button glow is a readable stand-in for a
         -- stack count we can't read. Bladestorm glows at 3 Imminent Demise; Execute glows

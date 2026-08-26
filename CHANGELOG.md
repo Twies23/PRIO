@@ -1,5 +1,11 @@
 # PRIO Changelog
 
+## 0.2.55 (alpha)
+- **Arms rotation rebuilt around readable proc signals.** Now that the button glows read cleanly, the rotation gates on them instead of stack counts it can't read: **Execute** fires on the **Sudden Death** glow, **Bladestorm** at **3 Imminent Demise** (its glow) during Colossus Smash, and **Cleave** at **3 Collateral Damage** (its glow) in AoE. **Executioner's Precision** has no glow, so it's tracked with a predicted counter — +1 per Execute (cap 2), reset by Mortal Strike — driving the "Mortal Strike at 2 stacks" line. New condition types under the hood: proc-glow and predicted-stacks. Reset Arms lists to default to pick this up.
+- Rotation Debug gained a **Predicted stacks** section showing the Executioner's Precision counter live.
+- *Note:* the separate sub-35% "execute phase" ordering isn't a distinct mode — execute range is health-gated (secret), so there's no readable trigger to switch to it; the main lists fold Execute in via the Sudden Death glow and usability.
+
+
 ## 0.2.54 (alpha)
 - **Added a Cleave proc-glow probe** to the Rotation Debug "Proc glows" section, to test whether Cleave glows at 3 stacks of Collateral Damage — the same glow-as-stack-signal approach we're using for Bladestorm/Execute/Mortal Strike.
 

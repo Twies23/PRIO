@@ -441,6 +441,12 @@ function RotationDebug:Rebuild(spec)
         for i, b in ipairs(rd.buffs or {}) do
             row("b" .. i, b.label or "?")
         end
+        if rd.predStacks and #rd.predStacks > 0 then
+            head("Predicted stacks  (cast counter)")
+            for i, p in ipairs(rd.predStacks) do
+                row("p" .. i, p.label or "?")
+            end
+        end
         if rd.glows and #rd.glows > 0 then
             head("Proc glows  (overlay)")
             for i, g in ipairs(rd.glows) do
@@ -519,6 +525,11 @@ function RotationDebug:Update()
     for i, b in ipairs(rd.buffs or {}) do
         local ok, res = pcall(function() return buffText(b.spell) end)
         set("b" .. i, ok and res or "|cffe0685aerr|r")
+    end
+    for i, p in ipairs(rd.predStacks or {}) do
+        local n = (PRIO.Engine and PRIO.Engine.P and PRIO.Engine.P.stacks
+            and PRIO.Engine.P.stacks[p.spell]) or 0
+        set("p" .. i, ("|cff0cd29f%d|r  |cff5a6a76(predicted)|r"):format(n))
     end
     for i, g in ipairs(rd.glows or {}) do
         local ok, res = pcall(function()

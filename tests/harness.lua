@@ -34,6 +34,7 @@ function H.reset()
         chargeState = {},                      -- ChargeState: {max,cur,belowMax}
         talents = {},                          -- IsTalentSelected
         stacks = {},                           -- AuraStackCount
+        glows = {},                            -- SpellGlowing (proc overlay)
         lastCastKey = nil,
     }
     H.S = S
@@ -101,6 +102,7 @@ function API.IsTalentSelected(id) return truthy(S.talents, id, false) end
 function API.IsTalentSelectedByName() return false end
 function API.IsAuraActive(id) return S.auras[id] end   -- true/false/nil
 function API.AuraStackCount(id) return S.stacks[id] end
+function API.SpellGlowing(id) local v = S.glows[id]; if v == nil then return nil end; return v and true or false end
 function API.AuraRemaining(id) return nil end          -- secret in "combat"; use predicted
 function API.InPandemic(id) return nil end
 function API.HasPowerCost(id) return false end

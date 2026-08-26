@@ -52,6 +52,14 @@ Cond.types = {
     { value = "skStacks",    text = "SK stacks \226\137\165", needsValue = true, min = 1, max = 4, def = 1, tag = "ele" },
     { value = "stacksMin",   text = "Buff stacks \226\137\165", needsSpell = true, needsValue = true, min = 1, max = 10, def = 2, target = "buff" },
     { value = "stacksMax",   text = "Buff stacks \226\137\164", needsSpell = true, needsValue = true, min = 0, max = 10, def = 1, target = "buff" },
+    -- Proc glow (spell activation overlay): a readable boolean stand-in for a stack
+    -- threshold we can't read (e.g. Bladestorm glows at 3 Imminent Demise).
+    { value = "glowing",     text = "Proc glowing",     needsSpell = true, target = "ability" },
+    { value = "notGlowing",  text = "Not proc glowing", needsSpell = true, target = "ability" },
+    -- Predicted stack count (advanced by our own casts via spec.stackTrack) for a
+    -- stacking buff with no readable count -- e.g. Executioner's Precision.
+    { value = "predStackMin", text = "Pred. stacks \226\137\165", needsSpell = true, needsValue = true, min = 1, max = 5, def = 2, target = "buff", tag = "predstack" },
+    { value = "predStackMax", text = "Pred. stacks \226\137\164", needsSpell = true, needsValue = true, min = 0, max = 5, def = 1, target = "buff", tag = "predstack" },
     { value = "chargesMin",  text = "Charges \226\137\165", needsValue = true, min = 1, max = 5, def = 2 },
     { value = "chargesMax",  text = "Charges \226\137\164", needsValue = true, min = 0, max = 5, def = 1 },
     { value = "auraRemainMin", text = "Buff time left \226\137\165", needsSpell = true, needsValue = true, min = 0, max = 30, def = 3, target = "duration" },
@@ -103,6 +111,10 @@ function Cond.ClauseLabel(cl, selfSid)
     elseif t == "refreshable" then return name .. " in pandemic"
     elseif t == "stacksMin" then return name .. " \226\137\165 " .. (cl.v or 1) .. " stk"
     elseif t == "stacksMax" then return name .. " \226\137\164 " .. (cl.v or 1) .. " stk"
+    elseif t == "glowing" then return name .. " glowing"
+    elseif t == "notGlowing" then return name .. " not glowing"
+    elseif t == "predStackMin" then return name .. " \226\137\165 " .. (cl.v or 1) .. " stk~"
+    elseif t == "predStackMax" then return name .. " \226\137\164 " .. (cl.v or 1) .. " stk~"
     elseif t == "chargesMin" then return name .. " \226\137\165 " .. (cl.v or 1) .. " chg"
     elseif t == "chargesMax" then return name .. " \226\137\164 " .. (cl.v or 1) .. " chg"
     elseif t == "auraRemainMin" then return name .. " \226\137\165 " .. (cl.v or 0) .. "s left"
@@ -312,6 +324,14 @@ local function EnergyNearCap()
     return e >= thr
 end
 
+-- Predicted stack count for an aura, advanced by our own casts (spec.stackTrack).
+-- In the look-ahead sim S._simStacks holds the per-slot advanced copy; live eval
+-- reads the real predicted table. nil/absent -> 0.
+local function PredStacks(sid, S)
+    if S and S._simStacks and S._simStacks[sid] ~= nil then return S._simStacks[sid] end
+    return (Engine.P.stacks and Engine.P.stacks[sid]) or 0
+end
+
 local function EvalClause(cl, S, selfSid)
     if cl.clauses then return Cond.Eval(cl, S, selfSid) end   -- nested group -> recurse
     local t = cl.type
@@ -346,6 +366,12 @@ local function EvalClause(cl, S, selfSid)
     -- reads as 0 stacks -> below any min, within any max.
     elseif t == "stacksMin" then return (API.AuraStackCount(sid) or 0) >= (cl.v or 1)
     elseif t == "stacksMax" then return (API.AuraStackCount(sid) or 0) <= (cl.v or 1)
+    -- Proc glow: clean boolean when readable; nil (API missing) -> treat as not glowing.
+    elseif t == "glowing" then return API.SpellGlowing(sid) == true
+    elseif t == "notGlowing" then return API.SpellGlowing(sid) == false
+    -- Predicted stacks (our own cast counter). Always defined (0 when none).
+    elseif t == "predStackMin" then return PredStacks(sid, S) >= (cl.v or 1)
+    elseif t == "predStackMax" then return PredStacks(sid, S) <= (cl.v or 1)
     elseif t == "chargesMin" then return (ChargeCount(sid) or 0) >= (cl.v or 1)
     elseif t == "chargesMax" then return (ChargeCount(sid) or 0) <= (cl.v or 1)
     -- Buff time-left (Zenith ending): predicted from the cast, since remaining is secret
@@ -412,6 +438,14 @@ function Cond.ClauseStatus(cl, S, selfSid)
         local s = API.AuraStackCount(sid); if s == nil then return "open" end
         local ok = (t == "stacksMin") and (s >= (cl.v or 1)) or (s <= (cl.v or 1))
         return ok and "pass" or "fail"
+    elseif t == "glowing" or t == "notGlowing" then
+        local g = API.SpellGlowing(sid); if g == nil then return "open" end
+        local ok = (t == "glowing") and g or (not g)
+        return ok and "pass" or "fail"
+    elseif t == "predStackMin" or t == "predStackMax" then
+        local s = PredStacks(sid, S)
+        local ok = (t == "predStackMin") and (s >= (cl.v or 1)) or (s <= (cl.v or 1))
+        return ok and "pass" or "fail"
     elseif t == "chargesMin" or t == "chargesMax" then
         local c = ChargeCount(sid); if c == nil then return "open" end
         local ok = (t == "chargesMin") and (c >= (cl.v or 1)) or (c <= (cl.v or 1))
@@ -460,7 +494,7 @@ function Engine:OnSpecChanged()
     local id = API.GetSpecID()
     spec = id and PRIO.specs and PRIO.specs[id] or nil
     wipe(idToKey)
-    self.P = { fsExpire = 0, mote = false, skStacks = 0, maelstrom = 0, charges = {}, assumeActive = {}, auraExpire = {}, cdExpire = {}, energyEst = nil, energyEstTime = nil }
+    self.P = { fsExpire = 0, mote = false, skStacks = 0, maelstrom = 0, charges = {}, assumeActive = {}, auraExpire = {}, cdExpire = {}, stacks = {}, energyEst = nil, energyEstTime = nil }
     if not spec then return end
     if spec.chargeTrack then
         for key, cfg in pairs(spec.chargeTrack) do
@@ -616,6 +650,12 @@ PRIO:On("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
         cc.cur = math.max(0, cc.cur - 1)
         if cc.rechargeEnd == 0 then cc.rechargeEnd = GetTime() + (cc.dur or spec.chargeTrack[key].recharge) end
     end
+    -- Advance predicted buff stacks (Executioner's Precision: +1 per Execute, reset on
+    -- Mortal Strike) from our own cast.
+    if spec.stackTrack then
+        Engine.P.stacks = Engine.P.stacks or {}
+        Engine:AdvanceStacks(Engine.P.stacks, key)
+    end
     if spec.OnCast then
         pcall(spec.OnCast, Engine.P, key, GetTime())
     end
@@ -671,7 +711,7 @@ PRIO:On("PLAYER_REGEN_ENABLED", function()
     -- Combat ended: clear volatile procs; Maelstrom and charges keep syncing from
     -- the real values now that they're readable again.
     local P = Engine.P
-    if P then P.fsExpire = 0; P.mote = false; P.skStacks = 0; if P.auraExpire then wipe(P.auraExpire) end end
+    if P then P.fsExpire = 0; P.mote = false; P.skStacks = 0; if P.auraExpire then wipe(P.auraExpire) end; if P.stacks then wipe(P.stacks) end end
     Engine.openerActive = false
 end)
 
@@ -899,7 +939,28 @@ end
 -- Apply a cast's declared effects to the look-ahead sim: consume/grant auras,
 -- and adjust the predicted Master of the Elements / Stormkeeper stacks. This lets
 -- the queue reflect a beat ahead (Lava Burst eats Purging Flames, etc.).
+-- Advance a predicted stack table (P.stacks live, or the sim copy) for a cast `key`.
+-- spec.stackTrack is keyed by the buff's aura ID: gen = cast keys that add a stack
+-- (capped at max), reset = cast keys that zero it. reset wins if a key is in both.
+function Engine:AdvanceStacks(stacks, key)
+    if not (spec and spec.stackTrack and key and stacks) then return end
+    for auraID, cfg in pairs(spec.stackTrack) do
+        local isReset, isGen = false, false
+        for _, k in ipairs(cfg.reset or {}) do if k == key then isReset = true; break end end
+        if not isReset then
+            for _, k in ipairs(cfg.gen or {}) do if k == key then isGen = true; break end end
+        end
+        if isReset then
+            stacks[auraID] = 0
+        elseif isGen then
+            stacks[auraID] = math.min(cfg.max or 99, (stacks[auraID] or 0) + 1)
+        end
+    end
+end
+
 local function ApplyEffects(sim, key)
+    -- Predicted stacks advance for every cast, independent of spellEffects.
+    if sim.stacks then Engine:AdvanceStacks(sim.stacks, key) end
     local fx = spec and spec.spellEffects and key and spec.spellEffects[key]
     if not fx then return end
     if fx.consume then for _, a in ipairs(fx.consume) do sim.aura[a] = false end end
@@ -1028,8 +1089,11 @@ function Engine:Evaluate()
         aura = {}, mote = S.mote, sk = S.skStacks, resource = S.maelstrom,
         energy = self:EnergyEstimate(),   -- % * max (tracks to cap) or checkpoint floor; spent as we pick
         lastCastKey = S.lastCastKey, lastCastID = S.lastCastID,
+        stacks = {},   -- predicted buff-stack counters, advanced per simulated cast
     }
+    if Engine.P.stacks then for k, v in pairs(Engine.P.stacks) do sim.stacks[k] = v end end
     S._sim = sim.aura
+    S._simStacks = sim.stacks
 
     -- If the player is mid-cast, treat that cast as already committed: fold its
     -- effects into the sim (so MotE/aura assumptions carry) and exclude it, so the
@@ -1125,6 +1189,7 @@ function Engine:Evaluate()
         end                                                 -- filler -> leave eligible
     end
     S._sim = nil
+    S._simStacks = nil
 
     -- Safety net: never go blank in combat. If nothing qualified (e.g. a custom
     -- list with no valid filler), show a known filler, else any known spell.

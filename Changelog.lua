@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.55", {
+        "Arms rotation now driven by readable signals: Execute on the Sudden Death glow, Bladestorm at 3 Imminent Demise (glow), Cleave at 3 Collateral Damage (glow), and a predicted Executioner's Precision counter (+1 per Execute, reset by Mortal Strike) for the 2-stack Mortal Strike. Reset Arms lists to default.",
+    } },
     { "0.2.54", {
         "Added a Cleave proc-glow probe to Rotation Debug -- testing whether Cleave glows at 3 Collateral Damage (another possible readable stack signal).",
     } },
