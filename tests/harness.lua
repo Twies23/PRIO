@@ -102,6 +102,11 @@ function API.IsTalentSelected(id) return truthy(S.talents, id, false) end
 function API.IsTalentSelectedByName() return false end
 function API.IsAuraActive(id) return S.auras[id] end   -- true/false/nil
 function API.AuraStackCount(id) return S.stacks[id] end
+function API.AuraStackSource(id)
+    local n = S.stackSource and S.stackSource[id]
+    if n ~= nil then return n, "cdm" end          -- simulate a clean CDM read
+    return nil, nil
+end
 function API.SpellGlowing(id) local v = S.glows[id]; if v == nil then return nil end; return v and true or false end
 function API.AuraRemaining(id) return nil end          -- secret in "combat"; use predicted
 function API.InPandemic(id) return nil end

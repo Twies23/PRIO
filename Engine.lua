@@ -1063,11 +1063,17 @@ local function BuildState(self, mode, enemies)
     if oi then
         local gain, _, cap = OppAmounts(oi)
         P.oppStacks = P.oppStacks or 0
-        local rc = ReadableStacks(oi.aura)
+        -- Sync to the real count ONLY if the spec opts in (oi.sync): for Opportunity the
+        -- Cooldown Manager renders the MAX charges (6), not the live count, so syncing
+        -- would wrongly snap a fresh single proc (3) up to 6. We rely on the glow anchor
+        -- + proc/spend prediction instead.
+        local rc = oi.sync and ReadableStacks(oi.aura) or nil
         if rc ~= nil then
             P.oppStacks = rc
         elseif oi.glowSpell then
             local g = API.SpellGlowing(oi.glowSpell)
+            -- glow off => exactly 0; glow on while we thought 0 => ONE proc's worth (never
+            -- the cap -- reaching the cap needs a second, separately-detected proc).
             if g == false then P.oppStacks = 0
             elseif g == true and P.oppStacks == 0 then P.oppStacks = gain end
         end

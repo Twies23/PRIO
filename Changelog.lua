@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.3.11", {
+        "Fix: Opportunity jumped straight to 6 when it lit up. The Cooldown Manager reports Opportunity's MAX charges (6), not the live count, and PRIO was trusting it. It now ignores that read and predicts from the glow -- first proc = 3, climbing to 6 only on a detected second proc. Also stops a wasted Pistol Shot that overcapped combo points when the count falsely read 6.",
+    } },
     { "0.3.10", {
         "Outlaw Opportunity charge tracking. The stack count is hidden in combat, so PRIO calculates it, anchored to readable signals: the Pistol Shot button glows while Opportunity is up, and with Fan the Hammer every proc is +3 / every Pistol Shot -3 (cap 6) -- so the count is only ever 0/3/6 and a glowing Pistol Shot means 3+.",
         "Self-correcting: when Opportunity empties and the glow goes off, the count hard-resets to 0, so it can't drift. Double-strikes add a proc, Pistol Shot spends, and all amounts adjust to whether Fan the Hammer is talented.",

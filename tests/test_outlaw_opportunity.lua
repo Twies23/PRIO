@@ -70,4 +70,11 @@ test("opportunity: without Fan the Hammer it's a single charge (+1 / cap 1)", fu
     eq(H.Engine.P.oppStacks, 0, "Pistol Shot -> 0")
 end)
 
+test("opportunity: a bad max-charges read does NOT stomp the predicted 3 up to 6", function()
+    setOutlaw(true)
+    H.S.stackSource = { [OPP] = 6 }   -- CDM renders max charges (6) even on a fresh proc
+    doubleStrike()                     -- one proc
+    eq(H.Engine.P.oppStacks, 3, "first proc stays 3 (sync is off, so the 6 read is ignored)")
+end)
+
 H.reset(); H.rebind()   -- restore Windwalker for later suites
