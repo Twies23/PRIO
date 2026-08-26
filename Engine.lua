@@ -1176,7 +1176,8 @@ function Engine:Evaluate()
 
     -- Opener: play the hardcoded sequence until it completes, times out, or the
     -- player deviates.
-    if self.openerActive then
+    if self.openerActive and InCombatLockdown() then
+        -- In combat, a stalled opener aborts after 15s. Out of combat we hold it (pre-pull).
         if GetTime() - (self.openerStart or 0) > 15 then self.openerActive = false end
     end
     if self.openerActive then self:SkipOpenerSteps() end

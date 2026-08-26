@@ -1,5 +1,10 @@
 # PRIO Changelog
 
+## 0.2.72 (alpha)
+- **The opener shows before the pull.** It now arms out of combat (as soon as your signature cooldowns are ready) and displays the opening sequence pre-pull — even if "Show out of combat" is off — instead of waiting until you're already in combat. It won't time out while you're standing there; it flows straight into the fight when you engage.
+- **Updated Arms opener defaults** to the tuned ST and AoE sequences.
+
+
 ## 0.2.71 (alpha)
 - **Slayer AoE tweak.** Mortal Strike in the AoE list (also used for AoE-Execute) now fires on cooldown instead of only during Rend's pandemic window. Reset Arms lists to default to pick it up.
 

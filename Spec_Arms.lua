@@ -329,10 +329,10 @@ local spec = {
 
     openerReady = { "Avatar", "ColossusSmash", "Warbreaker" },
     -- ST opener (opener) and AoE opener (openerAoe); the engine picks by pull size.
-    opener = { "Rend", "Avatar", "ColossusSmash", "MortalStrike", "Overpower",
-               "Execute", "Slam" },
-    openerAoe = { "Rend", "SweepingStrikes", "Avatar", "ColossusSmash", "Bladestorm",
-                  "Cleave", "MortalStrike" },
+    opener = { "Cleave", "Avatar", "ColossusSmash", "Execute", "Bladestorm",
+               "StormBolt", "HeroicStrike", "MortalStrike", "Overpower" },
+    openerAoe = { "SweepingStrikes", "Charge", "Cleave", "Avatar", "ColossusSmash",
+                  "Bladestorm", "Cleave", "Overpower", "Execute", "Cleave" },
 
     precombat = {},   -- Rend is a target debuff (opener leads with it), not a self-buff
 

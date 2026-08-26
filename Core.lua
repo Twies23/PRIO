@@ -280,7 +280,10 @@ function PRIO:Tick()
         -- Out of combat: pre-combat reminders take precedence, then optional rotation.
         local pre = self.Engine:PrecombatResult()
         if pre then self.Display:Render(pre); return end
-        if not self.db.showOOC then self.Display:Hide(); return end
+        -- Arm the opener before the pull so it's shown while out of combat.
+        if self.db.useOpener and not self.Engine.openerActive then self.Engine:StartOpener() end
+        -- Show the strip out of combat if enabled OR the opener is armed (pre-pull view).
+        if not (self.db.showOOC or self.Engine.openerActive) then self.Display:Hide(); return end
     end
     local result = self.Engine:Evaluate()
     self.Display:Render(result)

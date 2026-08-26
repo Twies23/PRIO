@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.72", {
+        "The opener now shows out of combat (before the pull) instead of only after combat starts. Updated the Arms ST/AoE opener defaults to the tuned sequences.",
+    } },
     { "0.2.71", {
         "Slayer AoE (and AoE-Execute): Mortal Strike now fires on cooldown instead of only in Rend's pandemic window. Reset Arms lists to default.",
     } },
