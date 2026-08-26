@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.3.15", {
+        "New /prio ssdelay diagnostic (Outlaw groundwork): times each combo-point arrival after a Sinister Strike, so we can see the gap between the instant combo point (strike + Roll the Bones stage bonus) and the delayed one from a double-strike -- which could let PRIO read the roll stage exactly and detect Opportunity procs cleanly.",
+    } },
     { "0.3.14", {
         "Outlaw: the free-Dispatch line now keys off the real 4-set buff, Fang Strike (was a placeholder). With the 4-piece set, track Fang Strike and PRIO suggests the free Dispatch while it's up. Harmless without the set.",
     } },

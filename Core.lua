@@ -463,6 +463,47 @@ SlashCmdList.PRIO = function(msg)
         print(("|cff0cd29fPRIO|r RtB frame probe (%s):")
             :format(InCombatLockdown() and "|cff0cd29fin combat|r" or "|cffe0a03aOOC|r"))
         print(API.FrameProbe(1214909, { 1214933, 1214934, 1214935 }))
+    elseif msg == "ssdelay" then
+        -- Time combo-point arrivals after each Sinister Strike, to separate the INSTANT
+        -- yield (first strike + Roll the Bones stage bonus) from the DELAYED double-strike
+        -- hit. Arm it, cast Sinister Strike on a dummy, and read the ms timings. This tells
+        -- us the threshold that splits "instant (stage)" from "delayed (double = Opportunity)".
+        local API = PRIO.API
+        if not PRIO._ssLogger then
+            local f = CreateFrame("Frame")
+            local COMBO = (Enum and Enum.PowerType and Enum.PowerType.ComboPoints) or 4
+            local SS = 193315
+            f.t0, f.prevCP = 0, 0
+            f:SetScript("OnEvent", function(self, event, a1, a2, a3)
+                if not self.armed then return end
+                if event == "UNIT_SPELLCAST_SUCCEEDED" then
+                    if a1 ~= "player" or API.SafeNum(a3) ~= SS then return end
+                    self.t0 = GetTime()
+                    local ok, cp = pcall(UnitPower, "player", COMBO)
+                    self.prevCP = (ok and not API.IsSecret(cp)) and cp or 0
+                    print(("|cff6fb3ffSinister Strike|r (CP=%s)"):format(tostring(self.prevCP)))
+                elseif event == "UNIT_POWER_UPDATE" then
+                    if a1 ~= "player" or a2 ~= "COMBO_POINTS" then return end
+                    if self.t0 == 0 or GetTime() - self.t0 > 1.5 then return end
+                    local ok, cp = pcall(UnitPower, "player", COMBO)
+                    if not ok or API.IsSecret(cp) then return end
+                    local d = cp - self.prevCP
+                    if d ~= 0 then
+                        print(("   |cff0cd29f%+d CP|r @ |cffffd200%d ms|r (now %d)")
+                            :format(d, math.floor((GetTime() - self.t0) * 1000), cp))
+                        self.prevCP = cp
+                    end
+                end
+            end)
+            f:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
+            f:RegisterEvent("UNIT_POWER_UPDATE")
+            PRIO._ssLogger = f
+        end
+        local f = PRIO._ssLogger
+        f.armed = not f.armed; f.t0 = 0
+        print("|cff0cd29fPRIO|r ssdelay: " .. (f.armed
+            and "|cff0cd29fARMED|r -- cast Sinister Strike on a dummy; watch the ms timings"
+            or "off"))
     elseif msg == "setup" then
         if PRIO.Setup then PRIO.Setup:Toggle() end
     elseif msg == "changelog" or msg == "changes" then
