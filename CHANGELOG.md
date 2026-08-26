@@ -1,5 +1,11 @@
 # PRIO Changelog
 
+## 0.2.56 (alpha)
+- **Arms conditions are now named, meaningful choices.** Instead of exposing a raw "Proc glowing" option, the condition editor offers spec-specific presets that say what they mean: **Sudden Death up**, **Imminent Demise (3)**, **Imminent Demise (<3)**, **Collateral Damage (3)**, and **Exec. Precision (2)**. Each resolves under the hood to the readable glow/predicted-stack signal, so you pick the *meaning* and never have to know that (say) "Execute glowing" stands for Sudden Death. The Arms default lists use these names too.
+- **Added "Has debuff" / "Missing debuff" conditions** alongside the buff ones, so target debuffs (like Rend) read naturally in the editor.
+- Reset Arms lists to default to pick up the renamed conditions.
+
+
 ## 0.2.55 (alpha)
 - **Arms rotation rebuilt around readable proc signals.** Now that the button glows read cleanly, the rotation gates on them instead of stack counts it can't read: **Execute** fires on the **Sudden Death** glow, **Bladestorm** at **3 Imminent Demise** (its glow) during Colossus Smash, and **Cleave** at **3 Collateral Damage** (its glow) in AoE. **Executioner's Precision** has no glow, so it's tracked with a predicted counter — +1 per Execute (cap 2), reset by Mortal Strike — driving the "Mortal Strike at 2 stacks" line. New condition types under the hood: proc-glow and predicted-stacks. Reset Arms lists to default to pick this up.
 - Rotation Debug gained a **Predicted stacks** section showing the Executioner's Precision counter live.

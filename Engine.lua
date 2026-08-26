@@ -40,6 +40,8 @@ PRIO.Cond = Cond
 Cond.types = {
     { value = "buffActive",  text = "Has buff",       needsSpell = true, target = "buff" },
     { value = "buffMissing", text = "Missing buff",   needsSpell = true, target = "buff" },
+    { value = "debuffActive",  text = "Has debuff",     needsSpell = true, target = "buff" },
+    { value = "debuffMissing", text = "Missing debuff", needsSpell = true, target = "buff" },
     { value = "cdReady",     text = "Off cooldown",   needsSpell = true, target = "ability" },
     { value = "cdNotReady",  text = "On cooldown",    needsSpell = true, target = "ability" },
     { value = "talentYes",   text = "Talent selected",     needsTalent = true },
@@ -52,14 +54,10 @@ Cond.types = {
     { value = "skStacks",    text = "SK stacks \226\137\165", needsValue = true, min = 1, max = 4, def = 1, tag = "ele" },
     { value = "stacksMin",   text = "Buff stacks \226\137\165", needsSpell = true, needsValue = true, min = 1, max = 10, def = 2, target = "buff" },
     { value = "stacksMax",   text = "Buff stacks \226\137\164", needsSpell = true, needsValue = true, min = 0, max = 10, def = 1, target = "buff" },
-    -- Proc glow (spell activation overlay): a readable boolean stand-in for a stack
-    -- threshold we can't read (e.g. Bladestorm glows at 3 Imminent Demise).
-    { value = "glowing",     text = "Proc glowing",     needsSpell = true, target = "ability" },
-    { value = "notGlowing",  text = "Not proc glowing", needsSpell = true, target = "ability" },
-    -- Predicted stack count (advanced by our own casts via spec.stackTrack) for a
-    -- stacking buff with no readable count -- e.g. Executioner's Precision.
-    { value = "predStackMin", text = "Pred. stacks \226\137\165", needsSpell = true, needsValue = true, min = 1, max = 5, def = 2, target = "buff", tag = "predstack" },
-    { value = "predStackMax", text = "Pred. stacks \226\137\164", needsSpell = true, needsValue = true, min = 0, max = 5, def = 1, target = "buff", tag = "predstack" },
+    -- NOTE: proc-glow (glowing/notGlowing) and predicted-stack (predStackMin/Max) clause
+    -- types are still evaluated below, but are NOT offered as raw picker options -- they
+    -- are surfaced only as named spec.condPresets (e.g. "Sudden Death up"), so the user
+    -- never has to know "Execute glow == Sudden Death".
     { value = "chargesMin",  text = "Charges \226\137\165", needsValue = true, min = 1, max = 5, def = 2 },
     { value = "chargesMax",  text = "Charges \226\137\164", needsValue = true, min = 0, max = 5, def = 1 },
     { value = "auraRemainMin", text = "Buff time left \226\137\165", needsSpell = true, needsValue = true, min = 0, max = 30, def = 3, target = "duration" },
@@ -78,18 +76,39 @@ Cond.types = {
     { value = "energyPctMax", text = "Energy % \226\137\164", needsValue = true, min = 0, max = 100, def = 20, tag = "energy" },
 }
 
+-- A spec.condPresets entry -> a picker option. Presets are NAMED boolean conditions
+-- (e.g. "Sudden Death up") that resolve to an underlying clause (a glow or predicted-
+-- stack read) the user never has to see. Clause form: { type = "preset:<key>" }.
+local function resolvePreset(t)
+    if type(t) ~= "string" then return nil end
+    local key = t:match("^preset:(.+)$")
+    if not (key and spec and spec.condPresets) then return nil end
+    for _, p in ipairs(spec.condPresets) do if p.key == key then return p end end
+    return nil
+end
+Cond.ResolvePreset = resolvePreset
+
 -- The condition types a spec should offer: generic ones always, tagged ones only when
--- the spec opts in (spec.condTags[tag]). Keeps Shaman-only MotE/SK stacks off Monk, etc.
-function Cond.TypesForSpec(spec)
-    local tags = spec and spec.condTags
+-- the spec opts in (spec.condTags[tag]); plus the spec's named presets. Keeps Shaman-
+-- only MotE/SK stacks off Monk, etc.
+function Cond.TypesForSpec(specArg)
+    local tags = specArg and specArg.condTags
     local out = {}
     for _, m in ipairs(Cond.types) do
         if not m.tag or (tags and tags[m.tag]) then out[#out + 1] = m end
+    end
+    if specArg and specArg.condPresets then
+        for _, p in ipairs(specArg.condPresets) do
+            out[#out + 1] = { value = "preset:" .. p.key, text = p.label or p.key }
+        end
     end
     return out
 end
 function Cond.TypeMeta(t)
     for _, m in ipairs(Cond.types) do if m.value == t then return m end end
+    -- Presets need no spell/value picker (the underlying clause carries them).
+    local p = resolvePreset(t)
+    if p then return { value = t, text = p.label or p.key } end
 end
 
 local function SpellShort(sid)
@@ -99,9 +118,13 @@ end
 
 function Cond.ClauseLabel(cl, selfSid)
     local t = cl.type
+    local preset = resolvePreset(t)
+    if preset then return preset.label or "?" end
     local name = SpellShort(cl.spell or selfSid)
     if t == "buffActive" then return name .. " buff"
     elseif t == "buffMissing" then return "no " .. name .. " buff"
+    elseif t == "debuffActive" then return name .. " debuff"
+    elseif t == "debuffMissing" then return "no " .. name .. " debuff"
     elseif t == "cdReady" then return name .. " ready"
     elseif t == "cdNotReady" then return name .. " on CD"
     elseif t == "talentYes" then return (cl.spell and SpellShort(cl.spell) or "talent") .. " talented"
@@ -335,6 +358,15 @@ end
 local function EvalClause(cl, S, selfSid)
     if cl.clauses then return Cond.Eval(cl, S, selfSid) end   -- nested group -> recurse
     local t = cl.type
+    -- Named preset -> evaluate its underlying clause (glow / predicted-stack read).
+    local preset = resolvePreset(t)
+    if preset then
+        if preset.clause then return EvalClause(preset.clause, S, selfSid) end
+        return true
+    end
+    -- Debuff variants share the tracked-aura read with their buff counterparts.
+    if t == "debuffActive" then t = "buffActive"
+    elseif t == "debuffMissing" then t = "buffMissing" end
     local sid = cl.spell or selfSid
     if t == "buffActive" then
         if S._sim and S._sim[sid] ~= nil then return S._sim[sid] end
@@ -422,6 +454,10 @@ end
 -- the value was unreadable -> the clause is effectively ignored right now).
 function Cond.ClauseStatus(cl, S, selfSid)
     local t = cl.type
+    local preset = resolvePreset(t)
+    if preset and preset.clause then return Cond.ClauseStatus(preset.clause, S, selfSid) end
+    if t == "debuffActive" then t = "buffActive"
+    elseif t == "debuffMissing" then t = "buffMissing" end
     local sid = cl.spell or selfSid
     if t == "buffActive" then
         if not API.IsTracked(sid) then return "fail" end     -- untracked -> fail, not ignored

@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.56", {
+        "Arms conditions now read as named choices -- \"Sudden Death up\", \"Imminent Demise (3)\", \"Collateral Damage (3)\", \"Exec. Precision (2)\" -- instead of raw proc-glow. Added \"Has debuff\" / \"Missing debuff\". Reset Arms lists to default.",
+    } },
     { "0.2.55", {
         "Arms rotation now driven by readable signals: Execute on the Sudden Death glow, Bladestorm at 3 Imminent Demise (glow), Cleave at 3 Collateral Damage (glow), and a predicted Executioner's Precision counter (+1 per Execute, reset by Mortal Strike) for the 2-stack Mortal Strike. Reset Arms lists to default.",
     } },

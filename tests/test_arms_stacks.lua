@@ -61,3 +61,47 @@ test("predStackMin/Max thresholds", function()
     falsy(evalClause({ type = "predStackMax", spell = EXECPREC, v = 0 }))
     H.reset(); H.rebind()
 end)
+
+-- Named presets resolve to their underlying clause against the ACTIVE spec.
+test("condPresets: resolve to the underlying glow / counter clause", function()
+    H.reset(); H.S.specID = 71; H.rebind()
+    -- "Sudden Death up" == Execute glow
+    H.S.glows[EXECUTE] = true
+    truthy(evalClause({ type = "preset:suddenDeath" }), "SD preset true when Execute glows")
+    H.S.glows[EXECUTE] = false
+    falsy(evalClause({ type = "preset:suddenDeath" }), "SD preset false when not glowing")
+    -- "Imminent Demise (3)" == Bladestorm glow; "(<3)" is its inverse
+    H.S.glows[BLADESTORM] = true
+    truthy(evalClause({ type = "preset:immDemise3" }))
+    falsy(evalClause({ type = "preset:immDemiseLt3" }))
+    H.S.glows[BLADESTORM] = false
+    falsy(evalClause({ type = "preset:immDemise3" }))
+    truthy(evalClause({ type = "preset:immDemiseLt3" }))
+    -- "Exec. Precision (2)" == predicted counter >= 2
+    H.fire("UNIT_SPELLCAST_SUCCEEDED", "player", nil, EXECUTE)
+    H.fire("UNIT_SPELLCAST_SUCCEEDED", "player", nil, EXECUTE)
+    truthy(evalClause({ type = "preset:execPrec2" }), "EP preset true at 2 predicted stacks")
+    -- Presets appear in the editor type list; raw glow/predstack do NOT.
+    local types = H.Cond.TypesForSpec(H.armsSpec)
+    local haveSD, haveRawGlow = false, false
+    for _, m in ipairs(types) do
+        if m.value == "preset:suddenDeath" then haveSD = true end
+        if m.value == "glowing" or m.value == "predStackMin" then haveRawGlow = true end
+    end
+    truthy(haveSD, "preset shows in editor picker")
+    falsy(haveRawGlow, "raw glow/predstack hidden from editor picker")
+    H.reset(); H.rebind()
+end)
+
+-- Debuff conditions alias the tracked-aura read (buff logic), debuff-labeled.
+test("debuffActive / debuffMissing read the tracked aura", function()
+    H.reset()
+    local REND = 772
+    H.S.tracked[REND] = true
+    H.S.auras[REND] = true
+    truthy(evalClause({ type = "debuffActive", spell = REND }))
+    falsy(evalClause({ type = "debuffMissing", spell = REND }))
+    H.S.auras[REND] = false
+    falsy(evalClause({ type = "debuffActive", spell = REND }))
+    truthy(evalClause({ type = "debuffMissing", spell = REND }))
+end)
