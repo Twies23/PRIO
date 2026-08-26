@@ -11,6 +11,11 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.3.5", {
+        "Outlaw Roll the Bones -- infer the roll from combo points. The stage buffs aren't readable in combat, so PRIO watches Sinister Strike: stage 2 makes it generate an extra combo point, so a Sinister Strike that gives only its base 1 CP proves a stage-1 roll -> reroll. It never mistakes a good roll for a bad one, and RtB's long cooldown gives it time to settle.",
+        "Keep It Rolling runs on cooldown while a roll is active (stage 3 isn't readable).",
+        "Rotation Debug shows the inferred roll state (reroll / assume good).",
+    } },
     { "0.3.4", {
         "Outlaw Roll the Bones -- read the stage from the bar's name. The three stage buffs share one Cooldown Manager bar and are secret by ID in combat, so PRIO now reads which name the bar is showing (One of a Kind / Double Trouble / Triple Threat) to know the real stage. Reroll and Keep It Rolling now fire correctly. Track Roll the Bones as a Bar for this to read.",
         "New /prio rtbframe dumps the Roll the Bones bar's icon + text to verify the stage read in combat.",

@@ -581,6 +581,13 @@ function RotationDebug:Update()
                 local mx = pt and API.PowerMax(pt)
                 if v == nil then return "|cffe0685aSECRET / na|r" end
                 return ("|cff0cd29f%s|r|cff5a6a76 / %s|r"):format(tostring(v), tostring(mx or "?"))
+            elseif r.kind == "predFlag" then
+                -- Inferred boolean (e.g. Outlaw rtbStage2): true / false / unknown.
+                local pf = PRIO.Engine and PRIO.Engine.P and PRIO.Engine.P.predFlags
+                local v = pf and pf[r.key]
+                if v == true then return "|cff0cd29ftrue|r" end
+                if v == false then return "|cffe0685afalse (reroll)|r" end
+                return "|cff9fb0beunknown (assume good)|r"
             end
             return "-"
         end)

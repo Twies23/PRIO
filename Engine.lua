@@ -439,6 +439,10 @@ local function EvalClause(cl, S, selfSid)
     elseif t == "skStacks" then return (S.skStacks or 0) >= (cl.v or 1)
     elseif t == "enemiesMin" then return (S.enemies or 1) >= (cl.v or 1)
     elseif t == "enemiesMax" then return (S.enemies or 1) <= (cl.v or 1)
+    -- Inferred predicted flags (e.g. Outlaw's rtbStage2 from combo-point observation).
+    -- false = proven low; true = proven high; nil = unknown (both read as "not that").
+    elseif t == "predFalse" then return (S.predFlags and S.predFlags[cl.key]) == false
+    elseif t == "predTrue"  then return (S.predFlags and S.predFlags[cl.key]) == true
     end
     return true
 end
@@ -537,7 +541,7 @@ function Engine:OnSpecChanged()
     local id = API.GetSpecID()
     spec = id and PRIO.specs and PRIO.specs[id] or nil
     wipe(idToKey)
-    self.P = { fsExpire = 0, mote = false, skStacks = 0, maelstrom = 0, charges = {}, assumeActive = {}, auraExpire = {}, cdExpire = {}, stacks = {}, energyEst = nil, energyEstTime = nil }
+    self.P = { fsExpire = 0, mote = false, skStacks = 0, maelstrom = 0, charges = {}, assumeActive = {}, auraExpire = {}, cdExpire = {}, stacks = {}, energyEst = nil, energyEstTime = nil, predFlags = {} }
     self:ResetExecuteRange()
     if not spec then return end
     if spec.chargeTrack then
@@ -723,8 +727,24 @@ PRIO:On("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
     if not spellID then return end
     local key = idToKey[spellID]
     if not key then return end
-    Engine.P.lastCast    = spellID          -- for "previous cast" conditions
-    Engine.P.lastCastKey = key
+    Engine.P.lastCast     = spellID          -- for "previous cast" conditions
+    Engine.P.lastCastKey  = key
+    Engine.P.lastCastTime = GetTime()
+    -- STAGE INFERENCE (Outlaw Roll the Bones): a "builder" cast whose resource yield
+    -- reveals a hidden buff stage. Record the resource BEFORE the cast + a short window
+    -- to sum its yield; a "reset" cast (re-rolling) clears the inferred flag. Combo points
+    -- read clean, so BuildState measures the yield when the window closes. (spec.stageInfer)
+    local si = spec.stageInfer
+    if si then
+        if key == si.builder then
+            Engine.P.siStartCP = spec.resource and API.Power(spec.resource) or nil
+            Engine.P.siEval    = GetTime() + (si.window or 0.45)
+        elseif key == si.reset then
+            Engine.P.predFlags = Engine.P.predFlags or {}
+            Engine.P.predFlags[si.flag] = nil            -- fresh roll: stage unknown again
+            Engine.P.siEval = nil
+        end
+    end
     -- Spend a predicted charge and start its recharge.
     local cc = spec.chargeTrack and spec.chargeTrack[key] and Engine.P.charges[key]
     if cc then
@@ -792,7 +812,7 @@ PRIO:On("PLAYER_REGEN_ENABLED", function()
     -- Combat ended: clear volatile procs; Maelstrom and charges keep syncing from
     -- the real values now that they're readable again.
     local P = Engine.P
-    if P then P.fsExpire = 0; P.mote = false; P.skStacks = 0; if P.auraExpire then wipe(P.auraExpire) end; if P.stacks then wipe(P.stacks) end end
+    if P then P.fsExpire = 0; P.mote = false; P.skStacks = 0; P.siEval = nil; P.siStartCP = nil; if P.auraExpire then wipe(P.auraExpire) end; if P.stacks then wipe(P.stacks) end; if P.predFlags then wipe(P.predFlags) end end
     Engine:ResetExecuteRange()
     Engine.openerActive = false
 end)
@@ -954,6 +974,24 @@ local function BuildState(self, mode, enemies)
     local realMax = spec.resource and API.PowerMax(spec.resource) or nil
     if realMax ~= nil then P.maelstromMax = realMax end
 
+    -- Stage inference (Outlaw): the builder's resource-gain window has closed -> total
+    -- yield tells us the stage. Disproof-only: a yield at or below the base (e.g. a
+    -- Sinister Strike that gave just its 1 base CP) proves the LOW stage, so the flag
+    -- goes false (reroll). Stage 2+ always adds +1, so it can never look this low ->
+    -- we never falsely clear a good roll. Guarded so a near-cap (wasted) cast is skipped.
+    local si = spec.stageInfer
+    if si and P.siEval and now >= P.siEval then
+        local startCP = P.siStartCP
+        P.siEval, P.siStartCP = nil, nil
+        if realMs ~= nil and startCP ~= nil and startCP <= (P.maelstromMax or 99) - 2 then
+            local yield = realMs - startCP
+            if yield >= 0 and yield <= (si.baseYield or 1) then
+                P.predFlags = P.predFlags or {}
+                P.predFlags[si.flag] = false
+            end
+        end
+    end
+
     -- Expire a predicted MotE that was granted but never consumed.
     if P.mote and P.moteExpire and now >= P.moteExpire then P.mote = false end
 
@@ -982,6 +1020,7 @@ local function BuildState(self, mode, enemies)
         fsRemaining = (P.fsExpire or 0) > now and (P.fsExpire - now) or 0,
         lastCastKey = P.lastCastKey,                   -- for "previous cast" conditions
         lastCastID  = P.lastCast,
+        predFlags   = P.predFlags,                      -- inferred booleans (e.g. rtbStage2)
         talent     = function(key) local id = spec.spells[key]; return id and API.IsKnown(id) end,
         ready      = function(key) local id = spec.spells[key]; return id and API.IsReady(id) end,
         auraActive = function(key) local id = spec.spells[key]; return id and API.IsAuraActive(id) end,

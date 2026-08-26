@@ -13,18 +13,17 @@
 --     engine won't hard-gate them on an unreadable Energy value). Energy pooling
 --     (Windwalker-style energyModel) is a later refinement.
 --
--- ROLL THE BONES (the open question this build is meant to answer):
---   RtB grants one or more buffs; the rotation keys off "stage" = how many are up
---   ("reroll at stage <=1", "Keep It Rolling at stage >=3"). Two candidate reads:
---     1. The RtB BAR (#1214909) is Cooldown-Manager tracked -> its active state and
---        rendered stage number read in combat via API.IsAuraActive / AuraStackCount.
---        The default lines below use this (stacksMax/Min on 1214909).
---     2. The individual RtB buffs (reworked in 12.1 to the 12149xx range, e.g. Triple
---        Threat #1214935) are NOT CDM-tracked -> only readable via a direct
---        GetPlayerAuraBySpellID probe, IF it survives combat. The Rotation Debug
---        window tests both paths live so we can pick the reliable one.
---   Index-based aura enumeration is BLOCKED in combat (confirmed), so `/prio myauras`
---   run OUT of combat after a roll is how we capture the real 12.1 buff IDs.
+-- ROLL THE BONES stage -- how we settled it (12.1 rework):
+--   RtB grants ONE buff whose stage (1-4) is random and cumulative: One of a Kind (1) /
+--   Double Trouble (2) / Triple Threat (3) / Jackpot (4). The rotation only cares about
+--   the stage-2 breakpoint (reroll a stage-1 roll). Reading the stage directly FAILED:
+--     - the stage buffs are secret by spell ID in combat (GetPlayerAuraBySpellID -> nil);
+--     - index aura enumeration is blocked in combat;
+--     - all stage buffs alias to one Cooldown-Manager bar, which only says "a roll is up".
+--   WHAT WORKS: infer it from combo points (which DO read clean). Stage 2 makes Sinister
+--   Strike generate an extra combo point, so a Sinister Strike that yields only its base
+--   1 CP proves the roll is stage 1 -> reroll. See `spec.stageInfer` + Engine BuildState.
+--   Disproof-only: stage 2+ can never look this low, so we never reroll a good roll.
 --------------------------------------------------------------------------------
 
 local ADDON, PRIO = ...
@@ -90,14 +89,21 @@ local function stacksMax(id, n) return { type = "stacksMax", spell = id, v = n }
 -- to the front of AoE (the only AoE adjustment Outlaw makes).
 --------------------------------------------------------------------------------
 
--- Stage helpers: reroll when NOT already at stage 2+ (i.e. One of a Kind or nothing);
--- Keep It Rolling once at stage 3 (Triple Threat).
-local function rtbStageLow()  return AND(buffDown(ID_RTB_S2), buffDown(ID_RTB_S3)) end
-local function rtbStageHigh() return buffUp(ID_RTB_S3) end
+-- STAGE via combo-point INFERENCE (the readable path -- see spec.stageInfer below and
+-- Engine's BuildState). The stage buffs are secret by ID in combat and the bar only
+-- reads "a roll is active", but combo points read clean and Roll the Bones stage 2 makes
+-- Sinister Strike generate an extra CP -- so a Sinister Strike that yields only its base
+-- 1 CP proves the roll is stage 1 (reroll). Stage 3 (Restless Blades) touches only secret
+-- cooldowns, so we can't read it -> Keep It Rolling just runs on cooldown while a roll is up.
+local function predStage2False() return { type = "predFalse", key = "rtbStage2" } end
+-- Reroll: no roll active, OR the current roll was inferred to be stage 1.
+local function rtbReroll() return OR(buffDown(ID_ROLLBONES), predStage2False()) end
+-- Keep It Rolling: on cooldown whenever any roll is active.
+local function rtbKeep()   return buffUp(ID_ROLLBONES) end
 
 local st = {
-    { spell = "RollTheBones",  cond = rtbStageLow() },                              -- reroll at stage <=1
-    { spell = "KeepItRolling", cond = rtbStageHigh() },                            -- lock in stage 3
+    { spell = "RollTheBones",  cond = rtbReroll() },                                 -- reroll: nothing up, or inferred stage 1
+    { spell = "KeepItRolling", cond = rtbKeep() },                                  -- Keep It Rolling on CD while a roll is up
     { spell = "Preparation",   cond = AND(cdDown(ID_BTE), cdDown(ID_ADRENALINE), cdDown(ID_KILLSPREE)) },
     { spell = "AdrenalineRush", cond = cpMax(2) },                                  -- on CD at <=2 CP
     { spell = "KillingSpree" },                                                     -- follows Adrenaline Rush
@@ -112,8 +118,8 @@ local st = {
 
 local aoe = {
     { spell = "BladeFlurry",   cond = buffDown(ID_BLADEFLURRY) },                   -- keep the cleave buff up
-    { spell = "RollTheBones",  cond = rtbStageLow() },
-    { spell = "KeepItRolling", cond = rtbStageHigh() },
+    { spell = "RollTheBones",  cond = rtbReroll() },
+    { spell = "KeepItRolling", cond = rtbKeep() },
     { spell = "Preparation",   cond = AND(cdDown(ID_BTE), cdDown(ID_ADRENALINE),
                                           cdDown(ID_KILLSPREE), cdDown(ID_BLADERUSH)) },
     { spell = "AdrenalineRush", cond = cpMax(2) },
@@ -136,6 +142,19 @@ local spec = {
     resourceLabel = "Combo Pts",
     maelstromMax = 7,             -- CP cap (readable PowerMax overrides; 6-7 with talents)
 
+    -- STAGE INFERENCE: watch Sinister Strike's combo-point yield to detect Roll the Bones
+    -- stage 1 (reroll). The engine records CP before the builder cast, waits `window`
+    -- seconds for the (possibly double-strike) yield to land, then if the total yield is
+    -- <= baseYield sets predFlags[flag]=false (proven stage 1). A `reset` cast (re-rolling)
+    -- clears it back to unknown. Read in the rotation via predFalse("rtbStage2").
+    stageInfer = {
+        builder   = "SinisterStrike",
+        reset     = "RollTheBones",
+        flag      = "rtbStage2",
+        baseYield = 1,     -- stage 1 Sinister Strike gives 1 CP; stage 2+ always adds +1
+        window    = 0.5,   -- seconds to sum the yield (covers the double-strike)
+    },
+
     -- Blade Flurry at 2+; no distinct cleave tier, so AoE mode covers 2+.
     cleaveAt = 2,
     aoeAt    = 2,
@@ -151,8 +170,8 @@ local spec = {
     condPresets = {
         { key = "maxCP",     label = "Max combo points (>=6)", clause = cpMin(6) },
         { key = "lowCP",     label = "Low combo points (<=2)", clause = cpMax(2) },
-        { key = "rtbLow",    label = "RtB stage <=1",          clause = rtbStageLow() },
-        { key = "rtbHigh",   label = "RtB stage 3",            clause = rtbStageHigh() },
+        { key = "rtbReroll", label = "RtB needs reroll",       clause = rtbReroll() },
+        { key = "rtbActive", label = "RtB roll active",        clause = rtbKeep() },
         { key = "opp6",      label = "Opportunity (6)",        clause = stacksMin(ID_OPPORTUNITY, 6) },
         { key = "opp3",      label = "Opportunity (3+)",       clause = stacksMin(ID_OPPORTUNITY, 3) },
     },
@@ -273,6 +292,9 @@ local spec = {
         },
         rangeProbes = {
             { label = "Combo Points",            kind = "resource" },
+            -- Inferred RtB stage: false = proven stage 1 (reroll), true = proven high,
+            -- unknown = not yet disproven (treated as good). Drives the reroll line.
+            { label = "RtB stage2 (inferred)",   kind = "predFlag", key = "rtbStage2" },
             -- Direct-ID reads for the named RtB stage buffs (CDM doesn't track them).
             -- These confirm whether the direct read survives combat -- if it does, the
             -- reroll / Keep It Rolling lines work; if "PRESENT/secret", they can't.
