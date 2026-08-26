@@ -1,0 +1,260 @@
+-- Spec_Outlaw.lua ---------------------------------------------------------------
+-- Outlaw Rogue (spec 260), patch 12.1 (Midnight). FIRST PASS -- Trickster priority
+-- built from the Wowhead 12.1 guide; Fatebound is deferred (rides the same core for
+-- now). This ships primarily to (a) register the spec so the Rotation Debug window
+-- turns on for Outlaw, and (b) verify which signals actually read in combat before
+-- the rotation is tuned. Treat the priority as a working default, not final.
+--
+-- SIGNAL REALITY (the good news):
+--   * COMBO POINTS are a DISCRETE class power -> they read CLEAN in combat (unlike
+--     Rage/Energy/Maelstrom). So every combo-point gate below is EXACT: finishers at
+--     >=6 CP, Adrenaline Rush at <=2 CP, Sinister Strike at <=5 CP, etc.
+--   * ENERGY is a filling bar -> SECRET in combat. Builders therefore fail open (the
+--     engine won't hard-gate them on an unreadable Energy value). Energy pooling
+--     (Windwalker-style energyModel) is a later refinement.
+--
+-- ROLL THE BONES (the open question this build is meant to answer):
+--   RtB grants one or more buffs; the rotation keys off "stage" = how many are up
+--   ("reroll at stage <=1", "Keep It Rolling at stage >=3"). Two candidate reads:
+--     1. The RtB BAR (#1214909) is Cooldown-Manager tracked -> its active state and
+--        rendered stage number read in combat via API.IsAuraActive / AuraStackCount.
+--        The default lines below use this (stacksMax/Min on 1214909).
+--     2. The individual RtB buffs (reworked in 12.1 to the 12149xx range, e.g. Triple
+--        Threat #1214935) are NOT CDM-tracked -> only readable via a direct
+--        GetPlayerAuraBySpellID probe, IF it survives combat. The Rotation Debug
+--        window tests both paths live so we can pick the reliable one.
+--   Index-based aura enumeration is BLOCKED in combat (confirmed), so `/prio myauras`
+--   run OUT of combat after a roll is how we capture the real 12.1 buff IDs.
+--------------------------------------------------------------------------------
+
+local ADDON, PRIO = ...
+PRIO.specs = PRIO.specs or {}
+
+local API = PRIO.API
+local COMBO = (Enum and Enum.PowerType and Enum.PowerType.ComboPoints) or 4
+
+-- Verified IDs from the live Cooldown Viewer dump (2026-08-26) unless noted.
+local ID_SINISTER   = 193315
+local ID_PISTOLSHOT = 185763
+local ID_DISPATCH   = 2098
+local ID_BTE        = 315341   -- Between the Eyes (cast + target debuff)
+local ID_ROLLBONES  = 1214909  -- Roll the Bones (Essential + TrackedBar; stage lives here)
+local ID_SND        = 315496   -- Slice and Dice (cast + self buff)
+local ID_BLADEFLURRY = 13877   -- Blade Flurry (TrackedBar)
+local ID_BLADERUSH  = 271877
+local ID_ADRENALINE = 13750    -- Adrenaline Rush (cast + buff)
+local ID_KILLSPREE  = 51690
+local ID_KEEPROLLING = 381989  -- Keep It Rolling
+local ID_PREPARATION = 1277933
+local ID_OPPORTUNITY = 279876  -- Opportunity (stacks: 3 / 6 gates)
+local ID_LOADEDDICE = 256170
+local ID_UNSEENBLADE = 441146  -- Trickster
+local ID_FLAWLESS   = 441321   -- Flawless Form (Trickster)
+local ID_ZEROIN     = 1259485  -- best-guess 4pc / BtE buff (VERIFY)
+local ID_VANISH     = 1856
+local ID_AMBUSH     = 8676
+local ID_GHOSTLY    = 196937
+local ID_THISTLETEA = 381623
+-- Roll the Bones buff (confirmed live): Triple Threat. The full 12.1 set is captured
+-- from `/prio myauras` and wired into the direct-aura probes below.
+local ID_RTB_TRIPLETHREAT = 1214935
+
+local function AND(...) return { op = "and", clauses = { ... } } end
+local function OR(...)  return { op = "or",  clauses = { ... } } end
+local function buffUp(id)    return { type = "buffActive",  spell = id } end
+local function buffDown(id)  return { type = "buffMissing", spell = id } end
+local function cdReady(id)   return { type = "cdReady",     spell = id } end
+local function cdDown(id)    return { type = "cdNotReady",  spell = id } end
+local function cpMin(n)      return { type = "resourceMin", v = n } end   -- combo points >= n
+local function cpMax(n)      return { type = "resourceMax", v = n } end   -- combo points <= n
+local function stacksMin(id, n) return { type = "stacksMin", spell = id, v = n } end
+local function stacksMax(id, n) return { type = "stacksMax", spell = id, v = n } end
+
+--------------------------------------------------------------------------------
+-- Trickster priority (Wowhead 12.1). Combo-point gates are exact; RtB stage reads
+-- from the CDM bar (#1214909). Same list drives ST and AoE, with Blade Flurry added
+-- to the front of AoE (the only AoE adjustment Outlaw makes).
+--------------------------------------------------------------------------------
+
+local st = {
+    { spell = "RollTheBones",  cond = stacksMax(ID_ROLLBONES, 1) },                 -- reroll at stage <=1
+    { spell = "KeepItRolling", cond = stacksMin(ID_ROLLBONES, 3) },                 -- lock in stage >=3
+    { spell = "Preparation",   cond = AND(cdDown(ID_BTE), cdDown(ID_ADRENALINE), cdDown(ID_KILLSPREE)) },
+    { spell = "AdrenalineRush", cond = cpMax(2) },                                  -- on CD at <=2 CP
+    { spell = "KillingSpree" },                                                     -- follows Adrenaline Rush
+    { spell = "Dispatch",      cond = buffUp(ID_ZEROIN) },                          -- 4pc proc (VERIFY buff)
+    { spell = "BladeRush" },                                                        -- on CD
+    { spell = "BetweenTheEyes", cond = cpMin(6) },                                  -- finisher at >=6 CP
+    { spell = "Dispatch",      cond = cpMin(6) },                                   -- finisher at >=6 CP
+    { spell = "PistolShot",    cond = OR(stacksMin(ID_OPPORTUNITY, 6),
+                                         AND(stacksMin(ID_OPPORTUNITY, 3), cpMin(1), cpMax(3))) },
+    { spell = "SinisterStrike", cond = cpMax(5) },                                  -- builder at <=5 CP
+}
+
+local aoe = {
+    { spell = "BladeFlurry",   cond = buffDown(ID_BLADEFLURRY) },                   -- keep the cleave buff up
+    { spell = "RollTheBones",  cond = stacksMax(ID_ROLLBONES, 1) },
+    { spell = "KeepItRolling", cond = stacksMin(ID_ROLLBONES, 3) },
+    { spell = "Preparation",   cond = AND(cdDown(ID_BTE), cdDown(ID_ADRENALINE),
+                                          cdDown(ID_KILLSPREE), cdDown(ID_BLADERUSH)) },
+    { spell = "AdrenalineRush", cond = cpMax(2) },
+    { spell = "KillingSpree" },
+    { spell = "Dispatch",      cond = buffUp(ID_ZEROIN) },
+    { spell = "BladeRush" },
+    { spell = "BetweenTheEyes", cond = cpMin(6) },
+    { spell = "Dispatch",      cond = cpMin(6) },
+    { spell = "PistolShot",    cond = OR(stacksMin(ID_OPPORTUNITY, 6),
+                                         AND(stacksMin(ID_OPPORTUNITY, 3), cpMin(1), cpMax(3))) },
+    { spell = "SinisterStrike", cond = cpMax(5) },
+}
+
+local spec = {
+    key      = "ROGUE_OUTLAW",
+    label    = "Outlaw",
+    className = "Rogue",
+    specID   = 260,
+    resource = COMBO,             -- COMBO POINTS: discrete -> readable in combat (exact gates)
+    resourceLabel = "Combo Pts",
+    maelstromMax = 7,             -- CP cap (readable PowerMax overrides; 6-7 with talents)
+
+    -- Blade Flurry at 2+; no distinct cleave tier, so AoE mode covers 2+.
+    cleaveAt = 2,
+    aoeAt    = 2,
+
+    modes = {
+        { value = "st",  text = "ST" },
+        { value = "aoe", text = "AoE" },
+    },
+
+    priority = { st = st, aoe = aoe },
+
+    -- Named presets surfaced in the condition editor (meaning, not mechanics).
+    condPresets = {
+        { key = "maxCP",     label = "Max combo points (>=6)", clause = cpMin(6) },
+        { key = "lowCP",     label = "Low combo points (<=2)", clause = cpMax(2) },
+        { key = "rtbLow",    label = "RtB stage <=1",          clause = stacksMax(ID_ROLLBONES, 1) },
+        { key = "rtbHigh",   label = "RtB stage >=3",          clause = stacksMin(ID_ROLLBONES, 3) },
+        { key = "opp6",      label = "Opportunity (6)",        clause = stacksMin(ID_OPPORTUNITY, 6) },
+        { key = "opp3",      label = "Opportunity (3+)",       clause = stacksMin(ID_OPPORTUNITY, 3) },
+    },
+
+    auras = {
+        SliceAndDice   = ID_SND,
+        BladeFlurry    = ID_BLADEFLURRY,
+        Opportunity    = ID_OPPORTUNITY,
+        AdrenalineRush = ID_ADRENALINE,
+        BetweenTheEyes = ID_BTE,
+        RollTheBones   = ID_ROLLBONES,
+        LoadedDice     = ID_LOADEDDICE,
+        UnseenBlade    = ID_UNSEENBLADE,
+        FlawlessForm   = ID_FLAWLESS,
+    },
+
+    setup = {
+        { kind = "trackedAura", label = "Roll the Bones tracked", spell = ID_ROLLBONES,
+          hint = "Track Roll the Bones (a Tracked Bar) so PRIO can read its stage -- the reroll / Keep It Rolling lines depend on it." },
+        { kind = "trackedAura", label = "Opportunity tracked", spell = ID_OPPORTUNITY,
+          hint = "Track Opportunity so its stack count (3 / 6) reads for the Pistol Shot lines." },
+        { kind = "trackedAura", label = "Slice and Dice tracked", spell = ID_SND,
+          hint = "Track Slice and Dice so its buff state reads." },
+        { kind = "trackedAura", label = "Blade Flurry tracked", spell = ID_BLADEFLURRY,
+          hint = "Track Blade Flurry so the AoE cleave-maintenance line reads." },
+        { kind = "trackedAura", label = "Between the Eyes tracked", spell = ID_BTE,
+          hint = "Track Between the Eyes so its debuff window reads." },
+        { kind = "info", label = "Combo Points",
+          hint = "No tracking needed -- combo points are a discrete resource PRIO reads directly, so finisher / builder combo-point gates are exact." },
+    },
+
+    spells = {
+        SinisterStrike = ID_SINISTER,
+        PistolShot     = ID_PISTOLSHOT,
+        Dispatch       = ID_DISPATCH,
+        BetweenTheEyes = ID_BTE,
+        RollTheBones   = ID_ROLLBONES,
+        SliceandDice   = ID_SND,
+        BladeFlurry    = ID_BLADEFLURRY,
+        BladeRush      = ID_BLADERUSH,
+        AdrenalineRush = ID_ADRENALINE,
+        KillingSpree   = ID_KILLSPREE,
+        KeepItRolling  = ID_KEEPROLLING,
+        Preparation    = ID_PREPARATION,
+        Ambush         = ID_AMBUSH,
+        Vanish         = ID_VANISH,
+        GhostlyStrike  = ID_GHOSTLY,
+        ThistleTea     = ID_THISTLETEA,
+    },
+
+    openerReady = { "AdrenalineRush" },
+    opener = { "AdrenalineRush", "RollTheBones", "SliceandDice", "SinisterStrike",
+               "PistolShot", "BetweenTheEyes" },
+    openerAoe = { "AdrenalineRush", "RollTheBones", "SliceandDice", "BladeFlurry",
+                  "SinisterStrike", "PistolShot", "BetweenTheEyes" },
+    precombat = {},
+
+    pickable = {
+        "SinisterStrike", "PistolShot", "Dispatch", "BetweenTheEyes", "RollTheBones",
+        "SliceandDice", "BladeFlurry", "BladeRush", "AdrenalineRush", "KillingSpree",
+        "KeepItRolling", "Preparation", "Ambush", "Vanish", "GhostlyStrike", "ThistleTea",
+    },
+
+    fillers = { [ID_SINISTER] = true },   -- Sinister Strike is the no-cooldown builder
+
+    flash = {
+        PistolShot = { type = "buffActive", spell = ID_OPPORTUNITY },   -- free/empowered shot
+    },
+
+    OnCast = function(P, key, now) end,
+
+    debug = {
+        { label = "Combo Points",        kind = "stacks", spell = ID_ROLLBONES },  -- placeholder; CP shown in rotdebug
+        { label = "Roll the Bones (bar)", kind = "buff",  spell = ID_ROLLBONES },
+        { label = "Slice and Dice",      kind = "buff",  spell = ID_SND },
+        { label = "Blade Flurry",        kind = "buff",  spell = ID_BLADEFLURRY },
+        { label = "Opportunity",         kind = "stacks", spell = ID_OPPORTUNITY },
+        { label = "Adrenaline Rush",     kind = "buff",  spell = ID_ADRENALINE },
+        { label = "Between the Eyes (t)", kind = "buff", spell = ID_BTE },
+    },
+    economy = {
+        gen   = { "Sinister Strike", "Pistol Shot", "Ambush" },
+        spend = { "Dispatch", "Between the Eyes", "Roll the Bones", "Slice and Dice" },
+    },
+
+    --------------------------------------------------------------------------------
+    -- Rotation Ability & Buff Debug (/prio rotdebug). THIS is the point of this build:
+    -- watch which signals read live in combat before trusting the rotation.
+    --   * buffs  -> API.IsAuraActive (what the COOLDOWN MANAGER reports active) + the
+    --               rendered stack/stage count and its source.
+    --   * rangeProbes.resource   -> combo points read straight off the power bar.
+    --   * rangeProbes.directAura -> GetPlayerAuraBySpellID for the untracked RtB buffs
+    --               (the only path that might survive combat). "readable" vs
+    --               "PRESENT/secret" vs "absent" tells us if direct reads work.
+    --------------------------------------------------------------------------------
+    rotationDebug = {
+        title = "Rotation Ability & Buff Debug",
+        abilities = {
+            "RollTheBones", "KeepItRolling", "Preparation", "AdrenalineRush", "KillingSpree",
+            "BladeRush", "BetweenTheEyes", "Dispatch", "PistolShot", "SinisterStrike", "BladeFlurry",
+        },
+        buffs = {
+            { label = "Roll the Bones (stage)", spell = ID_ROLLBONES },   -- CDM bar: active + stage?
+            { label = "Slice and Dice",         spell = ID_SND },
+            { label = "Blade Flurry",           spell = ID_BLADEFLURRY },
+            { label = "Opportunity",            spell = ID_OPPORTUNITY },
+            { label = "Adrenaline Rush",        spell = ID_ADRENALINE },
+            { label = "Loaded Dice",            spell = ID_LOADEDDICE },
+            { label = "Between the Eyes (dbf)", spell = ID_BTE },
+            { label = "Unseen Blade",           spell = ID_UNSEENBLADE },
+            { label = "Flawless Form",          spell = ID_FLAWLESS },
+        },
+        rangeProbes = {
+            { label = "Combo Points",             kind = "resource" },
+            -- Direct-ID reads for RtB buffs (CDM doesn't track these). Triple Threat is
+            -- confirmed live; add the rest of the 12.1 set from `/prio myauras`.
+            { label = "Triple Threat (RtB)",      kind = "directAura", spell = ID_RTB_TRIPLETHREAT },
+            { label = "Opportunity (direct)",     kind = "directAura", spell = ID_OPPORTUNITY },
+            { label = "Slice and Dice (direct)",  kind = "directAura", spell = ID_SND },
+        },
+    },
+}
+
+PRIO.specs[spec.specID] = spec

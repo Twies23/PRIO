@@ -561,6 +561,26 @@ function RotationDebug:Update()
             elseif r.kind == "execRange" then
                 local on = PRIO.Engine and PRIO.Engine.InExecuteRange and PRIO.Engine:InExecuteRange()
                 return on and "|cff0cd29fYES (latched)|r" or "|cff5a6a76no|r"
+            elseif r.kind == "directAura" then
+                -- Direct GetPlayerAuraBySpellID read: the ONLY path for auras the CDM
+                -- doesn't track (e.g. the six Roll the Bones buffs). Tests whether they
+                -- read clean in combat (index enumeration is blocked there).
+                local fn = C_UnitAuras and C_UnitAuras.GetPlayerAuraBySpellID
+                if not fn then return "|cffe0a03ana|r" end
+                local ok2, d = pcall(fn, r.spell)
+                if not ok2 then return "|cffe0685aerr|r" end
+                if d == nil then return "|cff5a6a76absent|r" end
+                if API.IsSecret(d) then return "|cffe0685aPRESENT/secret|r" end
+                local a = d.applications
+                local st = (type(a) == "number" and not API.IsSecret(a) and a > 0) and (" \195\151" .. a) or ""
+                return "|cff0cd29freadable|r|cff9fb0be" .. st .. "|r"
+            elseif r.kind == "resource" then
+                -- Discrete class power (e.g. Combo Points) -- readable clean in combat.
+                local pt = r.power or (spec and spec.resource)
+                local v = pt and API.Power(pt)
+                local mx = pt and API.PowerMax(pt)
+                if v == nil then return "|cffe0685aSECRET / na|r" end
+                return ("|cff0cd29f%s|r|cff5a6a76 / %s|r"):format(tostring(v), tostring(mx or "?"))
             end
             return "-"
         end)

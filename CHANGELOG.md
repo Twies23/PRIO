@@ -1,5 +1,12 @@
 # PRIO Changelog
 
+## 0.3.2
+**Outlaw Rogue — first pass (work in progress).**
+- Outlaw is now a recognised spec with a Trickster single-target and AoE priority. Combo points read exactly (they're a discrete resource), so finisher and builder combo-point gates are precise.
+- **Rotation Debug window** (`/prio rotdebug`) now works for Outlaw and shows, live, what your Cooldown Manager reports active for each buff (Roll the Bones stage, Slice and Dice, Blade Flurry, Opportunity, …), your combo points, and a direct read test for the Roll the Bones buffs the Cooldown Manager doesn't track.
+- `/prio myauras` gained a direct-ID probe: `/prio myauras <id> <id>` (or `/prio rtb`) tests specific auras via a path that can survive combat, since listing all buffs is blocked while fighting.
+- Still to come: verified 12.1 Roll the Bones buff IDs, Fatebound tuning, and Energy pooling.
+
 ## 0.3.1
 Groundwork for **Outlaw Rogue** support.
 - New `/prio myauras` (alias `/prio buffs`) command — lists every buff currently on you with its spell ID and whether the game lets PRIO read it in combat. This is how we map auras the Cooldown Manager doesn't track (like the individual Roll the Bones buffs) so the upcoming Outlaw rotation can read them.

@@ -347,7 +347,8 @@ end)
 --------------------------------------------------------------------------------
 SLASH_PRIO1 = "/prio"
 SlashCmdList.PRIO = function(msg)
-    msg = (msg or ""):lower():gsub("%s+", "")
+    local raw = msg or ""                      -- keep the raw text for arg parsing
+    msg = raw:lower():gsub("%s+", "")
     if msg == "lock" then
         PRIO.db.locked = true;  if PRIO.Display then PRIO.Display:ApplyLock() end
         print("|cff0cd29fPRIO|r: locked.")
@@ -434,14 +435,26 @@ SlashCmdList.PRIO = function(msg)
                 end
             end
         end
-    elseif msg == "myauras" or msg == "buffs" then
-        -- Dump every current player buff (id + name + secret status), tracked or not.
-        -- Finds the IDs of untracked auras (e.g. the six Roll the Bones buffs) and shows
-        -- whether they read clean. Run OOC to grab IDs, then IN COMBAT to test secrecy.
+    elseif msg:match("^myauras") or msg:match("^buffs") or msg:match("^rtb") then
+        -- Dump player buffs. Two sections: (1) enumerate all buffs (works OOC only), and
+        -- (2) probe specific IDs via GetPlayerAuraBySpellID (a path that can survive
+        -- combat). Grab IDs OOC, then test in-combat readability of those IDs.
+        --   /prio myauras                -> enumerate only
+        --   /prio myauras 193356 193358  -> enumerate + probe those IDs
+        --   /prio rtb                    -> probe the candidate Roll the Bones IDs
         local API = PRIO.API
+        local probe = {}
+        if msg:match("^rtb") then
+            -- Classic Roll the Bones buff IDs + the tracked RtB bar/Loaded Dice/SnD, so
+            -- one in-combat run shows which RtB signal is actually readable. Verify the
+            -- six buff IDs against a fresh OOC `/prio myauras` after rolling the bones.
+            probe = { 193356, 199600, 193358, 193357, 199603, 193359, 1214909, 256170, 315496 }
+        else
+            for d in raw:gmatch("%d+") do probe[#probe + 1] = tonumber(d) end
+        end
         print(("|cff0cd29fPRIO|r player buffs (%s):")
             :format(InCombatLockdown() and "|cff0cd29fin combat|r" or "|cffe0a03aOUT of combat - values always readable here|r"))
-        print(API.DumpPlayerAuras())
+        print(API.DumpPlayerAuras(probe))
     elseif msg == "setup" then
         if PRIO.Setup then PRIO.Setup:Toggle() end
     elseif msg == "changelog" or msg == "changes" then

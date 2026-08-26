@@ -961,25 +961,63 @@ end
 -- aren't in any CDV category (e.g. the six Roll the Bones buffs) AND learn whether
 -- they read clean in combat -- run it OOC to grab IDs, then IN COMBAT to test secrecy.
 -- Drives /prio myauras.
-function API.DumpPlayerAuras()
+function API.DumpPlayerAuras(probeIDs)
     local out = {}
+
+    -- SECTION 1: enumerate all player buffs by index. This WORKS OUT OF COMBAT but is
+    -- blocked in combat (GetAuraDataByIndex returns a secret object at index 1, so the
+    -- loop can't iterate) -- so use it OOC to discover IDs.
+    out[#out + 1] = "|cff6fb3ffEnumerate (works OOC only):|r"
     if not (C_UnitAuras and C_UnitAuras.GetAuraDataByIndex) then
-        return "C_UnitAuras.GetAuraDataByIndex unavailable."
+        out[#out + 1] = "  GetAuraDataByIndex unavailable."
+    else
+        local found = 0
+        for i = 1, 60 do
+            local ok, d = pcall(C_UnitAuras.GetAuraDataByIndex, "player", i, "HELPFUL")
+            if not ok or type(d) ~= "table" then break end
+            local sid = d.spellId
+            local idStr = (type(sid) == "number" and not IsSecret(sid)) and tostring(sid) or "<secret>"
+            local name = (type(sid) == "number" and not IsSecret(sid)) and (API.SpellName(sid) or "?") or "?"
+            local a = d.applications
+            local appStr = IsSecret(a) and "<secret>" or (type(a) == "number" and a > 0 and ("x" .. a) or "-")
+            local durSecret = IsSecret(d.expirationTime)
+            out[#out + 1] = ("  #%s  %s  %s%s")
+                :format(idStr, name, appStr, durSecret and "  |cffe0685adur:secret|r" or "")
+            found = found + 1
+        end
+        if found == 0 then out[#out + 1] = "  (none enumerable -- expected in combat)" end
     end
-    for i = 1, 60 do
-        local ok, d = pcall(C_UnitAuras.GetAuraDataByIndex, "player", i, "HELPFUL")
-        if not ok or type(d) ~= "table" then break end
-        local sid = d.spellId
-        -- spellId itself is normally clean; guard anyway so a secret one can't taint.
-        local idStr = (type(sid) == "number" and not IsSecret(sid)) and tostring(sid) or "<secret>"
-        local name = (type(sid) == "number" and not IsSecret(sid)) and (API.SpellName(sid) or "?") or "?"
-        local a = d.applications
-        local appStr = IsSecret(a) and "<secret>" or (type(a) == "number" and a > 0 and ("x" .. a) or "-")
-        local durSecret = IsSecret(d.expirationTime)
-        out[#out + 1] = ("  #%s  %s  %s%s")
-            :format(idStr, name, appStr, durSecret and "  |cffe0685adur:secret|r" or "")
+
+    -- SECTION 2: probe SPECIFIC ids via GetPlayerAuraBySpellID. This is a DIFFERENT API
+    -- path that can survive combat where enumeration can't -- this is the real test of
+    -- whether an untracked aura (e.g. a Roll the Bones buff) is readable while fighting.
+    if probeIDs and #probeIDs > 0 then
+        out[#out + 1] = "|cff6fb3ffDirect ID probes (GetPlayerAuraBySpellID):|r"
+        local haveAPI = C_UnitAuras and C_UnitAuras.GetPlayerAuraBySpellID
+        for _, id in ipairs(probeIDs) do
+            local name = API.SpellName(id) or "?"
+            if not haveAPI then
+                out[#out + 1] = ("  #%s  %s  |cffe0685aAPI missing|r"):format(id, name)
+            else
+                local ok, d = pcall(C_UnitAuras.GetPlayerAuraBySpellID, id)
+                if not ok then
+                    out[#out + 1] = ("  #%s  %s  |cffe0685aerror|r"):format(id, name)
+                elseif d == nil then
+                    out[#out + 1] = ("  #%s  %s  |cff5a6a76not present|r"):format(id, name)
+                elseif IsSecret(d) then
+                    out[#out + 1] = ("  #%s  %s  |cffe0685aPRESENT but SECRET|r"):format(id, name)
+                else
+                    local a = d.applications
+                    local appStr = IsSecret(a) and "appl:secret"
+                        or (type(a) == "number" and a > 0 and ("x" .. a) or "x1")
+                    local durSecret = IsSecret(d.expirationTime)
+                    out[#out + 1] = ("  #%s  %s  |cff0cd29fREADABLE|r %s%s")
+                        :format(id, name, appStr, durSecret and "  dur:secret" or "  dur:ok")
+                end
+            end
+        end
     end
-    if #out == 0 then return "  (no player buffs found)" end
+
     return table.concat(out, "\n")
 end
 
