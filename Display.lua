@@ -231,10 +231,15 @@ function Display:Render(result)
         end
     end
 
-    -- Title
+    -- Title (during the opener, show a distinct gold OPENER badge).
     if PRIO.db.showTitle and result.specLabel then
-        container.title:SetText(("|cff0cd29f%s|r  |cff5a6a76·|r  |cff9aa7b2%s|r")
-            :format(result.specLabel, result.modeLabel or ""))
+        if result.isOpener then
+            container.title:SetText(("|cff0cd29f%s|r  |cff5a6a76·|r  |cffffd200\226\150\182 OPENER|r")
+                :format(result.specLabel))
+        else
+            container.title:SetText(("|cff0cd29f%s|r  |cff5a6a76·|r  |cff9aa7b2%s|r")
+                :format(result.specLabel, result.modeLabel or ""))
+        end
         container.title:Show()
     else
         container.title:Hide()

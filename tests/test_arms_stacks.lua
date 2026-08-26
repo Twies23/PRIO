@@ -173,6 +173,26 @@ test("opener: custom db override wins, else spec default", function()
     H.reset(); H.rebind()
 end)
 
+-- Opener gate: an extra db.openerConds condition must pass for the opener to start.
+test("opener gate condition blocks / allows the opener", function()
+    H.reset(); H.S.specID = 71; H.rebind()
+    H.db.useOpener = true
+
+    H.Engine:StartOpener()
+    truthy(H.Engine.openerActive, "no gate -> opener starts on a fresh pull")
+
+    H.db.openerConds = { [H.armsSpec.key] = { op = "and", clauses = { { type = "talentYes", spell = 999999 } } } }
+    H.Engine:StartOpener()
+    falsy(H.Engine.openerActive, "failing gate condition blocks the opener")
+
+    H.db.openerConds = { [H.armsSpec.key] = { op = "and", clauses = { { type = "cdReady", spell = 107574 } } } }
+    H.Engine:StartOpener()
+    truthy(H.Engine.openerActive, "passing gate condition allows the opener")
+
+    H.db.openerConds = nil; H.db.useOpener = nil
+    H.reset(); H.rebind()
+end)
+
 -- Debuff conditions alias the tracked-aura read (buff logic), debuff-labeled.
 test("debuffActive / debuffMissing read the tracked aura", function()
     H.reset()

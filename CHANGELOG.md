@@ -1,5 +1,10 @@
 # PRIO Changelog
 
+## 0.2.64 (alpha)
+- **Opener "when to use" condition.** Options → Opener now has a condition chip (same editor as the priority lists) that gates whether the opener plays at the pull — on top of the built-in freshness check. Use it for things like "only open if Avatar is ready." Saved with profiles.
+- **In-opener indicator.** While the opener sequence is playing, the display title shows a gold **▶ OPENER** badge, so it's obvious you're in the opener vs. the normal priority.
+
+
 ## 0.2.63 (alpha)
 - **Clickable mode buttons under the display.** New **Behavior → Mode buttons under display** toggle adds an **Auto / ST / AoE** row beneath the strip (spec-driven — execute variants stay automatic). Click to hot-swap the live mode mid-combat; the active one is highlighted. They're plain indicator buttons, so there's nothing to taint.
 - **Removed the duplicate "AoE at N+ targets" control** from the Priorities screen. The **AoE at (enemies)** slider in Behavior is now per-spec (so it actually drives Arms' 2-target default), and is the single place to set it.

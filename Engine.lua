@@ -600,6 +600,12 @@ function Engine:StartOpener()
         if sid and API.IsReady(sid) then fresh = true; break end
     end
     if not fresh then return end
+    -- Optional user condition gating whether the opener plays at all.
+    local oc = PRIO.db.openerConds and PRIO.db.openerConds[spec.key]
+    if oc and PRIO.Cond then
+        local S = self:CurrentState()
+        if S and not PRIO.Cond.Eval(oc, S, nil) then return end
+    end
     local idx = 1
     while idx <= #op do
         local sid = spec.spells[op[idx]]
@@ -1167,7 +1173,7 @@ function Engine:Evaluate()
         end
         if n > 0 then
             return {
-                specLabel = spec.label or "", modeLabel = "Opener",
+                specLabel = spec.label or "", modeLabel = "Opener", isOpener = true,
                 title = (spec.label or "") .. "  ·  Opener",
                 primary = picks[1], queue = { unpack(picks, 2) },
                 debug = { mode = "opener", enemies = API.EnemyCount(), primary = picks[1].name },

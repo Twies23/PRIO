@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.64", {
+        "Openers can now have a \"when to use\" condition (Options -> Opener), and the display shows a gold OPENER badge while the opener is playing.",
+    } },
     { "0.2.63", {
         "Optional clickable Auto / ST / AoE buttons under the display (Behavior -> Mode buttons) to hot-swap mode in combat. Removed the duplicate AoE threshold from Priorities -- it's now the per-spec slider in Behavior.",
     } },

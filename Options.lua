@@ -495,17 +495,27 @@ end
 -- optional spell reference (cross-spell cooldown/buff checks).
 --------------------------------------------------------------------------------
 local editor
+local function NormalizeCond(c)
+    if not c then return { op = "and", clauses = {} } end
+    if not c.clauses then return { op = "and", clauses = { { type = c.type, spell = c.spell, v = c.v } } } end
+    return c
+end
+
 function Options:OpenCondEditor(spec, mode, index, variant)
-    local L = EnsureCustom(spec, mode, variant)
-    local e = L[index]
-    -- Normalize to group form for editing.
-    if not e.cond then
-        e.cond = { op = "and", clauses = {} }
-    elseif not e.cond.clauses then
-        e.cond = { op = "and", clauses = { { type = e.cond.type, spell = e.cond.spell, v = e.cond.v } } }
+    local cond, sid
+    if mode == "__opener__" then
+        -- Opener-gate condition, stored per spec in db.openerConds.
+        PRIO.db.openerConds = PRIO.db.openerConds or {}
+        cond = NormalizeCond(PRIO.db.openerConds[spec.key])
+        PRIO.db.openerConds[spec.key] = cond
+        sid = nil
+    else
+        local L = EnsureCustom(spec, mode, variant)
+        local e = L[index]
+        e.cond = NormalizeCond(e.cond)
+        cond = e.cond
+        sid  = PRIO.Engine:EntrySpellID(e)
     end
-    local cond = e.cond
-    local sid  = PRIO.Engine:EntrySpellID(e)
 
     if not editor then
         editor = UI.Window("PRIOCondEditor", 372, 300, "Conditions", "\226\128\148")
@@ -603,7 +613,8 @@ function Options:OpenCondEditor(spec, mode, index, variant)
 
     local function editorChanged()
         AfterChange()
-        if currentPage == "rotation" then Options:ShowPage("rotation") end
+        -- Reshow whichever page owns this condition (priority list or opener).
+        if currentPage == "rotation" or currentPage == "opener" then Options:ShowPage(currentPage) end
     end
 
     -- Match ALL / ANY (rebuilt each open so it captures this cond).
@@ -745,6 +756,25 @@ function Pages.opener()
     local op = PRIO.Engine:ActiveOpener() or {}
     local custom = IsCustomOpener(spec)
     local function refresh() AfterChange(); Options:ShowPage("opener") end
+
+    -- When-to-use gate: an optional condition that must pass at the pull for the opener
+    -- to play (on top of the built-in "a signature cooldown is ready" freshness check).
+    Section("When to use")
+    SettingRow("Extra condition at pull", 30, function(r)
+        local oc = PRIO.db.openerConds and PRIO.db.openerConds[spec.key]
+        local summary = Cond.Summary(oc, nil)
+        local isAlways = (summary == "always")
+        local cc = isAlways and C.muted or C.accent
+        local chip = CreateFrame("Button", nil, r, "BackdropTemplate")
+        chip:SetBackdrop({ bgFile = WHITE, edgeFile = WHITE, edgeSize = 1 })
+        chip:SetBackdropColor(cc[1], cc[2], cc[3], isAlways and 0.06 or 0.14)
+        chip:SetBackdropBorderColor(cc[1], cc[2], cc[3], 0.3)
+        local ct = UI.Font(chip, 11, cc); ct:SetPoint("CENTER", 0, 0)
+        ct:SetWidth(180); ct:SetJustifyH("CENTER"); ct:SetWordWrap(false)
+        ct:SetText(isAlways and "always (tap to add)" or summary)
+        chip:SetSize(200, 20); chip:SetPoint("RIGHT", 0, 0)
+        chip:SetScript("OnClick", function() Options:OpenCondEditor(spec, "__opener__") end)
+    end)
 
     Section("Sequence" .. (custom and "   (custom)" or "   (default)"))
     if custom then
@@ -974,7 +1004,7 @@ function Options:ShowPage(key)
     currentPage = key
     -- clear old content (hide; new widgets overlay at the same positions)
     if picker then picker:Hide() end
-    if editor and key ~= "rotation" then editor:Hide() end
+    if editor and key ~= "rotation" and key ~= "opener" then editor:Hide() end
     for _, f in ipairs(kids) do f:Hide() end
     wipe(kids)
 
