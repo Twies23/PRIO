@@ -187,6 +187,12 @@ local spec = {
     aoeAt    = 3,
     usesPandemic = true,             -- Rend refreshes in its pandemic window
 
+    -- Execute-range detection: Execute (163201) is usable only in execute range or on a
+    -- Sudden Death proc, so "usable without the proc glow" => in range (see Engine's
+    -- latched UpdateExecuteRange). Drives the "In execute range" preset.
+    executeSpell = 163201,
+    executeHold  = 4,                -- seconds to hold the latch through rage dips
+
     -- Hero split (see top-of-file note). activeHero picks the list; priorityVariants
     -- drives the Options hero picker + per-hero custom lists.
     activeHero = activeHero,
@@ -211,6 +217,7 @@ local spec = {
         { key = "immDemiseLt3", label = "Imminent Demise (<3)",  clause = notGlowing(ID_BLADESTORM) },
         { key = "collateral3",  label = "Collateral Damage (3)", clause = glowing(845) },
         { key = "execPrec2",    label = "Exec. Precision (2)",   clause = predMin(ID_EXECPREC, 2) },
+        { key = "execRange",    label = "In execute range",      clause = { type = "inExecuteRange" } },
     },
 
     -- Relevant buffs/debuffs (selectable in the condition editor regardless of build).
@@ -339,6 +346,7 @@ local spec = {
         rangeProbes = {
             { label = "Target health %",        kind = "health" },
             { label = "Execute usable (clean)", kind = "usableClean", spell = 163201 },
+            { label = "In execute range",       kind = "execRange" },
         },
         -- Proc-glow probes: testing whether the button glow is a readable stand-in for a
         -- stack count we can't read. Bladestorm glows at 3 Imminent Demise; Execute glows

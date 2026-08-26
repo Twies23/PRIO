@@ -558,6 +558,9 @@ function RotationDebug:Update()
                 if u == true then return "|cff0cd29fusable|r" end
                 if u == false then return "|cffe0685aunusable|r" end
                 return "|cffe0a03asecret|r"
+            elseif r.kind == "execRange" then
+                local on = PRIO.Engine and PRIO.Engine.InExecuteRange and PRIO.Engine:InExecuteRange()
+                return on and "|cff0cd29fYES (latched)|r" or "|cff5a6a76no|r"
             end
             return "-"
         end)

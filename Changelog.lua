@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.59", {
+        "New \"In execute range\" detection: since target health is secret, we infer execute phase from Execute being usable without a Sudden Death proc, latched so it rides through rage dips. Watch it in Rotation Debug's Execute range section.",
+    } },
     { "0.2.58", {
         "Rotation Debug: added Execute-range probes (target health %, Execute usable-clean) to test whether we can detect execute range (<35%) for an execute-phase priority.",
     } },

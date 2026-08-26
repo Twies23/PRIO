@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.59 (alpha)
+- **New "In execute range" detection (latched).** Target health is a secret value, so we can't read "< 35%" directly. Instead we infer it: Execute is only usable in execute range or on a Sudden Death proc, so **usable *without* the proc glow** means you're genuinely in range. Because rage also gates usability, the flag is **latched** — it holds through brief rage dips and only drops after a few seconds out of range (or on target change / combat end). It's exposed as an **"In execute range"** condition and shown live in Rotation Debug's *Execute range* section. Next step: auto-swap to execute-phase priority lists off this signal.
+
+
 ## 0.2.58 (alpha)
 - **Rotation Debug: new "Execute range" probe section.** Two rows to figure out whether we can auto-detect execute phase (target below 35%): **Target health %** (shows the value, or `secret / no target` if it's a protected value) and **Execute usable (clean)** (whether Execute's usable flag reads cleanly — it should flip on in execute range). If either reads clean on the dummy, we can build an "in execute range" condition and lift Execute's priority automatically.
 

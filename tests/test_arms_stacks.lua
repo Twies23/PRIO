@@ -93,6 +93,46 @@ test("condPresets: resolve to the underlying glow / counter clause", function()
     H.reset(); H.rebind()
 end)
 
+-- Latched execute-range detection: usable-without-proc = in range; holds through rage
+-- dips (spec.executeHold); resets on target change.
+test("execute range: latch on usable-without-proc, hold, reset", function()
+    H.reset(); H.S.specID = 71; H.rebind()
+    local E = H.Engine
+
+    -- Execute unusable -> not in range.
+    H.S.usableClean[EXECUTE] = false; H.S.glows[EXECUTE] = false
+    falsy(E:UpdateExecuteRange(), "unusable -> not in range")
+
+    -- Usable with no proc glow -> in execute range (latched on).
+    H.S.usableClean[EXECUTE] = true; H.S.glows[EXECUTE] = false
+    truthy(E:UpdateExecuteRange(), "usable + no proc -> in range")
+
+    -- A Sudden Death proc (glow) alone isn't range, but the latch holds.
+    H.S.usableClean[EXECUTE] = true; H.S.glows[EXECUTE] = true
+    truthy(E:UpdateExecuteRange(), "latch holds during a proc")
+
+    -- Brief rage dip (unusable) within the hold window -> still latched.
+    H.S.usableClean[EXECUTE] = false; H.S.glows[EXECUTE] = false
+    truthy(E:UpdateExecuteRange(), "holds through a brief unusable dip")
+
+    -- Past the hold window with no fresh true -> drops.
+    H.S.now = H.S.now + 10
+    falsy(E:UpdateExecuteRange(), "drops after the hold window")
+
+    -- Re-latch, then a target change clears it immediately.
+    H.S.usableClean[EXECUTE] = true; H.S.glows[EXECUTE] = false
+    truthy(E:UpdateExecuteRange())
+    H.fire("PLAYER_TARGET_CHANGED")
+    falsy(E:InExecuteRange(), "target change resets the latch")
+
+    -- The preset resolves to the latched flag.
+    H.S.usableClean[EXECUTE] = true; H.S.glows[EXECUTE] = false
+    E:UpdateExecuteRange()
+    truthy(evalClause({ type = "preset:execRange" }), "In execute range preset true when latched")
+
+    H.reset(); H.rebind()
+end)
+
 -- Debuff conditions alias the tracked-aura read (buff logic), debuff-labeled.
 test("debuffActive / debuffMissing read the tracked aura", function()
     H.reset()

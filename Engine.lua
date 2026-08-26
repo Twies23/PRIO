@@ -404,6 +404,13 @@ local function EvalClause(cl, S, selfSid)
     -- Predicted stacks (our own cast counter). Always defined (0 when none).
     elseif t == "predStackMin" then return PredStacks(sid, S) >= (cl.v or 1)
     elseif t == "predStackMax" then return PredStacks(sid, S) <= (cl.v or 1)
+    -- Latched execute-range flag (secret-safe: usable-without-proc, debounced).
+    elseif t == "inExecuteRange" then
+        if S and S.execRange ~= nil then return S.execRange end
+        return Engine:InExecuteRange()
+    elseif t == "notExecuteRange" then
+        if S and S.execRange ~= nil then return not S.execRange end
+        return not Engine:InExecuteRange()
     elseif t == "chargesMin" then return (ChargeCount(sid) or 0) >= (cl.v or 1)
     elseif t == "chargesMax" then return (ChargeCount(sid) or 0) <= (cl.v or 1)
     -- Buff time-left (Zenith ending): predicted from the cast, since remaining is secret
@@ -748,8 +755,13 @@ PRIO:On("PLAYER_REGEN_ENABLED", function()
     -- the real values now that they're readable again.
     local P = Engine.P
     if P then P.fsExpire = 0; P.mote = false; P.skStacks = 0; if P.auraExpire then wipe(P.auraExpire) end; if P.stacks then wipe(P.stacks) end end
+    Engine:ResetExecuteRange()
     Engine.openerActive = false
 end)
+
+-- A new target starts at full health -> drop the latched execute-range flag so it
+-- can't carry over from the last mob.
+PRIO:On("PLAYER_TARGET_CHANGED", function() Engine:ResetExecuteRange() end)
 
 -- Predicted charge tracker. Real current charges are secret in combat, so we model
 -- them and clamp to the readable castable state each tick.
@@ -843,6 +855,33 @@ function Engine:ResolveMode(enemies)
     return "st"
 end
 
+-- Execute-phase detection, LATCHED. Target health is a secret value, so we can't read
+-- "< 35%" directly. But an execute ability (spec.executeSpell) becomes usable ONLY in
+-- execute range or on a proc -- so "usable AND not glowing (no proc)" means we're
+-- genuinely in range. Rage (secret) also gates usability, which makes the raw read
+-- flicker, so we LATCH: hold the flag on through brief non-usable dips, drop it after
+-- spec.executeHold seconds without a fresh true (or on target change / combat end).
+Engine.execLatch = { active = false, lastRaw = 0 }
+
+function Engine:UpdateExecuteRange()
+    local L = self.execLatch
+    local ex = spec and spec.executeSpell
+    if not ex then L.active = false; return false end
+    local usable = API.UsableClean(ex)      -- true/false/nil (clean read)
+    local glow   = API.SpellGlowing(ex)     -- true = a proc (e.g. Sudden Death) is up
+    local raw = (usable == true) and (glow == false)   -- castable for a reason other than a proc
+    local now = GetTime()
+    if raw then
+        L.active = true; L.lastRaw = now
+    elseif L.active and (now - L.lastRaw) > (spec.executeHold or 4) then
+        L.active = false
+    end
+    return L.active
+end
+
+function Engine:InExecuteRange() return self.execLatch.active end
+function Engine:ResetExecuteRange() self.execLatch.active = false; self.execLatch.lastRaw = 0 end
+
 --------------------------------------------------------------------------------
 -- State object handed to each priority predicate
 --------------------------------------------------------------------------------
@@ -871,10 +910,13 @@ local function BuildState(self, mode, enemies)
         P.fsExpire = now + 18
     end
 
+    local execRange = self:UpdateExecuteRange()        -- refresh the latch once per evaluate
+
     return {
         now       = now,
         mode      = mode,
         enemies   = enemies,
+        execRange = execRange,                         -- latched "in execute range" boolean
         maelstrom = P.maelstrom or 0,                  -- predicted (synced when readable)
         maelstromMax = P.maelstromMax or (spec and spec.maelstromMax) or 0,
         maelstromReadable = realMs ~= nil,
