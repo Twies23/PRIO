@@ -1,5 +1,10 @@
 # PRIO Changelog
 
+## 0.3.10
+**Outlaw — Opportunity charge tracking.** The stack count is hidden in combat, so PRIO calculates it, anchored to signals it *can* read:
+- The Pistol Shot button glows while Opportunity is up, and with Fan the Hammer every proc is +3 and every Pistol Shot −3 (cap 6) — so the count is only ever 0, 3, or 6, and a glowing Pistol Shot means 3+. That makes the *"3 stacks + low combo points"* Pistol Shot fully readable.
+- The count self-corrects: whenever Opportunity empties and the glow goes off, it hard-resets to 0, so it can't drift over a fight. Double-strikes add a proc; Pistol Shot spends. All amounts adjust to whether Fan the Hammer is talented.
+
 ## 0.3.9
 - The Keep It Rolling alert now shows its **keybind** and clearer wording: *"2+ roll detected — extend if it's a 3 or Jackpot."* Says exactly what PRIO knows (a good roll) and leaves the extend-or-not call to you.
 

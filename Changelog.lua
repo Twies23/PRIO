@@ -11,6 +11,10 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.3.10", {
+        "Outlaw Opportunity charge tracking. The stack count is hidden in combat, so PRIO calculates it, anchored to readable signals: the Pistol Shot button glows while Opportunity is up, and with Fan the Hammer every proc is +3 / every Pistol Shot -3 (cap 6) -- so the count is only ever 0/3/6 and a glowing Pistol Shot means 3+.",
+        "Self-correcting: when Opportunity empties and the glow goes off, the count hard-resets to 0, so it can't drift. Double-strikes add a proc, Pistol Shot spends, and all amounts adjust to whether Fan the Hammer is talented.",
+    } },
     { "0.3.9", {
         "The Keep It Rolling alert now shows its keybind and clearer wording: \"2+ roll detected -- extend if it's a 3 or Jackpot.\" Says what PRIO knows (a good roll) and leaves the extend call to you.",
     } },

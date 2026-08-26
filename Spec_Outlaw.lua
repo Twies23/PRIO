@@ -82,6 +82,8 @@ local function cpMin(n)      return { type = "resourceMin", v = n } end   -- com
 local function cpMax(n)      return { type = "resourceMax", v = n } end   -- combo points <= n
 local function stacksMin(id, n) return { type = "stacksMin", spell = id, v = n } end
 local function stacksMax(id, n) return { type = "stacksMax", spell = id, v = n } end
+local function glow(id)      return { type = "glowing", spell = id } end            -- button proc glow
+local function predOppMin(n) return { type = "predStackMin", spell = ID_OPPORTUNITY, v = n } end  -- predicted Opportunity charges
 
 --------------------------------------------------------------------------------
 -- Trickster priority (Wowhead 12.1). Combo-point gates are exact; RtB stage reads
@@ -113,8 +115,8 @@ local st = {
     { spell = "BladeRush" },                                                        -- on CD
     { spell = "BetweenTheEyes", cond = cpMin(6) },                                  -- finisher at >=6 CP
     { spell = "Dispatch",      cond = cpMin(6) },                                   -- finisher at >=6 CP
-    { spell = "PistolShot",    cond = OR(stacksMin(ID_OPPORTUNITY, 6),
-                                         AND(stacksMin(ID_OPPORTUNITY, 3), cpMin(1), cpMax(3))) },
+    { spell = "PistolShot",    cond = OR(predOppMin(6),                                         -- Opportunity at cap (predicted)
+                                         AND(glow(ID_PISTOLSHOT), cpMin(1), cpMax(3))) },   -- Opportunity up (glow=>3+) & low CP
     { spell = "SinisterStrike", cond = cpMax(5) },                                  -- builder at <=5 CP
 }
 
@@ -129,8 +131,8 @@ local aoe = {
     { spell = "BladeRush" },
     { spell = "BetweenTheEyes", cond = cpMin(6) },
     { spell = "Dispatch",      cond = cpMin(6) },
-    { spell = "PistolShot",    cond = OR(stacksMin(ID_OPPORTUNITY, 6),
-                                         AND(stacksMin(ID_OPPORTUNITY, 3), cpMin(1), cpMax(3))) },
+    { spell = "PistolShot",    cond = OR(predOppMin(6),                                         -- Opportunity at cap (predicted)
+                                         AND(glow(ID_PISTOLSHOT), cpMin(1), cpMax(3))) },   -- Opportunity up (glow=>3+) & low CP
     { spell = "SinisterStrike", cond = cpMax(5) },
 }
 
@@ -158,6 +160,22 @@ local spec = {
         -- to know how many strikes landed (1 or 2). A yield equal to the strike count =
         -- no Roll-the-Bones bonus = stage 1; a yield above it = stage 2+ (the extra CP).
         doubleMarker = { aura = ID_OPPORTUNITY },
+    },
+
+    -- OPPORTUNITY charge tracking. The stack COUNT is secret in combat, so PRIO predicts
+    -- it, anchored to readable signals: the Pistol Shot button GLOWS while Opportunity is
+    -- up, and with Fan the Hammer every proc is +3 and every Pistol Shot -3 (cap 6) -- so
+    -- the count is only ever 0 / 3 / 6, and glow-on means >=3. Glow off snaps it to 0 (so
+    -- drift can't build up); a detected Sinister Strike double-strike adds a proc (3->6);
+    -- Pistol Shot spends. Synced to the real count whenever it reads clean. All amounts
+    -- gate on Fan the Hammer so it degrades to a single-charge buff without it.
+    oppInfer = {
+        aura      = ID_OPPORTUNITY,
+        glowSpell = ID_PISTOLSHOT,     -- button glow = Opportunity present (>=3 with Fan the Hammer)
+        spendKey  = "PistolShot",
+        talent    = 381846,            -- Fan the Hammer (rank 2: +2 gain / +2 spend / max 6)
+        gain = 3, spend = 3, cap = 6,  -- with Fan the Hammer
+        gainBase = 1, spendBase = 1, capBase = 1,   -- without it (single charge)
     },
 
     -- ALERTS: advisory nudges, not auto-suggestions. Keep It Rolling's value depends on
@@ -188,8 +206,8 @@ local spec = {
         { key = "lowCP",     label = "Low combo points (<=2)", clause = cpMax(2) },
         { key = "rtbReroll", label = "RtB needs reroll",       clause = rtbReroll() },
         { key = "rtbGood",   label = "RtB good roll (2+)",     clause = AND(buffUp(ID_ROLLBONES), predStage2True()) },
-        { key = "opp6",      label = "Opportunity (6)",        clause = stacksMin(ID_OPPORTUNITY, 6) },
-        { key = "opp3",      label = "Opportunity (3+)",       clause = stacksMin(ID_OPPORTUNITY, 3) },
+        { key = "opp6",      label = "Opportunity (6)",        clause = predOppMin(6) },
+        { key = "opp3",      label = "Opportunity up (3+)",    clause = glow(ID_PISTOLSHOT) },
     },
 
     auras = {
@@ -305,6 +323,13 @@ local spec = {
             { label = "Between the Eyes (dbf)",  spell = ID_BTE },
             { label = "Unseen Blade",            spell = ID_UNSEENBLADE },
             { label = "Flawless Form",           spell = ID_FLAWLESS },
+        },
+        predStacks = {
+            -- Predicted Opportunity charges (0/3/6 with Fan the Hammer), glow-anchored.
+            { label = "Opportunity (pred)",      spell = ID_OPPORTUNITY },
+        },
+        glows = {
+            { label = "Pistol Shot (Opportunity)", spell = ID_PISTOLSHOT },   -- glow = Opportunity present (>=3)
         },
         rangeProbes = {
             { label = "Combo Points",            kind = "resource" },

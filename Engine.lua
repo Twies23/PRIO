@@ -733,6 +733,24 @@ local function MarkerCount(dm)
     return a == true and 1 or 0
 end
 
+-- Exact stack count ONLY when it reads clean (from the aura's own .applications or the
+-- Cooldown Viewer's rendered number), else nil. Used to sync a predicted counter to the
+-- real value whenever the game exposes it. "assumed"/nil sources return nil (unreadable).
+local function ReadableStacks(aura)
+    if not (aura and API.AuraStackSource) then return nil end
+    local n, src = API.AuraStackSource(aura)
+    if n ~= nil and (src == "appl" or src == "cdm") then return n end
+    return nil
+end
+
+-- Opportunity charge amounts, talent-scaled. Fan the Hammer (rank 2) turns each grant
+-- and each Pistol Shot into +/-3 and raises the cap to 6; without it, a single charge.
+local function OppAmounts(oi)
+    local fth = oi.talent and API.IsTalentSelected(oi.talent)
+    if fth then return (oi.gain or 3), (oi.spend or 3), (oi.cap or 6) end
+    return (oi.gainBase or 1), (oi.spendBase or 1), (oi.capBase or 1)
+end
+
 PRIO:On("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
     if unit ~= "player" or not spec then return end
     spellID = API.SafeNum(spellID)
@@ -757,6 +775,13 @@ PRIO:On("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
             Engine.P.predFlags[si.flag] = nil            -- fresh roll: stage unknown again
             Engine.P.siEval = nil
         end
+    end
+    -- Opportunity spender (Pistol Shot) consumes charges on cast; the glow anchor in
+    -- BuildState corrects to 0 next tick if that emptied it.
+    local oi = spec.oppInfer
+    if oi and key == oi.spendKey then
+        local _, spend = OppAmounts(oi)
+        Engine.P.oppStacks = math.max(0, (Engine.P.oppStacks or 0) - spend)
     end
     -- Spend a predicted charge and start its recharge.
     local cc = spec.chargeTrack and spec.chargeTrack[key] and Engine.P.charges[key]
@@ -825,7 +850,7 @@ PRIO:On("PLAYER_REGEN_ENABLED", function()
     -- Combat ended: clear volatile procs; Maelstrom and charges keep syncing from
     -- the real values now that they're readable again.
     local P = Engine.P
-    if P then P.fsExpire = 0; P.mote = false; P.skStacks = 0; P.siEval = nil; P.siStartCP = nil; P.siStartOpp = nil; if P.auraExpire then wipe(P.auraExpire) end; if P.stacks then wipe(P.stacks) end; if P.predFlags then wipe(P.predFlags) end end
+    if P then P.fsExpire = 0; P.mote = false; P.skStacks = 0; P.siEval = nil; P.siStartCP = nil; P.siStartOpp = nil; P.oppStacks = 0; if P.auraExpire then wipe(P.auraExpire) end; if P.stacks then wipe(P.stacks) end; if P.predFlags then wipe(P.predFlags) end end
     Engine:ResetExecuteRange()
     Engine.openerActive = false
 end)
@@ -1007,6 +1032,13 @@ local function BuildState(self, mode, enemies)
                 local oppNow = MarkerCount(si.doubleMarker)
                 if oppNow ~= nil and oppNow > startOpp then strikes = 2 end
             end
+            -- A double-strike granted Opportunity: add a proc's worth of charges (this
+            -- is the 3->6 step; the 0->3 step is also caught by the glow anchor below).
+            if strikes == 2 and spec.oppInfer then
+                local oi = spec.oppInfer
+                local gain, _, cap = OppAmounts(oi)
+                P.oppStacks = math.min(cap, (P.oppStacks or 0) + gain)
+            end
             -- Only measure when the full possible yield fits without hitting the CP cap,
             -- so a clipped stage-2 can never masquerade as stage 1.
             if startCP <= maxCP - (strikes + 1) then
@@ -1019,6 +1051,29 @@ local function BuildState(self, mode, enemies)
                 end
             end
         end
+    end
+
+    -- OPPORTUNITY charge count (Outlaw). Predicted, but ANCHORED to readable signals so
+    -- it self-corrects: sync to the real stack count when it reads clean; otherwise the
+    -- proc glow pins the low end (glow off => exactly 0, so drift can't accumulate past
+    -- one empty; glow on while we thought 0 => snap to a proc's worth). The +proc step
+    -- (3->6) is added on detected double-strikes above; Pistol Shot spends on cast. The
+    -- result lands in P.stacks so predStackMin(aura) reads it.
+    local oi = spec.oppInfer
+    if oi then
+        local gain, _, cap = OppAmounts(oi)
+        P.oppStacks = P.oppStacks or 0
+        local rc = ReadableStacks(oi.aura)
+        if rc ~= nil then
+            P.oppStacks = rc
+        elseif oi.glowSpell then
+            local g = API.SpellGlowing(oi.glowSpell)
+            if g == false then P.oppStacks = 0
+            elseif g == true and P.oppStacks == 0 then P.oppStacks = gain end
+        end
+        P.oppStacks = math.max(0, math.min(cap, P.oppStacks))
+        P.stacks = P.stacks or {}
+        P.stacks[oi.aura] = P.oppStacks
     end
 
     -- Expire a predicted MotE that was granted but never consumed.
