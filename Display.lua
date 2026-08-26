@@ -250,6 +250,7 @@ function Display:Render(result)
         local specID = API.GetSpecID()
         local spec = specID and PRIO.specs and PRIO.specs[specID]
         self:BuildModeButtons(spec)
+        self:PositionModeBar()
         self:UpdateModeButtons()
         modeBar:Show()
     elseif modeBar then
@@ -263,15 +264,15 @@ end
 -- frames that just set db.mode and re-evaluate -- nothing secure, safe in combat.
 --------------------------------------------------------------------------------
 local function StyleModeButton(b, active)
+    -- Active = accent-filled; inactive = dark. Text stays WHITE either way.
     if active then
-        b:SetBackdropColor(accent[1], accent[2], accent[3], 0.85)
+        b:SetBackdropColor(accent[1], accent[2], accent[3], 0.9)
         b:SetBackdropBorderColor(accent[1], accent[2], accent[3], 1)
-        b.text:SetTextColor(0.02, 0.09, 0.07, 1)
     else
         b:SetBackdropColor(0, 0, 0, 0.7)
         b:SetBackdropBorderColor(accent[1], accent[2], accent[3], 0.4)
-        b.text:SetTextColor(0.72, 0.80, 0.86, 1)
     end
+    b.text:SetTextColor(1, 1, 1, 1)
 end
 
 function Display:UpdateModeButtons()
@@ -280,9 +281,29 @@ function Display:UpdateModeButtons()
     for _, b in ipairs(modeBar.buttons) do StyleModeButton(b, b.value == cur) end
 end
 
+local function SaveModeBarPoint()
+    if not modeBar then return end
+    local p, _, rp, x, y = modeBar:GetPoint()
+    PRIO.db.modeBarPoint = { p, rp, x, y }
+end
+
+-- Anchor the bar: a saved custom point if the user dragged it, else under the strip.
+function Display:PositionModeBar()
+    if not modeBar or modeBar.isMoving then return end
+    modeBar:ClearAllPoints()
+    local mp = PRIO.db.modeBarPoint
+    if mp then
+        modeBar:SetPoint(mp[1], UIParent, mp[2], mp[3], mp[4])
+    else
+        modeBar:SetPoint("TOP", container, "BOTTOM", 0, -18)
+    end
+end
+
 function Display:BuildModeButtons(spec)
     if not modeBar then
-        modeBar = CreateFrame("Frame", "PRIOModeBar", container)
+        modeBar = CreateFrame("Frame", "PRIOModeBar", UIParent)
+        modeBar:SetMovable(true)
+        modeBar:SetClampedToScreen(true)
         modeBar.buttons = {}
     end
     local key = (spec and spec.key) or "none"
@@ -314,11 +335,18 @@ function Display:BuildModeButtons(spec)
             if PRIO.Tick then PRIO:Tick() end
             Display:UpdateModeButtons()
         end)
+        -- Drag any button to move the whole bar (only when the display is unlocked).
+        b:RegisterForDrag("LeftButton")
+        b:SetScript("OnDragStart", function()
+            if not PRIO.db.locked then modeBar.isMoving = true; modeBar:StartMoving() end
+        end)
+        b:SetScript("OnDragStop", function()
+            modeBar:StopMovingOrSizing(); modeBar.isMoving = false; SaveModeBarPoint()
+        end)
         modeBar.buttons[#modeBar.buttons + 1] = b
         x = x + BW + GAP
     end
-    modeBar:ClearAllPoints()
-    modeBar:SetPoint("TOP", container, "BOTTOM", 0, -18)
+    self:PositionModeBar()
 end
 
 function Display:Hide()

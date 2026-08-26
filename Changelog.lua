@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.65", {
+        "Mode buttons are now draggable (when the display is unlocked) and remember their spot; the active button keeps white text on the accent fill.",
+    } },
     { "0.2.64", {
         "Openers can now have a \"when to use\" condition (Options -> Opener), and the display shows a gold OPENER badge while the opener is playing.",
     } },
