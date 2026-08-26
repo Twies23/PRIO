@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.3.19
+- **Fix:** Opportunity was still jumping straight to 6 on the first proc. The glow anchor was "floor to a proc's worth when the button lights up," which double-counted against the actual proc landing at the same instant. Now the proc detection alone drives the count (first proc = 3, second = 6), and the glow only resets it to 0 when Opportunity empties.
+
 ## 0.3.18
 - Outlaw: the Roll the Bones / Opportunity combo-point detection now works by **order, not exact timing**. Your `/prio ssdelay` runs showed the instant bump can land anywhere from 0–120ms and the double-strike from ~200–330ms, so a fixed millisecond cutoff was brittle. It now just uses "first bump after the cast = stage, second bump = double-strike," which is immune to frame-rate and latency jitter.
 

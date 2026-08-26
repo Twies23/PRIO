@@ -1044,14 +1044,13 @@ local function BuildState(self, mode, enemies)
     -- can't fire a cap-dump Pistol Shot that overcaps combo points.
     local oi = spec.oppInfer
     if oi and oi.glowSpell then
-        local gain, _, cap = OppAmounts(oi)
+        local _, _, cap = OppAmounts(oi)
         P.oppStacks = P.oppStacks or 0
-        local g = API.SpellGlowing(oi.glowSpell)
-        if g == false then
-            P.oppStacks = 0                        -- empty: hard reset (drift correction)
-        elseif g == true and P.oppStacks == 0 then
-            P.oppStacks = gain                     -- glowing but we have 0 -> floor at one proc
-        end                                        -- glowing & >0: keep the proc-tracked climb (3->6)
+        -- The proc counter (double-strike detection) drives the climb; the glow is only a
+        -- reset: glow off => Opportunity is empty => 0 (drift correction). We deliberately
+        -- do NOT floor-to-a-proc on glow-on -- that would double-count against a proc that
+        -- lands the same instant the button lights up (jumping straight to 6).
+        if API.SpellGlowing(oi.glowSpell) == false then P.oppStacks = 0 end
         P.oppStacks = math.max(0, math.min(cap, P.oppStacks))
         P.stacks = P.stacks or {}
         P.stacks[oi.aura] = P.oppStacks

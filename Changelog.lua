@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.3.19", {
+        "Fix: Opportunity still jumped to 6 on the first proc. The glow anchor floored the count to a proc's worth when the button lit up, double-counting against the actual proc landing the same instant. Now the proc detection alone drives the count (first proc = 3, second = 6); the glow only resets it to 0 when Opportunity empties.",
+    } },
     { "0.3.18", {
         "Outlaw: the Roll the Bones / Opportunity combo-point detection now works by ORDER, not exact timing. The instant bump can land 0-120ms and the double-strike ~200-330ms, so a fixed millisecond cutoff was brittle; it now uses 'first bump after the cast = stage, second bump = double-strike', immune to frame-rate and latency jitter.",
     } },
