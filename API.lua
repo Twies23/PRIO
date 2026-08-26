@@ -545,6 +545,20 @@ end
 -- draws the number when it's > 1, so: no frame -> nil; not active -> 0; active with a
 -- number -> that number; active without a number -> 1. Requires the buff to be tracked
 -- in the Cooldown Manager.
+-- Target health percent (0-100) if readable, else nil (no target, or a secret value).
+-- Tests whether execute range (< 35%) can be detected at all -- enemy health may or may
+-- not be a secret value in combat like our own resources are.
+function API.TargetHealthPct()
+    if not (UnitExists and UnitExists("target")) then return nil end
+    local okH, h  = pcall(UnitHealth, "target")
+    local okM, hm = pcall(UnitHealthMax, "target")
+    if not (okH and okM) then return nil end
+    if h == nil or hm == nil or IsSecret(h) or IsSecret(hm) then return nil end
+    h, hm = tonumber(h), tonumber(hm)
+    if not (h and hm) or hm <= 0 then return nil end
+    return (h / hm) * 100
+end
+
 -- Spell activation overlay ("proc glow"): true when Blizzard is glowing the spell's
 -- button (e.g. Bladestorm lights up at 3 Imminent Demise, Execute at a Sudden Death
 -- proc). This is a DIFFERENT signal than the aura stack count, so it can be readable

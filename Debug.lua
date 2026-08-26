@@ -453,6 +453,12 @@ function RotationDebug:Rebuild(spec)
                 row("g" .. i, g.label or "?")
             end
         end
+        if rd.rangeProbes and #rd.rangeProbes > 0 then
+            head("Execute range  (probe)")
+            for i, r in ipairs(rd.rangeProbes) do
+                row("r" .. i, r.label or "?")
+            end
+        end
     end
 
     rLayoutH = y + 20
@@ -539,6 +545,23 @@ function RotationDebug:Update()
             return "|cffe0a03asecret/na|r"
         end)
         set("g" .. i, ok and res or "|cffe0685aerr|r")
+    end
+    for i, r in ipairs(rd.rangeProbes or {}) do
+        local ok, res = pcall(function()
+            if r.kind == "health" then
+                local p = API.TargetHealthPct and API.TargetHealthPct()
+                if p == nil then return "|cffe0a03asecret / no target|r" end
+                local col = (p < 35) and "0cd29f" or "9fb0be"
+                return ("|cff%s%.0f%%|r%s"):format(col, p, p < 35 and "  |cff0cd29f(execute)|r" or "")
+            elseif r.kind == "usableClean" then
+                local u = API.UsableClean and API.UsableClean(r.spell)
+                if u == true then return "|cff0cd29fusable|r" end
+                if u == false then return "|cffe0685aunusable|r" end
+                return "|cffe0a03asecret|r"
+            end
+            return "-"
+        end)
+        set("r" .. i, ok and res or "|cffe0685aerr|r")
     end
 end
 

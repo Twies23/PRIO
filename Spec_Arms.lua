@@ -334,6 +334,12 @@ local spec = {
         predStacks = {
             { label = "Exec. Precision (pred)", spell = ID_EXECPREC },
         },
+        -- Execute-range probes: can we detect target < 35% at all? Testing target health
+        -- readability and whether Execute's usable flag reads clean (flips on in range).
+        rangeProbes = {
+            { label = "Target health %",        kind = "health" },
+            { label = "Execute usable (clean)", kind = "usableClean", spell = 163201 },
+        },
         -- Proc-glow probes: testing whether the button glow is a readable stand-in for a
         -- stack count we can't read. Bladestorm glows at 3 Imminent Demise; Execute glows
         -- on a Sudden Death proc; Mortal Strike may glow with Executioner's Precision.

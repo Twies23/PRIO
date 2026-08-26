@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.58", {
+        "Rotation Debug: added Execute-range probes (target health %, Execute usable-clean) to test whether we can detect execute range (<35%) for an execute-phase priority.",
+    } },
     { "0.2.57", {
         "Renamed the debuff conditions to \"Enemy has debuff\" / \"Enemy missing debuff\" for clarity.",
     } },

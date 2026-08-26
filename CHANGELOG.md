@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.58 (alpha)
+- **Rotation Debug: new "Execute range" probe section.** Two rows to figure out whether we can auto-detect execute phase (target below 35%): **Target health %** (shows the value, or `secret / no target` if it's a protected value) and **Execute usable (clean)** (whether Execute's usable flag reads cleanly — it should flip on in execute range). If either reads clean on the dummy, we can build an "in execute range" condition and lift Execute's priority automatically.
+
+
 ## 0.2.57 (alpha)
 - **Renamed the debuff conditions to "Enemy has debuff" / "Enemy missing debuff"** — the debuff lives on your target, so the label now says so.
 
