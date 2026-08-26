@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.66 (alpha)
+- **Updated Slayer defaults.** The AoE and ST-Execute lists are refreshed to the latest tuned versions, and **AoE-Execute now just reuses the AoE list** (nothing special in execute there). Reset Arms lists to default to pick them up. (Colossus unchanged.)
+
+
 ## 0.2.65 (alpha)
 - **Mode buttons are now movable.** Drag them anywhere while the display is unlocked (drag any button); the position is remembered. They default to just under the strip.
 - **Active button keeps white text** on the accent fill (instead of dark), so the selected mode reads clearly.

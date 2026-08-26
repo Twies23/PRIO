@@ -91,15 +91,32 @@ local slayer_st = {
     { spell = "Slam" },
 }
 
--- Slayer shared list for AoE, ST-Execute, and AoE-Execute (user-tuned default, 0.2.61):
--- the user set all three to the same list.
-local slayer_exec = {
+-- Slayer AoE (user-tuned default, 0.2.66). Also used for AoE-Execute (nothing special
+-- in execute at AoE).
+local slayer_aoe = {
+    { spell = "SweepingStrikes" },
+    { spell = "Cleave", cond = debuffDown(ID_REND) },                                 -- enemy no Rend debuff
     { spell = "Cleave", cond = AND(refreshable(ID_REND), cdReady(ID_COLOSSUS_DBF)) }, -- Rend in pandemic AND Colossus Smash ready
     { spell = "Avatar" },
     { spell = "ColossusSmash" },
+    { spell = "Cleave", cond = preset("collateral3") },                              -- 3 Collateral Damage
+    { spell = "Bladestorm" },
+    { spell = "Execute", cond = preset("suddenDeath") },                              -- Sudden Death up
+    { spell = "Cleave" },
+    { spell = "Overpower" },
+    { spell = "Execute" },
+    { spell = "MortalStrike", cond = refreshable(ID_REND) },                          -- Rend in pandemic
+    { spell = "Slam" },
+}
+
+-- Slayer ST-Execute (user-tuned default, 0.2.66).
+local slayer_st_execute = {
+    { spell = "Cleave", cond = AND(refreshable(ID_REND), cdReady(ID_COLOSSUS_DBF)) }, -- Rend in pandemic AND Colossus Smash ready
+    { spell = "Avatar", cond = OR(cdReady(ID_COLOSSUS_DBF), buffUp(ID_COLOSSUS_DBF)) }, -- Colossus Smash ready OR up
+    { spell = "ColossusSmash" },
     { spell = "HeroicStrike" },
     { spell = "Bladestorm", cond = buffUp(ID_COLOSSUS_DBF) },                         -- Colossus Smash buff
-    { spell = "MortalStrike", cond = refreshable(ID_REND) },                          -- Rend in pandemic
+    { spell = "MortalStrike", cond = preset("execPrec2") },                           -- 2 Executioner's Precision
     { spell = "Execute", cond = preset("suddenDeath") },                              -- Sudden Death up
     { spell = "Overpower" },
     { spell = "Execute" },
@@ -188,8 +205,8 @@ local colossus_aoe_execute = {
 -- No Cleave tier: Arms uses ST (1 target) and AoE (2+, configurable), each with an
 -- execute-phase variant the engine swaps in automatically.
 local heroLists = {
-    slayer   = { st = slayer_st,   aoe = slayer_exec,
-                 st_execute = slayer_exec,   aoe_execute = slayer_exec },
+    slayer   = { st = slayer_st,   aoe = slayer_aoe,
+                 st_execute = slayer_st_execute,   aoe_execute = slayer_aoe },
     colossus = { st = colossus_st, aoe = colossus_aoe,
                  st_execute = colossus_st_execute, aoe_execute = colossus_aoe_execute },
 }

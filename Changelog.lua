@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.66", {
+        "Updated the Slayer AoE and ST-Execute default lists to the latest tuned versions; AoE-Execute now just uses the AoE list. Reset Arms lists to default. Colossus unchanged.",
+    } },
     { "0.2.65", {
         "Mode buttons are now draggable (when the display is unlocked) and remember their spot; the active button keeps white text on the accent fill.",
     } },
