@@ -92,4 +92,24 @@ test("outlaw alert: Keep It Rolling advisory only on a confirmed good roll", fun
     falsy(r2 and r2.alerts, "no KiR alert on a stage-1 roll")
 end)
 
+test("outlaw: an Energy-cost ability (Roll the Bones) is not blocked by combo points", function()
+    setOutlaw()
+    H.S.power[COMBO] = 2                                   -- combo points readable = 2
+    H.S.powerCost = { [ROLLBONES] = { type = 3, cost = 25 } }  -- RtB: 25 Energy (type 3), 0 CP
+    H.rebind()
+    local r = H.Engine:Evaluate()
+    eq(r and r.primary and r.primary.name, "Spell" .. ROLLBONES,
+       "RtB (Energy cost) is recommended at 2 combo points, not gated out")
+end)
+
+test("outlaw: a combo-point-cost ability IS still gated by combo points", function()
+    setOutlaw()
+    H.S.power[COMBO] = 2
+    H.S.powerCost = { [ROLLBONES] = { type = 4, cost = 5 } }   -- pretend RtB costs 5 CP
+    H.rebind()
+    local r = H.Engine:Evaluate()
+    falsy(r and r.primary and r.primary.name == "Spell" .. ROLLBONES,
+          "a real combo-point cost above the pool still blocks it")
+end)
+
 H.reset(); H.rebind()   -- restore Windwalker for later suites

@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.3.21", {
+        "Fix (Outlaw): Roll the Bones (and other Energy-cost abilities) could be silently skipped -- PRIO compared their Energy cost against your combo points, so at low CP it decided you couldn't afford them. It now checks the cost of the right resource, so Roll the Bones is recommended whenever it's off cooldown. (Windwalker was unaffected -- it uses its own Chi cost.)",
+    } },
     { "0.3.20", {
         "Outlaw: new 'Opportunity >= / <= N' condition in the editor -- gate any line on PRIO's tracked Opportunity charge count (0/3/6) at the threshold you choose. Reads the real tracked count, not the Cooldown Manager's misleading max-charges number.",
     } },

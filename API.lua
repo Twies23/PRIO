@@ -246,13 +246,16 @@ function API.HasPowerCost(spellID)
 end
 
 -- The spell's resource cost amount (Maelstrom etc), or nil. Static, not secret.
-function API.PowerCostAmount(spellID)
+-- Cost of a spell. With `powerType` (e.g. the spec's resource), returns ONLY the cost
+-- of that power type -- so a spell that costs Energy doesn't get compared against Combo
+-- Points. Without it, returns the first non-zero cost (legacy). nil = no such cost.
+function API.PowerCostAmount(spellID, powerType)
     if not (spellID and C_Spell and C_Spell.GetSpellPowerCost) then return nil end
     local ok, costs = pcall(C_Spell.GetSpellPowerCost, spellID)
     if ok and type(costs) == "table" then
         for _, c in ipairs(costs) do
             local cost = SafeNum(c and c.cost)
-            if cost and cost > 0 then return cost end
+            if cost and cost > 0 and (powerType == nil or c.type == powerType) then return cost end
         end
     end
     return nil

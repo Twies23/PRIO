@@ -110,8 +110,13 @@ end
 function API.SpellGlowing(id) local v = S.glows[id]; if v == nil then return nil end; return v and true or false end
 function API.AuraRemaining(id) return nil end          -- secret in "combat"; use predicted
 function API.InPandemic(id) return nil end
-function API.HasPowerCost(id) return false end
-function API.PowerCostAmount(id) return nil end
+function API.HasPowerCost(id) return S.powerCost and S.powerCost[id] ~= nil end
+function API.PowerCostAmount(id, powerType)
+    local pc = S.powerCost and S.powerCost[id]     -- { type = <powerType>, cost = n }
+    if not pc then return nil end
+    if powerType == nil or pc.type == powerType then return pc.cost end
+    return nil
+end
 function API.HasAura(id) return S.auras[id] == true end
 function API.HasMainHandEnchant() return false end
 function API.Keybind() return "" end

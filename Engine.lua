@@ -1225,7 +1225,9 @@ local function ResourceCost(key, sid, S)
         local ok, cost = pcall(spec.ResourceCost, spec, key, sid, S)
         if ok and type(cost) == "number" then return cost end
     end
-    return API.PowerCostAmount(sid)
+    -- Only the cost of the SPEC'S resource -- so an Energy cost isn't compared to Combo
+    -- Points (which would block finishers/Roll the Bones that cost Energy, not CP).
+    return API.PowerCostAmount(sid, spec and spec.resource)
 end
 
 -- Spend an Energy spender's cost from the look-ahead floor (no regen -- conservative).
