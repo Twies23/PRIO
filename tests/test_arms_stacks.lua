@@ -233,6 +233,28 @@ test("Arms AoE queue never stacks Cleave", function()
     H.reset(); H.rebind()
 end)
 
+-- During a channel (Bladestorm) every spell reads "unusable"; PRIO should still
+-- predict the next actions instead of collapsing to a single filler.
+test("channel: predict next actions while everything is unusable", function()
+    H.reset(); H.S.specID = 71; H.rebind()
+    H.Engine.openerActive = false
+    H.S.enemies = 1
+    H.db.advanceWhileCasting = true
+    setmetatable(H.S.usable, { __index = function() return false end })   -- all unusable
+    local BLADESTORM = 227847
+    UnitChannelInfo = function() return "Bladestorm", nil, nil, nil, nil, nil, nil, BLADESTORM end
+
+    local r = H.Engine:Evaluate()
+
+    UnitChannelInfo = function() return nil end
+    setmetatable(H.S.usable, nil)
+    H.db.advanceWhileCasting = false
+
+    truthy(r and r.primary, "still produces a primary during the channel")
+    truthy(#(r.queue or {}) >= 1, "queue predicts follow-up actions, not just a lone filler")
+    H.reset(); H.rebind()
+end)
+
 -- Debuff conditions alias the tracked-aura read (buff logic), debuff-labeled.
 test("debuffActive / debuffMissing read the tracked aura", function()
     H.reset()

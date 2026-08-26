@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.74 (alpha)
+- **Keeps predicting during channels (e.g. Bladestorm).** While you're channeling, the game reports every other ability as "unusable" for the duration, which was collapsing the strip to a single filler icon. PRIO now relaxes that usability check while a cast/channel is in flight (it already skips the spell you're casting) and predicts the next actions from cooldowns and conditions — so you see what to press coming out of Bladestorm. (Requires "Advance primary while casting", which is on by default.)
+
+
 ## 0.2.73 (alpha)
 - **Fixed Cleave being queued several times in a row.** Cleave has a (hasted) cooldown, so it was wrong to treat it as a no-cooldown filler — the look-ahead was stacking it as the next 2–3 icons. It's now single-use in the queue (Slam remains the only true filler). The live "Now" recommendation is unchanged — it still suggests Cleave whenever it's actually off cooldown. (Crushing Combo's free Cleaves after Colossus Smash aren't modeled — its haste-scaled cooldown isn't readable.)
 

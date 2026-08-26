@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.74", {
+        "During a channel like Bladestorm (when the game reports every ability as unusable), PRIO now keeps predicting the next actions instead of collapsing to a single filler icon.",
+    } },
     { "0.2.73", {
         "Fixed Cleave being recommended several times in a row: it has a (hasted) cooldown, so it's no longer treated as a spammable filler in the look-ahead queue.",
     } },

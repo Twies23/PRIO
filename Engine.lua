@@ -1239,9 +1239,14 @@ function Engine:Evaluate()
     -- If the player is mid-cast, treat that cast as already committed: fold its
     -- effects into the sim (so MotE/aura assumptions carry) and exclude it, so the
     -- PRIMARY advances to the next GCD instead of repeating the spell in flight.
+    -- While a cast/channel is in flight (e.g. Bladestorm), EVERY spell reports "not
+    -- usable" for the duration -- so we relax the usable gate below and predict the
+    -- next actions from cooldowns + conditions instead of collapsing to the filler.
+    local castingNow = false
     if PRIO.db.advanceWhileCasting ~= false then
         local castKey, castSid = self:InFlightCast()
         if castKey and castSid then
+            castingNow = true
             ApplyEffects(sim, castKey)
             ApplyResourceDelta(sim, castKey, castSid, S)
             ApplyEnergy(sim, castKey)
@@ -1287,7 +1292,10 @@ function Engine:Evaluate()
             local ecost = EnergyCostOf(em)
             if ecost and sim.energy < ecost then ready = false end
         end
-        if not (ready and API.IsUsable(sid)) then return nil end          -- hard: castable now
+        if not ready then return nil end                                  -- hard: cooldown/resource
+        -- Usability is a hard gate normally, but during a channel it's false for
+        -- everything -- so skip it then and predict the post-channel action.
+        if not castingNow and not API.IsUsable(sid) then return nil end
         if not PRIO.Cond.Eval(e.cond, S, sid) then return nil end
         return { sid = sid, i = i, rep = rep, maxC = maxC }
     end
