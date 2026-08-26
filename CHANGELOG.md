@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.52 (alpha)
+- **Fixed the Rotation Debug stack-source tag never appearing.** The `appl`/`cdm`/`appl-secret`/`assumed` tag added last version was silently dropped by a Lua multiple-return gotcha (`X and f()` keeps only the first value), so active buffs showed a bare `×N` with no source. It now renders, so you can see at a glance whether a stack count read exactly (`appl`), came from the Cooldown Viewer (`cdm`), or had to be assumed.
+
+
 ## 0.2.51 (alpha)
 - **Middle-click the minimap button to open the Rotation Debug window.** The minimap button now has three actions: left-click = options, right-click = main debug window, middle-click = rotation debug window. (Also still available via `/prio rotdebug`.)
 

@@ -485,7 +485,10 @@ local function buffText(sid)
     local a = API.IsAuraActive(sid)
     if a == nil then return "|cffe0a03auntracked|r" end
     if a ~= true then return "|cffe0685agone|r" end
-    local n, src = API.AuraStackSource and API.AuraStackSource(sid)
+    -- NOTE: `X and f()` truncates multiple returns to one, so guard with an if to keep
+    -- both n and src (this bug once made the source tag silently never render).
+    local n, src
+    if API.AuraStackSource then n, src = API.AuraStackSource(sid) end
     local stack = (n and n > 0) and (" |cff9fb0be\195\151" .. n .. "|r") or ""
     local tag = src and ("  |cff" .. (srcColor[src] or "5a6a76") .. src .. "|r") or ""
     return "|cff0cd29factive|r" .. stack .. tag

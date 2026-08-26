@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.2.52", {
+        "Fixed the Rotation Debug stack-source tag (appl/cdm/appl-secret/assumed) never showing -- a Lua multi-return bug dropped it. Now visible so we can tell if stacks read exactly.",
+    } },
     { "0.2.51", {
         "Middle-click the minimap button to toggle the Rotation Debug window (left = options, right = debug, middle = rotation debug).",
     } },
