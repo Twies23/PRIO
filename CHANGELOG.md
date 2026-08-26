@@ -1,5 +1,11 @@
 # PRIO Changelog
 
+## 0.3.3
+**Outlaw Roll the Bones — correct 12.1 model.**
+- In 12.1 Roll the Bones grants a single named buff whose identity is the stage — **One of a Kind** (1), **Double Trouble** (2), **Triple Threat** (3) — and the tracked bar only ever reads as one stack. PRIO now reads the stage from which named buff is active, so the reroll (stage 1 or less) and Keep It Rolling (stage 3) lines work correctly.
+- Buff conditions now fall back to reading a buff **directly** when the Cooldown Manager doesn't track it — this is what lets the named Roll the Bones buffs (and other untracked buffs) drive the rotation.
+- Rotation Debug shows all three stage buffs and a direct-read test for each, so you can confirm the stage reads in combat.
+
 ## 0.3.2
 **Outlaw Rogue — first pass (work in progress).**
 - Outlaw is now a recognised spec with a Trickster single-target and AoE priority. Combo points read exactly (they're a discrete resource), so finisher and builder combo-point gates are precise.

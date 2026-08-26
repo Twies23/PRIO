@@ -520,17 +520,32 @@ end
 function API.IsAuraActive(spellID)
     if not spellID then return nil end
     local frame = trackedFrames[spellID]
-    if not frame then return nil end
-    if frame.IsActive then
-        local ok, active = pcall(frame.IsActive, frame)
-        if ok and active ~= nil and not IsSecret(active) then return active and true or false end
+    if frame then
+        if frame.IsActive then
+            local ok, active = pcall(frame.IsActive, frame)
+            if ok and active ~= nil and not IsSecret(active) then return active and true or false end
+        end
+        -- Fallback: swipe-colour first channel (nonzero => active), per EllesmereUI CDM.
+        -- Guard the exact value we compare so we never compare a secret number.
+        local sc = frame.cooldownSwipeColor
+        if type(sc) == "table" and sc.GetRGBA then
+            local ok, r = pcall(sc.GetRGBA, sc)
+            if ok and type(r) == "number" and not IsSecret(r) then return r ~= 0 end
+        end
+        return nil
     end
-    -- Fallback: swipe-colour first channel (nonzero => active), per EllesmereUI CDM.
-    -- Guard the exact value we compare so we never compare a secret number.
-    local sc = frame.cooldownSwipeColor
-    if type(sc) == "table" and sc.GetRGBA then
-        local ok, r = pcall(sc.GetRGBA, sc)
-        if ok and type(r) == "number" and not IsSecret(r) then return r ~= 0 end
+    -- NOT Cooldown-Manager tracked: read the player aura directly. This is the only
+    -- path for buffs the CDM doesn't track -- e.g. the named Roll the Bones stage buffs
+    -- (One of a Kind / Double Trouble / Triple Threat), which the RtB bar doesn't expose
+    -- as a stack. Clean present -> true, clean absent -> false, secret -> nil (in combat
+    -- if the aura is protected). Tracked auras above are untouched by this fallback.
+    if C_UnitAuras and C_UnitAuras.GetPlayerAuraBySpellID then
+        local ok, d = pcall(C_UnitAuras.GetPlayerAuraBySpellID, spellID)
+        if ok then
+            if d == nil then return false end
+            if IsSecret(d) then return nil end
+            return true
+        end
     end
     return nil
 end

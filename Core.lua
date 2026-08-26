@@ -445,10 +445,10 @@ SlashCmdList.PRIO = function(msg)
         local API = PRIO.API
         local probe = {}
         if msg:match("^rtb") then
-            -- Classic Roll the Bones buff IDs + the tracked RtB bar/Loaded Dice/SnD, so
-            -- one in-combat run shows which RtB signal is actually readable. Verify the
-            -- six buff IDs against a fresh OOC `/prio myauras` after rolling the bones.
-            probe = { 193356, 199600, 193358, 193357, 199603, 193359, 1214909, 256170, 315496 }
+            -- 12.1 named Roll the Bones stage buffs (One of a Kind / Double Trouble /
+            -- Triple Threat) + the tracked RtB bar / Loaded Dice, so one in-combat run
+            -- shows which RtB signal is actually readable.
+            probe = { 1214933, 1214934, 1214935, 1214909, 256170, 279876, 315496 }
         else
             for d in raw:gmatch("%d+") do probe[#probe + 1] = tonumber(d) end
         end

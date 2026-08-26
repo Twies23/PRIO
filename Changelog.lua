@@ -11,6 +11,11 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.3.3", {
+        "Outlaw Roll the Bones -- correct 12.1 model: RtB grants one named buff whose identity is the stage (One of a Kind = 1, Double Trouble = 2, Triple Threat = 3); the tracked bar only reads as one stack, so PRIO now reads the stage from which named buff is up. Reroll and Keep It Rolling lines work correctly.",
+        "Buff conditions now fall back to reading a buff directly when the Cooldown Manager doesn't track it -- what lets the named Roll the Bones buffs drive the rotation.",
+        "Rotation Debug shows all three stage buffs plus a direct-read test for each.",
+    } },
     { "0.3.2", {
         "Outlaw Rogue -- first pass (work in progress): recognised spec with a Trickster ST and AoE priority. Combo points read exactly, so combo-point gates are precise.",
         "Rotation Debug (/prio rotdebug) works for Outlaw: shows live what your Cooldown Manager reports active (Roll the Bones stage, Slice and Dice, Blade Flurry, Opportunity...), your combo points, and a direct-read test for the untracked Roll the Bones buffs.",

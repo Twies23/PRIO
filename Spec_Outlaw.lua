@@ -55,9 +55,14 @@ local ID_VANISH     = 1856
 local ID_AMBUSH     = 8676
 local ID_GHOSTLY    = 196937
 local ID_THISTLETEA = 381623
--- Roll the Bones buff (confirmed live): Triple Threat. The full 12.1 set is captured
--- from `/prio myauras` and wired into the direct-aura probes below.
-local ID_RTB_TRIPLETHREAT = 1214935
+-- ROLL THE BONES STAGE (12.1 rework, confirmed live 2026-08-26): RtB grants ONE named
+-- buff whose identity IS the stage -- not six separate buffs, and the RtB bar (#1214909)
+-- only ever reads "1 stack (assumed)", so stage must be read from WHICH buff is up.
+-- These are mutually exclusive and NOT Cooldown-Manager tracked, so they rely on the
+-- direct player-aura read (API.IsAuraActive's untracked fallback).
+local ID_RTB_S1 = 1214933   -- "One of a Kind"  = stage 1
+local ID_RTB_S2 = 1214934   -- "Double Trouble" = stage 2
+local ID_RTB_S3 = 1214935   -- "Triple Threat"  = stage 3 (top; Wowhead "stage 3+")
 
 local function AND(...) return { op = "and", clauses = { ... } } end
 local function OR(...)  return { op = "or",  clauses = { ... } } end
@@ -76,9 +81,14 @@ local function stacksMax(id, n) return { type = "stacksMax", spell = id, v = n }
 -- to the front of AoE (the only AoE adjustment Outlaw makes).
 --------------------------------------------------------------------------------
 
+-- Stage helpers: reroll when NOT already at stage 2+ (i.e. One of a Kind or nothing);
+-- Keep It Rolling once at stage 3 (Triple Threat).
+local function rtbStageLow()  return AND(buffDown(ID_RTB_S2), buffDown(ID_RTB_S3)) end
+local function rtbStageHigh() return buffUp(ID_RTB_S3) end
+
 local st = {
-    { spell = "RollTheBones",  cond = stacksMax(ID_ROLLBONES, 1) },                 -- reroll at stage <=1
-    { spell = "KeepItRolling", cond = stacksMin(ID_ROLLBONES, 3) },                 -- lock in stage >=3
+    { spell = "RollTheBones",  cond = rtbStageLow() },                              -- reroll at stage <=1
+    { spell = "KeepItRolling", cond = rtbStageHigh() },                            -- lock in stage 3
     { spell = "Preparation",   cond = AND(cdDown(ID_BTE), cdDown(ID_ADRENALINE), cdDown(ID_KILLSPREE)) },
     { spell = "AdrenalineRush", cond = cpMax(2) },                                  -- on CD at <=2 CP
     { spell = "KillingSpree" },                                                     -- follows Adrenaline Rush
@@ -93,8 +103,8 @@ local st = {
 
 local aoe = {
     { spell = "BladeFlurry",   cond = buffDown(ID_BLADEFLURRY) },                   -- keep the cleave buff up
-    { spell = "RollTheBones",  cond = stacksMax(ID_ROLLBONES, 1) },
-    { spell = "KeepItRolling", cond = stacksMin(ID_ROLLBONES, 3) },
+    { spell = "RollTheBones",  cond = rtbStageLow() },
+    { spell = "KeepItRolling", cond = rtbStageHigh() },
     { spell = "Preparation",   cond = AND(cdDown(ID_BTE), cdDown(ID_ADRENALINE),
                                           cdDown(ID_KILLSPREE), cdDown(ID_BLADERUSH)) },
     { spell = "AdrenalineRush", cond = cpMax(2) },
@@ -132,8 +142,8 @@ local spec = {
     condPresets = {
         { key = "maxCP",     label = "Max combo points (>=6)", clause = cpMin(6) },
         { key = "lowCP",     label = "Low combo points (<=2)", clause = cpMax(2) },
-        { key = "rtbLow",    label = "RtB stage <=1",          clause = stacksMax(ID_ROLLBONES, 1) },
-        { key = "rtbHigh",   label = "RtB stage >=3",          clause = stacksMin(ID_ROLLBONES, 3) },
+        { key = "rtbLow",    label = "RtB stage <=1",          clause = rtbStageLow() },
+        { key = "rtbHigh",   label = "RtB stage 3",            clause = rtbStageHigh() },
         { key = "opp6",      label = "Opportunity (6)",        clause = stacksMin(ID_OPPORTUNITY, 6) },
         { key = "opp3",      label = "Opportunity (3+)",       clause = stacksMin(ID_OPPORTUNITY, 3) },
     },
@@ -145,6 +155,9 @@ local spec = {
         AdrenalineRush = ID_ADRENALINE,
         BetweenTheEyes = ID_BTE,
         RollTheBones   = ID_ROLLBONES,
+        RtBOneOfAKind  = ID_RTB_S1,
+        RtBDoubleTrouble = ID_RTB_S2,
+        RtBTripleThreat = ID_RTB_S3,
         LoadedDice     = ID_LOADEDDICE,
         UnseenBlade    = ID_UNSEENBLADE,
         FlawlessForm   = ID_FLAWLESS,
@@ -152,7 +165,7 @@ local spec = {
 
     setup = {
         { kind = "trackedAura", label = "Roll the Bones tracked", spell = ID_ROLLBONES,
-          hint = "Track Roll the Bones (a Tracked Bar) so PRIO can read its stage -- the reroll / Keep It Rolling lines depend on it." },
+          hint = "Track Roll the Bones (a Tracked Bar) so PRIO sees a roll is active. NOTE: the bar doesn't expose the stage -- PRIO reads that from which named buff is up (One of a Kind / Double Trouble / Triple Threat), automatically." },
         { kind = "trackedAura", label = "Opportunity tracked", spell = ID_OPPORTUNITY,
           hint = "Track Opportunity so its stack count (3 / 6) reads for the Pistol Shot lines." },
         { kind = "trackedAura", label = "Slice and Dice tracked", spell = ID_SND,
@@ -206,7 +219,7 @@ local spec = {
     OnCast = function(P, key, now) end,
 
     debug = {
-        { label = "Combo Points",        kind = "stacks", spell = ID_ROLLBONES },  -- placeholder; CP shown in rotdebug
+        { label = "RtB stage 3 (TripleThreat)", kind = "buff", spell = ID_RTB_S3 },
         { label = "Roll the Bones (bar)", kind = "buff",  spell = ID_ROLLBONES },
         { label = "Slice and Dice",      kind = "buff",  spell = ID_SND },
         { label = "Blade Flurry",        kind = "buff",  spell = ID_BLADEFLURRY },
@@ -236,23 +249,27 @@ local spec = {
             "BladeRush", "BetweenTheEyes", "Dispatch", "PistolShot", "SinisterStrike", "BladeFlurry",
         },
         buffs = {
-            { label = "Roll the Bones (stage)", spell = ID_ROLLBONES },   -- CDM bar: active + stage?
-            { label = "Slice and Dice",         spell = ID_SND },
-            { label = "Blade Flurry",           spell = ID_BLADEFLURRY },
-            { label = "Opportunity",            spell = ID_OPPORTUNITY },
-            { label = "Adrenaline Rush",        spell = ID_ADRENALINE },
-            { label = "Loaded Dice",            spell = ID_LOADEDDICE },
-            { label = "Between the Eyes (dbf)", spell = ID_BTE },
-            { label = "Unseen Blade",           spell = ID_UNSEENBLADE },
-            { label = "Flawless Form",          spell = ID_FLAWLESS },
+            { label = "RtB bar (assumed 1)",     spell = ID_ROLLBONES },   -- CDM bar: active, no stage
+            { label = "One of a Kind (stg1)",    spell = ID_RTB_S1 },      -- via direct-read fallback
+            { label = "Double Trouble (stg2)",   spell = ID_RTB_S2 },
+            { label = "Triple Threat (stg3)",    spell = ID_RTB_S3 },
+            { label = "Slice and Dice",          spell = ID_SND },
+            { label = "Blade Flurry",            spell = ID_BLADEFLURRY },
+            { label = "Opportunity",             spell = ID_OPPORTUNITY },
+            { label = "Adrenaline Rush",         spell = ID_ADRENALINE },
+            { label = "Loaded Dice",             spell = ID_LOADEDDICE },
+            { label = "Between the Eyes (dbf)",  spell = ID_BTE },
+            { label = "Unseen Blade",            spell = ID_UNSEENBLADE },
+            { label = "Flawless Form",           spell = ID_FLAWLESS },
         },
         rangeProbes = {
-            { label = "Combo Points",             kind = "resource" },
-            -- Direct-ID reads for RtB buffs (CDM doesn't track these). Triple Threat is
-            -- confirmed live; add the rest of the 12.1 set from `/prio myauras`.
-            { label = "Triple Threat (RtB)",      kind = "directAura", spell = ID_RTB_TRIPLETHREAT },
-            { label = "Opportunity (direct)",     kind = "directAura", spell = ID_OPPORTUNITY },
-            { label = "Slice and Dice (direct)",  kind = "directAura", spell = ID_SND },
+            { label = "Combo Points",            kind = "resource" },
+            -- Direct-ID reads for the named RtB stage buffs (CDM doesn't track them).
+            -- These confirm whether the direct read survives combat -- if it does, the
+            -- reroll / Keep It Rolling lines work; if "PRESENT/secret", they can't.
+            { label = "One of a Kind (direct)",  kind = "directAura", spell = ID_RTB_S1 },
+            { label = "Double Trouble (direct)", kind = "directAura", spell = ID_RTB_S2 },
+            { label = "Triple Threat (direct)",  kind = "directAura", spell = ID_RTB_S3 },
         },
     },
 }
