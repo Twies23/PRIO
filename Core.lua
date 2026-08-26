@@ -455,6 +455,14 @@ SlashCmdList.PRIO = function(msg)
         print(("|cff0cd29fPRIO|r player buffs (%s):")
             :format(InCombatLockdown() and "|cff0cd29fin combat|r" or "|cffe0a03aOUT of combat - values always readable here|r"))
         print(API.DumpPlayerAuras(probe))
+    elseif msg == "rtbframe" then
+        -- Dump the Roll the Bones bar frame: its icon, spellID-like fields, and rendered
+        -- text (the active stage NAME, e.g. "Double Trouble"), next to each stage spell's
+        -- icon/name. Run IN COMBAT with a roll active to confirm the name reads clean.
+        local API = PRIO.API
+        print(("|cff0cd29fPRIO|r RtB frame probe (%s):")
+            :format(InCombatLockdown() and "|cff0cd29fin combat|r" or "|cffe0a03aOOC|r"))
+        print(API.FrameProbe(1214909, { 1214933, 1214934, 1214935 }))
     elseif msg == "setup" then
         if PRIO.Setup then PRIO.Setup:Toggle() end
     elseif msg == "changelog" or msg == "changes" then

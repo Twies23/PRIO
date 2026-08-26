@@ -515,24 +515,81 @@ function API.RefreshTracked()
     end
 end
 
+-- Is this tracked frame currently active? true/false when readable, nil when secret.
+local function frameActive(frame)
+    if frame.IsActive then
+        local ok, active = pcall(frame.IsActive, frame)
+        if ok and active ~= nil and not IsSecret(active) then return active and true or false end
+    end
+    -- Fallback: swipe-colour first channel (nonzero => active), per EllesmereUI CDM.
+    -- Guard the exact value we compare so we never compare a secret number.
+    local sc = frame.cooldownSwipeColor
+    if type(sc) == "table" and sc.GetRGBA then
+        local ok, r = pcall(sc.GetRGBA, sc)
+        if ok and type(r) == "number" and not IsSecret(r) then return r ~= 0 end
+    end
+    return nil
+end
+
+-- Does the frame currently RENDER `text` in one of its FontStrings? Used to tell apart
+-- linked spells that share one Cooldown-Manager frame (e.g. the Roll the Bones stage
+-- buffs: the bar shows "One of a Kind" / "Double Trouble" / "Triple Threat"). Tolerant
+-- of truncation ("Double Troub...") via prefix matching. Rendered text reads clean in
+-- combat (same path as the stack-count number). Returns true/false, or nil if we can't
+-- read any text at all.
+local function frameShowsText(frame, text)
+    if not text or text == "" then return nil end
+    local target = text:lower()
+    local sawAny, matched = false, false
+    local ok = pcall(function()
+        local function consider(fs)
+            if type(fs) == "table" and fs.GetObjectType and fs:GetObjectType() == "FontString" and fs.GetText then
+                local t = fs:GetText()
+                if type(t) == "string" and t ~= "" then
+                    local s = t:lower():gsub("%.%.%.$", ""):gsub("%s+$", "")
+                    if s ~= "" and not tonumber(s) then       -- ignore the duration/stack number
+                        sawAny = true
+                        if target == s or target:find(s, 1, true) == 1 or s:find(target, 1, true) == 1 then
+                            matched = true
+                        end
+                    end
+                end
+            end
+        end
+        if frame.Name then consider(frame.Name) end
+        if frame.Label then consider(frame.Label) end
+        if frame.GetRegions then for _, r in ipairs({ frame:GetRegions() }) do consider(r) end end
+        if frame.GetChildren then
+            for _, ch in ipairs({ frame:GetChildren() }) do
+                if ch.GetRegions then for _, r in ipairs({ ch:GetRegions() }) do consider(r) end end
+            end
+        end
+    end)
+    if not ok or not sawAny then return nil end
+    return matched
+end
+
+-- Spells whose "active" read must be disambiguated by the frame's rendered NAME, because
+-- several of them alias to one Cooldown-Manager frame (linked spells). Specs register
+-- their IDs here (see Spec_Outlaw's Roll the Bones stage buffs). Empty for every other
+-- spec -> no extra work, no behaviour change.
+API.linkedNameDisambig = API.linkedNameDisambig or {}
+
 -- true/false when the tracked aura's state is readable, nil when we can't tell
 -- (spell not tracked by the viewer). Callers fail open on nil.
 function API.IsAuraActive(spellID)
     if not spellID then return nil end
     local frame = trackedFrames[spellID]
     if frame then
-        if frame.IsActive then
-            local ok, active = pcall(frame.IsActive, frame)
-            if ok and active ~= nil and not IsSecret(active) then return active and true or false end
+        local active = frameActive(frame)
+        if active ~= true then return active end        -- false / nil pass straight through
+        -- Frame is active. If this spell shares its frame with other linked spells,
+        -- it's only THE active one when the frame is currently showing its name.
+        if API.linkedNameDisambig[spellID] then
+            local shows = frameShowsText(frame, API.SpellName(spellID))
+            if shows ~= nil then return shows end        -- readable -> exact; unreadable -> plain active
         end
-        -- Fallback: swipe-colour first channel (nonzero => active), per EllesmereUI CDM.
-        -- Guard the exact value we compare so we never compare a secret number.
-        local sc = frame.cooldownSwipeColor
-        if type(sc) == "table" and sc.GetRGBA then
-            local ok, r = pcall(sc.GetRGBA, sc)
-            if ok and type(r) == "number" and not IsSecret(r) then return r ~= 0 end
-        end
-        return nil
+        return true
     end
     -- NOT Cooldown-Manager tracked: read the player aura directly. This is the only
     -- path for buffs the CDM doesn't track -- e.g. the named Roll the Bones stage buffs
@@ -968,6 +1025,93 @@ function API.AuraRemaining(spellID)
         return rem > 0 and rem or 0
     end
     return nil
+end
+
+-- Diagnostic: probe a TRACKED frame to find what reveals its CURRENT active linked
+-- spell in combat. Roll the Bones (#1214909) aliases its stage buffs (One of a Kind /
+-- Double Trouble / Triple Threat) to one frame, so IsAuraActive can't tell the stage.
+-- The frame is DISPLAYING the active stage buff, though, so its icon and/or a live
+-- field should carry it -- and being display state, may read where the aura (by ID) is
+-- secret. Dumps: each stage's spell icon, the FRAME's current icon, any frame field
+-- holding a stage/spellID-looking number, and the base aura's name. Drives /prio rtbframe.
+function API.FrameProbe(spellID, stageIDs)
+    local out = {}
+    local frame = trackedFrames[spellID]
+    out[#out + 1] = ("tracked frame for #%s: %s"):format(tostring(spellID), tostring(frame ~= nil))
+
+    local function tex(id)
+        if C_Spell and C_Spell.GetSpellTexture then
+            local ok, t = pcall(C_Spell.GetSpellTexture, id); if ok then return t end
+        end
+        return nil
+    end
+    for _, id in ipairs(stageIDs or {}) do
+        out[#out + 1] = ("  stage #%s %-18s icon=%s"):format(id, API.SpellName(id) or "?", tostring(tex(id)))
+    end
+
+    -- Base aura name (the user's hunch: does the active aura report its stage NAME?).
+    if C_UnitAuras and C_UnitAuras.GetPlayerAuraBySpellID then
+        for _, id in ipairs({ spellID }) do
+            local ok, d = pcall(C_UnitAuras.GetPlayerAuraBySpellID, id)
+            if ok and type(d) == "table" then
+                local nm = IsSecret(d.name) and "<secret>" or tostring(d.name)
+                local sid = IsSecret(d.spellId) and "<secret>" or tostring(d.spellId)
+                out[#out + 1] = ("  base aura #%s: name=%s spellId=%s"):format(id, nm, sid)
+            else
+                out[#out + 1] = ("  base aura #%s: %s"):format(id, ok and "absent" or "err")
+            end
+        end
+    end
+
+    if not frame then return table.concat(out, "\n") end
+
+    -- FRAME current icon (compare to the stage icons above).
+    local icon = frame.Icon or frame.icon
+    local fIcon
+    if icon then
+        for _, m in ipairs({ "GetTextureFileID", "GetTexture" }) do
+            if icon[m] then local ok, t = pcall(icon[m], icon); if ok and t then fIcon = t; break end end
+        end
+    end
+    out[#out + 1] = "  FRAME.Icon = " .. tostring(fIcon)
+
+    -- Scan the frame's top-level fields for a stage ID or any 12149xx-range spellID.
+    local want = {}; for _, id in ipairs(stageIDs or {}) do want[id] = true end
+    local hits = {}
+    local okScan = pcall(function()
+        for k, v in pairs(frame) do
+            if type(v) == "number" and (want[v] or (v > 1200000 and v < 1300000)) then
+                hits[#hits + 1] = ("%s=%s"):format(tostring(k), tostring(v))
+            end
+        end
+    end)
+    out[#out + 1] = "  frame spellID-like fields: " .. (okScan and (#hits > 0 and table.concat(hits, ", ") or "(none)") or "(scan err)")
+    for _, k in ipairs({ "cooldownID", "spellID", "overrideSpellID", "auraInstanceID" }) do
+        if frame[k] ~= nil then out[#out + 1] = ("  frame.%s=%s"):format(k, tostring(frame[k])) end
+    end
+
+    -- Rendered FontString text (this is where the active stage NAME lives, e.g.
+    -- "Double Trouble"). Sweep the frame + one level of children.
+    local seen = {}
+    local function sweep(f, tag)
+        if not f or seen[f] then return end
+        seen[f] = true
+        if not f.GetRegions then return end
+        local okR, regions = pcall(function() return { f:GetRegions() } end)
+        if not okR then return end
+        for _, r in ipairs(regions) do
+            if type(r) == "table" and r.GetObjectType and r:GetObjectType() == "FontString" and r.GetText then
+                local t = r:GetText()
+                if type(t) == "string" and t ~= "" then out[#out + 1] = ("  %s text=%q"):format(tag, t) end
+            end
+        end
+    end
+    sweep(frame, "frame")
+    if frame.GetChildren then
+        local okC, kids = pcall(function() return { frame:GetChildren() } end)
+        if okC then for i, ch in ipairs(kids) do sweep(ch, "child" .. i) end end
+    end
+    return table.concat(out, "\n")
 end
 
 -- Diagnostic: dump EVERY current player buff (HELPFUL), whether or not it's tracked

@@ -64,6 +64,15 @@ local ID_RTB_S1 = 1214933   -- "One of a Kind"  = stage 1
 local ID_RTB_S2 = 1214934   -- "Double Trouble" = stage 2
 local ID_RTB_S3 = 1214935   -- "Triple Threat"  = stage 3 (top; Wowhead "stage 3+")
 
+-- All three stage buffs alias to the single Roll the Bones bar in the Cooldown Manager,
+-- so their raw "active" read is just "a roll is up". Register them for NAME-based
+-- disambiguation: PRIO reads which name the bar is rendering ("Double Trouble", ...) to
+-- know the actual stage. This is the readable-in-combat signal (the aura is secret by ID).
+API.linkedNameDisambig = API.linkedNameDisambig or {}
+API.linkedNameDisambig[ID_RTB_S1] = true
+API.linkedNameDisambig[ID_RTB_S2] = true
+API.linkedNameDisambig[ID_RTB_S3] = true
+
 local function AND(...) return { op = "and", clauses = { ... } } end
 local function OR(...)  return { op = "or",  clauses = { ... } } end
 local function buffUp(id)    return { type = "buffActive",  spell = id } end

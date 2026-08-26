@@ -1,5 +1,10 @@
 # PRIO Changelog
 
+## 0.3.4
+**Outlaw Roll the Bones — read the stage from the bar's name.**
+- The three stage buffs all share one Cooldown Manager bar (so they always read as "a roll is active"), and reading them by ID is blocked in combat. PRIO now reads the **name the Roll the Bones bar is showing** ("One of a Kind" / "Double Trouble" / "Triple Threat") to know the real stage — so reroll and Keep It Rolling finally fire on the right stage. **Track Roll the Bones as a Bar in your Cooldown Manager** for this to read.
+- New `/prio rtbframe` dumps the Roll the Bones bar's icon and text so the stage read can be verified in combat.
+
 ## 0.3.3
 **Outlaw Roll the Bones — correct 12.1 model.**
 - In 12.1 Roll the Bones grants a single named buff whose identity is the stage — **One of a Kind** (1), **Double Trouble** (2), **Triple Threat** (3) — and the tracked bar only ever reads as one stack. PRIO now reads the stage from which named buff is active, so the reroll (stage 1 or less) and Keep It Rolling (stage 3) lines work correctly.
