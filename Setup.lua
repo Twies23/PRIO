@@ -39,6 +39,8 @@ local function statusOf(it)
     elseif it.kind == "pandemic" then
         if API.InPandemic and API.InPandemic(it.spell) == true then Setup.confirmed[it.spell] = true end
         return Setup.confirmed[it.spell] and "ok" or "warn"
+    elseif it.kind == "info" then
+        return "info"
     end
     return "warn"
 end
@@ -47,6 +49,7 @@ local STATE = {
     ok   = { txt = "Ready",         col = { 0.047, 0.824, 0.616 } },
     bad  = { txt = "Action needed", col = { 0.88,  0.41,  0.35  } },
     warn = { txt = "Optional",      col = { 0.878, 0.627, 0.227 } },
+    info = { txt = "Automatic",     col = { 0.62,  0.72,  0.82  } },
 }
 
 --------------------------------------------------------------------------------

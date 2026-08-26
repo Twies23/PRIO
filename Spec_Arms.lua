@@ -286,20 +286,22 @@ local spec = {
         SweepingStrikes = ID_SWEEPING,
     },
 
-    -- First-time setup checklist (Setup.lua adds the global nameplate check).
+    -- First-time setup checklist (Setup.lua adds the global nameplate check). Only the
+    -- auras PRIO actually READS from the Cooldown Manager need tracking: Rend (missing/
+    -- refresh) and Colossus Smash (its debuff window). Sudden Death, Imminent Demise and
+    -- Collateral Damage are read from BUTTON GLOWS, and Executioner's Precision is
+    -- predicted from casts -- none of those need tracking (shown as "Automatic").
     setup = {
         { kind = "trackedAura", label = "Rend tracked", spell = ID_REND,
-          hint = "Track Rend in your Cooldown Manager so PRIO knows when to refresh it." },
-        { kind = "trackedAura", label = "Sudden Death tracked", spell = ID_SUDDENDEATH,
-          hint = "Track Sudden Death (Buff Icons) so PRIO can read its stacks for Execute timing." },
-        { kind = "trackedAura", label = "Collateral Damage tracked", spell = ID_COLLATERAL,
-          hint = "Track Collateral Damage so AoE Cleave fires at 3 stacks." },
-        { kind = "trackedAura", label = "Imminent Demise tracked", spell = ID_IMMINENT,
-          hint = "Track Imminent Demise so the pre-Bladestorm Execute reads its stacks." },
-        { kind = "trackedAura", label = "Executioner's Precision tracked", spell = ID_EXECPREC,
-          hint = "Track Executioner's Precision for execute-window Mortal Strike timing." },
+          hint = "Track Rend (target debuff) in your Cooldown Manager so PRIO can tell when it's missing or about to fall off." },
+        { kind = "trackedAura", label = "Colossus Smash tracked", spell = ID_COLOSSUS_DBF,
+          hint = "Track Colossus Smash in your Cooldown Manager so PRIO can see its debuff window (drives the Bladestorm / Demolish timing)." },
         { kind = "pandemic", label = "Rend pandemic alert", spell = ID_REND,
-          hint = "Optional: enable the Pandemic Time alert on Rend (Edit Mode -> Cooldown Manager) for no-clip refresh timing." },
+          hint = "Optional: enable the Pandemic Time alert on Rend (Edit Mode -> Cooldown Manager) so it refreshes exactly in its no-clip window." },
+        { kind = "info", label = "Sudden Death / Imminent Demise / Collateral Damage",
+          hint = "No tracking needed -- PRIO reads these from the Execute, Bladestorm and Cleave button glows automatically." },
+        { kind = "info", label = "Executioner's Precision",
+          hint = "No tracking needed -- PRIO predicts its stacks from your Execute and Mortal Strike casts." },
     },
 
     spells = {

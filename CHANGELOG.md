@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.2.67 (alpha)
+- **Corrected the Arms setup checklist.** It now matches what PRIO actually reads: it asks you to track **Rend** (missing/refresh) and **Colossus Smash** (its debuff window) in the Cooldown Manager, keeps the optional Rend pandemic alert, and drops the stale requests to track Sudden Death, Imminent Demise, Collateral Damage, and Executioner's Precision. Those now show as **Automatic** — Sudden Death / Imminent Demise / Collateral Damage are read from the Execute / Bladestorm / Cleave button glows, and Executioner's Precision is predicted from your casts, so none of them need tracking.
+
+
 ## 0.2.66 (alpha)
 - **Updated Slayer defaults.** The AoE and ST-Execute lists are refreshed to the latest tuned versions, and **AoE-Execute now just reuses the AoE list** (nothing special in execute there). Reset Arms lists to default to pick them up. (Colossus unchanged.)
 
