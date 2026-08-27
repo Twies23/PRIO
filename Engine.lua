@@ -1446,13 +1446,31 @@ function Engine:Evaluate()
         end
 
         local ready = e.ignoreCD or API.IsReady(sid)
-        -- Primary-resource gate. Runs when the resource READS clean (discrete: Chi, Combo
-        -- Points) -- exact -- OR when the spec opts in to gate on the PREDICTED value for a
-        -- SECRET resource it tracks for exactly this (spec.gatePredictedResource, e.g. Ele's
-        -- Maelstrom) so spenders don't show before you can afford them. Specs that fail open
-        -- on a secret resource (Arms rage) set neither and are unchanged.
-        if ready and (S.maelstromReadable or spec.gatePredictedResource)
+        -- Primary-resource affordability gate.
+        if ready and spec.affordGate and spec.affordGate[idToKey[sid]] then
+            -- Preferred: the game's own insufficient-power flag. It reads CLEAN in combat
+            -- even when the resource bar is secret (like Maelstrom), so it's EXACT with no
+            -- prediction drift, and a proc-free cast reads as affordable automatically.
+            --   true  -> can't afford it: withhold.
+            --   false -> affordable: show.
+            --   nil   -> the game hid the flag: fall back to the predicted-resource gate
+            --            (below) so we never spam a spender we can't afford.
+            local ip = API.InsufficientPower(sid)
+            if ip == true then
+                ready = false
+            elseif ip == nil and (API.HasPowerCost(sid) or spec.ResourceCost) then
+                local cost = ResourceCost(idToKey[sid], sid, S)
+                if cost and S.freeSpend and spec.freeSpendGlow and spec.freeSpendGlow[idToKey[sid]] then
+                    cost = 0
+                end
+                if cost and S.maelstrom < cost then ready = false end
+            end
+        elseif ready and (S.maelstromReadable or spec.gatePredictedResource)
            and (API.HasPowerCost(sid) or spec.ResourceCost) then
+            -- Fallback for specs without a clean insufficient-power read: gate on the
+            -- resource value -- exact when it reads clean (Chi, Combo Points), else the
+            -- predicted value (spec.gatePredictedResource). Specs that fail open on a
+            -- secret resource (Arms rage) set neither and are unchanged.
             local cost = ResourceCost(idToKey[sid], sid, S)
             -- 4-set free spender: a proc has zeroed this spender's cost (read from the CDM
             -- glow), so don't withhold it for lack of the resource.

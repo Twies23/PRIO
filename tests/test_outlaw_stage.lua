@@ -207,7 +207,7 @@ end)
 -- Blast / Earthquake free and lights it on the CDM (spec.freeSpendGlow). Set up Ele with
 -- Maelstrom secret and every ST line but the bare Elemental Blast out of the way, so EB is
 -- the reachable candidate and its cost gate is what's under test. EB costs 75 Maelstrom.
-local EB, ELE_FS = 117014, 188389
+local EB, ELE_FS = 117014, 470411
 local function setEle()
     H.reset(); H.S.specID = 262
     H.S.power[11] = nil; H.S.powerMax[11] = 150            -- Maelstrom secret in combat
@@ -225,15 +225,23 @@ local function eleShowsEB()
     return hit["Spell" .. EB] == true
 end
 
-test("Elemental 4-set: a glowing (free) spender isn't withheld at low Maelstrom", function()
+test("Elemental affordGate: spender gated on the readable insufficient-power flag", function()
     setEle()
-    H.Engine.P.maelstrom = 20                              -- predicted below the 75 cost
-    falsy(eleShowsEB(), "no proc: Elemental Blast withheld below its Maelstrom cost")
+    H.S.insufficientPower[EB] = true                       -- game says you can't afford it
+    falsy(eleShowsEB(), "insufficientPower=true: Elemental Blast withheld")
 
     setEle()
-    H.S.glows[EB] = true                                   -- 4-set proc lights EB on the CDM
-    H.Engine.P.maelstrom = 20
-    truthy(eleShowsEB(), "proc glow: the free Elemental Blast shows even at low Maelstrom")
+    H.S.insufficientPower[EB] = false                      -- affordable now (or a free proc)
+    truthy(eleShowsEB(), "insufficientPower=false: Elemental Blast shows")
+
+    -- Flag unreadable -> fall back to the predicted-Maelstrom gate (safety net).
+    setEle(); H.S.insufficientPower[EB] = nil
+    H.Engine.P.maelstrom = 20                              -- predicted below the 75 cost
+    falsy(eleShowsEB(), "flag unreadable + predicted below cost: withheld (fallback)")
+
+    setEle(); H.S.insufficientPower[EB] = nil
+    H.Engine.P.maelstrom = 100                             -- predicted above cost
+    truthy(eleShowsEB(), "flag unreadable + predicted above cost: shows (fallback)")
 end)
 
 test("Elemental 4-set: a free spender doesn't drain predicted Maelstrom (one cast only)", function()

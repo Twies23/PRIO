@@ -31,6 +31,7 @@ function H.reset()
         ready = {},                            -- IsReady: default true
         usable = {},                           -- IsUsable: default true
         usableClean = {},                      -- UsableClean: true/false/nil
+        insufficientPower = {},                -- InsufficientPower: true/false/nil (default nil)
         chargeState = {},                      -- ChargeState: {max,cur,belowMax}
         talents = {},                          -- IsTalentSelected
         stacks = {},                           -- AuraStackCount
@@ -98,6 +99,7 @@ function API.IsTracked(id) return truthy(S.tracked, id, false) end
 function API.IsReady(id) return truthy(S.ready, id, true) end
 function API.IsUsable(id) return truthy(S.usable, id, true) end
 function API.UsableClean(id) local v = S.usableClean[id]; if v == nil then return nil end; return v and true or false end
+function API.InsufficientPower(id) local v = S.insufficientPower[id]; if v == nil then return nil end; return v and true or false end
 function API.UsableOrNoPower(id)
     local v = S.usableNoPower and S.usableNoPower[id]
     if v ~= nil then return v and true or false end

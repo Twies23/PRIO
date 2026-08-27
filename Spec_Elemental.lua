@@ -158,10 +158,12 @@ local spec = {
         VoltaicBlaze = { aura = ID_FLAMESHOCK, dur = 4 },
     },
 
-    -- Maelstrom is secret in combat, so gate spenders (Earth Shock / Elemental Blast /
-    -- Earthquake) on the PREDICTED Maelstrom -- otherwise the cost gate is skipped and they
-    -- show before you can afford them. (PRIO tracks Maelstrom precisely for this.)
-    gatePredictedResource = true,
+    -- Maelstrom is secret in combat, so predicting it drifts. Instead, gate the spenders on
+    -- the game's own insufficient-power flag (spec.affordGate -> API.InsufficientPower), which
+    -- reads CLEAN in combat even with the bar secret: an EXACT "can I afford it right now?"
+    -- boolean, no prediction. The spender shows the moment you actually have the Maelstrom
+    -- (and stays down when you don't), and a proc-free cast reads as affordable automatically.
+    affordGate = { EarthShock = true, ElementalBlast = true, Earthquake = true },
     -- 4-set (Ophidian Oracle): after Stormkeeper/Ascendance fade, the proc makes your next
     -- Earth Shock / Elemental Blast / Earthquake cost 100% less Maelstrom, and the game
     -- lights that spender up on the Cooldown Manager. PRIO reads that glow (spec.freeSpendGlow)

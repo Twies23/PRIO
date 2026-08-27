@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.4.5
+- **Elemental — spenders now gate on "can I actually afford it?" instead of predicted Maelstrom.** Predicting a secret filling resource always drifts, so Earth Shock / Elemental Blast / Earthquake now use the game's own insufficient-power flag, which reads exactly even while the Maelstrom bar is hidden — no prediction, no drift. They appear the moment you truly have the Maelstrom and stay down when you don't (and a free 4-set proc reads as affordable automatically). If the game ever hides that flag too, it falls back to the old predicted gate so a spender can't spam. *(Verify the flag reads in your content with `/prio usable` in combat — the `noPower` column should say true/false, not secret.)*
+
 ## 0.4.4
 - **Elemental — fixed overcapping.** PRIO's predicted Maelstrom was running low because it never counted **Flame Shock's passive generation** (its DoT ticks generate Maelstrom continuously, and you keep it up the whole fight) — so spenders were held back until you were already capped. PRIO now accrues Flame Shock's ticks over time (haste-scaled, ~3 per tick), and **Chain Lightning** now generates per target (2 × targets) instead of a flat amount. Net result: the prediction tracks your real Maelstrom far better and recommends spenders before you overcap. *(If it now spends slightly early, the Flame Shock tick value is a one-line tune — let me know.)*
 
