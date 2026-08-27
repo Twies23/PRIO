@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.4.6
+- **Outlaw — Fatebound hero tree added.** Outlaw now has a Trickster / Fatebound hero split (auto-selected from your talents, like Arms' Slayer / Colossus). Fatebound's default lists are a clone of Trickster's for now — a starting point to rework in-game and re-tune. Pick either tree under Options → Priorities to view and edit its lists.
+
 ## 0.4.5
 - **Elemental — spenders now gate on "can I actually afford it?" instead of predicted Maelstrom.** Predicting a secret filling resource always drifts, so Earth Shock / Elemental Blast / Earthquake now use the game's own insufficient-power flag, which reads exactly even while the Maelstrom bar is hidden — no prediction, no drift. They appear the moment you truly have the Maelstrom and stay down when you don't (and a free 4-set proc reads as affordable automatically). If the game ever hides that flag too, it falls back to the old predicted gate so a spender can't spam. *(Verify the flag reads in your content with `/prio usable` in combat — the `noPower` column should say true/false, not secret.)*
 

@@ -302,4 +302,18 @@ test("Elemental: Chain Lightning generates 2 Maelstrom per target", function()
     eq(H.Engine.P.maelstrom, 10, "2 x 5 targets = 10")
 end)
 
+test("outlaw hero split: Unseen Blade selects Trickster, its absence selects Fatebound", function()
+    local s = H.outlawSpec
+    H.reset(); H.S.knownStrict[441146] = true; H.rebind()
+    eq(s.activeHero(), "trickster", "Unseen Blade known -> Trickster")
+    H.reset(); H.S.knownStrict[441146] = false; H.rebind()
+    eq(s.activeHero(), "fatebound", "no Unseen Blade -> Fatebound")
+    -- Fatebound defaults are an INDEPENDENT clone of Trickster (same content, own tables),
+    -- so reworking one won't disturb the other.
+    truthy(s.priorityByVariant.fatebound.st ~= s.priorityByVariant.trickster.st, "independent st tables")
+    truthy(s.priorityByVariant.fatebound.aoe ~= s.priorityByVariant.trickster.aoe, "independent aoe tables")
+    eq(#s.priorityByVariant.fatebound.st, #s.priorityByVariant.trickster.st, "cloned st length")
+    eq(#s.priorityByVariant.fatebound.aoe, #s.priorityByVariant.trickster.aoe, "cloned aoe length")
+end)
+
 H.reset(); H.rebind()   -- restore Windwalker for later suites

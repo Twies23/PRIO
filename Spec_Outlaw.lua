@@ -142,6 +142,28 @@ local aoe = {
     { spell = "SinisterStrike", cond = cpMax(5) },
 }
 
+--------------------------------------------------------------------------------
+-- HERO SPLIT. Fatebound plays very similarly to Trickster, so for now its lists are a
+-- CLONE of Trickster's (independent copies) -- placeholder to be reworked in-game and
+-- re-tuned, then shipped as real Fatebound defaults. Active hero is decided by a STRICT
+-- known-check on the Trickster keystone Unseen Blade (441146) -- talent/spellbook state,
+-- not an aura -- which Fatebound rogues lack. Default is Trickster (the tuned list).
+-- TODO: once the Fatebound keystone ID is confirmed in-game, make this a POSITIVE Fatebound
+-- check defaulting to Trickster (mirrors Arms' Demolish->Colossus signature).
+--------------------------------------------------------------------------------
+local fatebound_st  = CopyTable(st)
+local fatebound_aoe = CopyTable(aoe)
+
+local heroLists = {
+    trickster = { st = st,           aoe = aoe },
+    fatebound = { st = fatebound_st, aoe = fatebound_aoe },
+}
+
+local function activeHero()
+    if API and API.IsKnownStrict and API.IsKnownStrict(ID_UNSEENBLADE) then return "trickster" end
+    return "fatebound"
+end
+
 local spec = {
     key      = "ROGUE_OUTLAW",
     label    = "Outlaw",
@@ -204,7 +226,15 @@ local spec = {
         { value = "aoe", text = "AoE" },
     },
 
-    priority = { st = st, aoe = aoe },
+    -- Hero split (see heroLists above). activeHero picks the live list; priorityVariants
+    -- drives the Options hero picker + per-hero custom lists (Trickster tuned, Fatebound
+    -- currently a clone to rework in-game).
+    activeHero = activeHero,
+    priorityByVariant = heroLists,
+    priorityVariants = {
+        { key = "trickster", label = "Trickster" },
+        { key = "fatebound", label = "Fatebound" },
+    },
 
     -- Offer the Outlaw-only "Opportunity >=/<=" condition (reads PRIO's tracked 0/3/6
     -- count, not the Cooldown Manager's max-charges number).
@@ -374,5 +404,15 @@ local spec = {
         },
     },
 }
+
+-- spec.priority is a live proxy resolving to the ACTIVE hero's list for a mode (editor /
+-- export / any direct read). Customization lives in db.customPriorities, so the backing
+-- table stays empty and the __index resolver is safe.
+spec.priority = setmetatable({}, {
+    __index = function(_, mode)
+        local h = heroLists[activeHero()] or heroLists.trickster
+        return h[mode] or h.st
+    end,
+})
 
 PRIO.specs[spec.specID] = spec
