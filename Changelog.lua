@@ -12,36 +12,11 @@ PRIO.Changelog = Changelog
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
     { "0.4.10", {
-        "Outlaw -- new default priority lists (both hero trees, ST + AoE). Shipped defaults are now the tuned list: opens with Stealth, supercharge-aware finishers (spend a Supercharged CP with Between the Eyes / Killing Spree), Killing Spree during Adrenaline Rush, the 4-set free Dispatch, and a Fatebound Deal Fate line that self-activates only on that talent. Trickster and Fatebound share the list (still customizable separately); AoE is the same core with the two Blade Flurry lines up top. Reset to default (per mode) to pick these up if you've customized.",
-    } },
-    { "0.4.9", {
-        "Outlaw -- Supercharged Combo Points (Supercharger talent): Adrenaline Rush supercharges 2, and each damaging finisher (Dispatch, Between the Eyes, Killing Spree) consumes one. New editable conditions 'Supercharged CP >= / <= / = N'. Predicted from your own casts; shown in Rotation Debug; inert unless talented.",
-        "New '=' (equals) condition operator alongside >= and <= -- for Combo Points/Resource, Opportunity, Supercharged CP, Buff stacks, Charges, and Enemies.",
-        "Outlaw -- Stealth added as an ability (Vanish was already there), plus a 'Stealthed / Not stealthed' condition reading the game's stealth state (Stealth / Vanish / Shadow Dance) for opener and re-stealth lines.",
-    } },
-    { "0.4.8", {
-        "Outlaw -- finishers now fire at the combo points you set, not only at max. A finisher (Dispatch, Between the Eyes, Slice and Dice) is castable at any combo points, but the game reports its COST as the maximum -- so PRIO's affordability check withheld it below max and overrode your own condition. A 'Dispatch at >= 5 CP' line now fires at 5 (still correctly withheld at 0 CP). The real fix behind 'it should recommend Dispatch, not Sinister Strike'.",
-    } },
-    { "0.4.7", {
-        "Fix: the Rotation Debug window showed some conditions' pass/fail inverted. A '>= N' line (e.g. Combo Pts >= 6) wrongly showed PASS whenever you were BELOW N, likewise for other >=/glowing/usable checks. Display-only -- the actual rotation always evaluated correctly -- but it made it look like a finisher should be firing before you had the combo points. The debug now reports true pass/fail.",
-    } },
-    { "0.4.6", {
-        "Outlaw -- Fatebound hero tree added. Outlaw now has a Trickster / Fatebound hero split (auto-selected from your talents, like Arms' Slayer / Colossus). Fatebound's default lists are a clone of Trickster's for now -- a starting point to rework in-game and re-tune. Pick either tree under Options -> Priorities to view and edit its lists.",
-    } },
-    { "0.4.5", {
-        "Elemental -- spenders now gate on 'can I actually afford it?' instead of predicted Maelstrom. Predicting a secret filling resource always drifts, so Earth Shock / Elemental Blast / Earthquake now use the game's own insufficient-power flag, which reads exactly even while the Maelstrom bar is hidden -- no prediction, no drift. They appear the moment you have the Maelstrom and stay down when you don't (a free 4-set proc reads as affordable automatically). If the game hides that flag too, it falls back to the old predicted gate so a spender can't spam. Verify with /prio usable in combat -- the noPower column should read true/false, not secret.",
-    } },
-    { "0.4.4", {
-        "Elemental -- fixed overcapping. Predicted Maelstrom ran low because it never counted Flame Shock's passive generation (its DoT ticks generate Maelstrom continuously, and you keep it up all fight), so spenders were held back until you'd already capped. PRIO now accrues Flame Shock ticks over time (haste-scaled, ~3 per tick), and Chain Lightning generates per target (2 x targets) instead of a flat amount. The prediction now tracks real Maelstrom far better. If it spends slightly early, the Flame Shock tick value is a one-line tune.",
-    } },
-    { "0.4.3", {
-        "Elemental 4-set (Ophidian Oracle): PRIO now understands the free spender. When the proc lights up your next Earth Shock / Elemental Blast / Earthquake on the Cooldown Manager, PRIO reads that glow and treats the spender as costing no Maelstrom -- so it isn't withheld by the affordability gate, and your predicted Maelstrom is no longer mispredicted as drained after the free cast. The glow read is latched, since the proc clears the instant you cast.",
-    } },
-    { "0.4.2", {
-        "Fix (Elemental Shaman, long-standing): Elemental Blast / Earthquake / Earth Shock were recommended before you had enough Maelstrom. Maelstrom is secret in combat, so the affordability gate was being skipped and spenders showed at any amount. PRIO now gates Elemental's spenders on its PREDICTED Maelstrom (already tracked precisely), so a spender only appears once you can afford it -- the same result Outlaw gets from readable combo points. Fail-open specs (Arms rage) are unchanged.",
-    } },
-    { "0.4.1", {
-        "Fix (regression from 0.4.0): the 'keep showing a spender only blocked by resource' behavior was applied to every spec, wrongly recommending Elemental Shaman Maelstrom spenders before you had enough Maelstrom. That relaxation is now Outlaw-only (Energy regens passively); built-resource specs (Maelstrom, Holy Power) again wait until you can afford the spender.",
+        "Fourth stable release -- full Outlaw Fatebound support and a big round of Elemental & Outlaw fixes. Everything since 0.4.0.",
+        "Outlaw: Fatebound hero tree (Trickster / Fatebound split, auto-selected from talents; both share tuned ST/AoE defaults, each customizable per hero). New tuned default lists -- Stealth opener, supercharge-aware finishers, Killing Spree during Adrenaline Rush, 4-set free Dispatch, and a self-gating Fatebound Deal Fate line.",
+        "Outlaw: Supercharged Combo Points (Supercharger talent) tracked, with new 'Supercharged CP >= / <= / = N' conditions. Finishers now fire at the combo points you set, not only at max (the game reports a finisher's cost as its maximum, which was overriding your condition). Stealth added as an ability; new Stealthed / Not stealthed condition.",
+        "Elemental: spenders gate on the game's readable insufficient-power flag instead of predicted Maelstrom (exact, no drift) -- fixes both showing too early and being held back while overcapping. Flame Shock's passive per-tick Maelstrom is now counted and Chain Lightning scales per target. The 4-set free spender is read from the CDM glow -- not withheld, not mispredicted as drained.",
+        "Engine & editor: new '=' (equals) operator for count conditions (Combo Points, Opportunity, Supercharged CP, Buff stacks, Charges, Enemies); fixed the Rotation Debug window showing some '>=' / glowing / usable conditions' pass/fail inverted (display-only -- the rotation itself was always correct).",
     } },
     { "0.4.0", {
         "Third stable release -- headlined by full Outlaw Rogue (Trickster) support, plus engine improvements for every spec. Everything since 0.3.0.",
