@@ -959,6 +959,12 @@ function Engine:ApplyMaelstrom(P, sid, key)
         end
     end
     local cost = API.PowerCostAmount(sid)
+    -- 4-set free spender: the proc (latched from the CDM glow) makes this cast cost no
+    -- Maelstrom -- don't subtract, and consume the latch so only ONE cast is free.
+    if cost and key and P.freeSpend and spec and spec.freeSpendGlow and spec.freeSpendGlow[key] then
+        cost = 0
+        P.freeSpend = false
+    end
     if cost then P.maelstrom = math.max(0, P.maelstrom - cost) end
     local gen = spec and spec.maelstromGen and key and spec.maelstromGen[key]
     if gen then P.maelstrom = math.min(cap, P.maelstrom + gen) end
@@ -1069,6 +1075,20 @@ local function BuildState(self, mode, enemies)
         P.stacks[oi.aura] = P.oppStacks
     end
 
+    -- FREE-SPENDER latch (tier 4-set, e.g. Elemental's Ophidian Oracle): a proc makes the
+    -- NEXT spender cost no primary resource, and the game lights that spender up on the
+    -- Cooldown Manager. Read the glow each frame and LATCH it -- the buff (and its glow)
+    -- clears the instant the spender is cast, so reading the glow at cast time would miss
+    -- it and wrongly subtract the resource. The latch is consumed in ApplyMaelstrom.
+    if spec.freeSpendGlow then
+        local free = false
+        for key in pairs(spec.freeSpendGlow) do
+            local sid = spec.spells[key]
+            if sid and API.SpellGlowing(sid) == true then free = true; break end
+        end
+        P.freeSpend = free
+    end
+
     -- Expire a predicted MotE that was granted but never consumed.
     if P.mote and P.moteExpire and now >= P.moteExpire then P.mote = false end
 
@@ -1091,6 +1111,7 @@ local function BuildState(self, mode, enemies)
         maelstrom = P.maelstrom or 0,                  -- predicted (synced when readable)
         maelstromMax = P.maelstromMax or (spec and spec.maelstromMax) or 0,
         maelstromReadable = realMs ~= nil,
+        freeSpend = P.freeSpend and true or false,     -- 4-set: next spender costs nothing
         mote      = P.mote and true or false,
         skStacks  = P.skStacks or 0,
         fsActive  = fsActive,                          -- true/false/nil (real read)
@@ -1406,6 +1427,11 @@ function Engine:Evaluate()
         if ready and (S.maelstromReadable or spec.gatePredictedResource)
            and (API.HasPowerCost(sid) or spec.ResourceCost) then
             local cost = ResourceCost(idToKey[sid], sid, S)
+            -- 4-set free spender: a proc has zeroed this spender's cost (read from the CDM
+            -- glow), so don't withhold it for lack of the resource.
+            if cost and S.freeSpend and spec.freeSpendGlow and spec.freeSpendGlow[idToKey[sid]] then
+                cost = 0
+            end
             if cost and S.maelstrom < cost then ready = false end
         end
         -- Energy prediction gate (soft): the bar is secret, so this is a dead-reckoned

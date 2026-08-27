@@ -203,4 +203,53 @@ test("engine: gatePredictedResource gates a SECRET-resource spender on the PREDI
     H.outlawSpec.gatePredictedResource = nil              -- restore
 end)
 
+-- Elemental's 4-set (Ophidian Oracle): a proc makes the next Earth Shock / Elemental
+-- Blast / Earthquake free and lights it on the CDM (spec.freeSpendGlow). Set up Ele with
+-- Maelstrom secret and every ST line but the bare Elemental Blast out of the way, so EB is
+-- the reachable candidate and its cost gate is what's under test. EB costs 75 Maelstrom.
+local EB, ELE_FS = 117014, 188389
+local function setEle()
+    H.reset(); H.S.specID = 262
+    H.S.power[11] = nil; H.S.powerMax[11] = 150            -- Maelstrom secret in combat
+    H.S.powerCost = { [EB] = { type = 11, cost = 75 } }
+    H.S.auras[ELE_FS] = true                                -- Flame Shock up -> upkeep line skips
+    setmetatable(H.S.ready, { __index = function() return false end })
+    H.S.ready[EB] = true                                   -- only bare Elemental Blast is ready
+    H.S.glows = {}
+    H.rebind()
+end
+local function eleShowsEB()
+    local r = H.Engine:Evaluate(); local hit = {}
+    if r and r.primary then hit[r.primary.name] = true end
+    for _, e in ipairs((r and r.queue) or {}) do hit[e.name] = true end
+    return hit["Spell" .. EB] == true
+end
+
+test("Elemental 4-set: a glowing (free) spender isn't withheld at low Maelstrom", function()
+    setEle()
+    H.Engine.P.maelstrom = 20                              -- predicted below the 75 cost
+    falsy(eleShowsEB(), "no proc: Elemental Blast withheld below its Maelstrom cost")
+
+    setEle()
+    H.S.glows[EB] = true                                   -- 4-set proc lights EB on the CDM
+    H.Engine.P.maelstrom = 20
+    truthy(eleShowsEB(), "proc glow: the free Elemental Blast shows even at low Maelstrom")
+end)
+
+test("Elemental 4-set: a free spender doesn't drain predicted Maelstrom (one cast only)", function()
+    setEle()
+    H.S.glows[EB] = true                                   -- EB lit = free
+    H.Engine.P.maelstrom = 100
+    H.Engine:CurrentState()                                -- latch the free-spender read
+    truthy(H.Engine.P.freeSpend, "glow latched a free spender")
+
+    H.Engine:ApplyMaelstrom(H.Engine.P, EB, "ElementalBlast")   -- free cast
+    eq(H.Engine.P.maelstrom, 100, "free cast doesn't drain Maelstrom")
+    falsy(H.Engine.P.freeSpend, "latch consumed after the free cast")
+
+    H.S.glows[EB] = nil; H.Engine:CurrentState()           -- glow gone -> next cast is normal
+    H.Engine:ApplyMaelstrom(H.Engine.P, EB, "ElementalBlast")
+    eq(H.Engine.P.maelstrom, 25, "the following cast drains normally (100 - 75)")
+end)
+
 H.reset(); H.rebind()   -- restore Windwalker for later suites

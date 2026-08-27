@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.4.3
+- **Elemental 4-set (Ophidian Oracle):** PRIO now understands the free spender. When the proc lights up your next **Earth Shock / Elemental Blast / Earthquake** on the Cooldown Manager, PRIO reads that glow and treats the spender as costing no Maelstrom — so it isn't withheld by the affordability gate (0.4.2), and it no longer mispredicts your Maelstrom as drained after you cast the free one. Reading the glow is latched, so it still counts even though the proc clears the instant you cast.
+
 ## 0.4.2
 - **Fix (Elemental Shaman, long-standing):** Elemental Blast / Earthquake / Earth Shock were recommended before you had enough **Maelstrom**. Because Maelstrom is secret in combat, the engine's affordability gate was skipped entirely, so spenders showed at any amount. PRIO now gates Elemental's spenders on its *predicted* Maelstrom (which it already tracks precisely), so a spender only appears once you can actually afford it — the same result Outlaw gets from readable combo points. Fail-open specs (Arms rage) are unchanged.
 

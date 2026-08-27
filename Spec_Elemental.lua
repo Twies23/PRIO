@@ -162,6 +162,12 @@ local spec = {
     -- Earthquake) on the PREDICTED Maelstrom -- otherwise the cost gate is skipped and they
     -- show before you can afford them. (PRIO tracks Maelstrom precisely for this.)
     gatePredictedResource = true,
+    -- 4-set (Ophidian Oracle): after Stormkeeper/Ascendance fade, the proc makes your next
+    -- Earth Shock / Elemental Blast / Earthquake cost 100% less Maelstrom, and the game
+    -- lights that spender up on the Cooldown Manager. PRIO reads that glow (spec.freeSpendGlow)
+    -- so the free spender isn't withheld by the Maelstrom gate and isn't mispredicted as
+    -- having drained Maelstrom when you cast it. Inert without the 4-set (nothing glows).
+    freeSpendGlow = { EarthShock = true, ElementalBlast = true, Earthquake = true },
     maelstromMax = 150,
     maelstromGen = {
         LightningBolt  = 8,
