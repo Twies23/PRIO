@@ -1398,8 +1398,13 @@ function Engine:Evaluate()
         end
 
         local ready = e.ignoreCD or API.IsReady(sid)
-        -- Primary-resource (Chi) gate, only when readable (secret combat fails open).
-        if ready and S.maelstromReadable and (API.HasPowerCost(sid) or spec.ResourceCost) then
+        -- Primary-resource gate. Runs when the resource READS clean (discrete: Chi, Combo
+        -- Points) -- exact -- OR when the spec opts in to gate on the PREDICTED value for a
+        -- SECRET resource it tracks for exactly this (spec.gatePredictedResource, e.g. Ele's
+        -- Maelstrom) so spenders don't show before you can afford them. Specs that fail open
+        -- on a secret resource (Arms rage) set neither and are unchanged.
+        if ready and (S.maelstromReadable or spec.gatePredictedResource)
+           and (API.HasPowerCost(sid) or spec.ResourceCost) then
             local cost = ResourceCost(idToKey[sid], sid, S)
             if cost and S.maelstrom < cost then ready = false end
         end

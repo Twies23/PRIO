@@ -178,4 +178,29 @@ test("engine: without softPowerUsable, an unaffordable spender IS withheld (buil
     H.outlawSpec.softPowerUsable = true                   -- restore
 end)
 
+test("engine: gatePredictedResource gates a SECRET-resource spender on the PREDICTED value", function()
+    -- Elemental's case: Maelstrom is secret in combat, so the readable cost gate is skipped
+    -- and spenders would show at any amount. With spec.gatePredictedResource the gate runs
+    -- against the predicted resource instead. Modelled here on Outlaw with combo points made
+    -- secret (power=nil) and a spender costing 5 of the primary resource.
+    setOutlaw()
+    H.outlawSpec.gatePredictedResource = true
+    H.S.power[COMBO] = nil                                 -- resource reads secret -> not readable
+    H.S.powerCost = { [2098] = { type = 4, cost = 5 } }    -- Dispatch: 5 of the primary resource
+    H.S.auras[ROLLBONES] = true
+    H.S.ready[315341] = false; H.S.ready[271877] = false   -- BtE / Blade Rush on CD
+    H.rebind()
+
+    H.Engine.P.maelstrom = 3                               -- predicted below cost -> withheld
+    local lo = H.Engine:Evaluate()
+    falsy(lo and lo.primary and lo.primary.name == "Spell2098",
+          "predicted 3 < cost 5: spender withheld even though the resource is secret")
+
+    H.Engine.P.maelstrom = 6                               -- predicted at/above cost -> shown
+    local hi = H.Engine:Evaluate()
+    eq(hi and hi.primary and hi.primary.name, "Spell2098",
+       "predicted 6 >= cost 5: spender shows")
+    H.outlawSpec.gatePredictedResource = nil              -- restore
+end)
+
 H.reset(); H.rebind()   -- restore Windwalker for later suites

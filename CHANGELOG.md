@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.4.2
+- **Fix (Elemental Shaman, long-standing):** Elemental Blast / Earthquake / Earth Shock were recommended before you had enough **Maelstrom**. Because Maelstrom is secret in combat, the engine's affordability gate was skipped entirely, so spenders showed at any amount. PRIO now gates Elemental's spenders on its *predicted* Maelstrom (which it already tracks precisely), so a spender only appears once you can actually afford it — the same result Outlaw gets from readable combo points. Fail-open specs (Arms rage) are unchanged.
+
 ## 0.4.1
 - **Fix (regression from 0.4.0):** the "keep showing a spender that's only blocked by resource" behavior was applied to every spec, which wrongly recommended **Elemental Shaman** Maelstrom spenders before you had enough Maelstrom. That relaxation is now Outlaw-only (Energy regenerates passively); specs whose spenders need a *built* resource — Maelstrom, Holy Power — again correctly wait until you can afford them.
 

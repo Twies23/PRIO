@@ -158,6 +158,10 @@ local spec = {
         VoltaicBlaze = { aura = ID_FLAMESHOCK, dur = 4 },
     },
 
+    -- Maelstrom is secret in combat, so gate spenders (Earth Shock / Elemental Blast /
+    -- Earthquake) on the PREDICTED Maelstrom -- otherwise the cost gate is skipped and they
+    -- show before you can afford them. (PRIO tracks Maelstrom precisely for this.)
+    gatePredictedResource = true,
     maelstromMax = 150,
     maelstromGen = {
         LightningBolt  = 8,
