@@ -210,6 +210,13 @@ local spec = {
     -- count, not the Cooldown Manager's max-charges number).
     condTags = { outlaw = true },
 
+    -- Energy is a fast-regen secondary, so a spender that's unusable ONLY for lack of
+    -- Energy still shows (you'll press it when Energy ticks up) instead of collapsing to
+    -- the cheapest builder. Combo-point affordability is enforced by the CP conditions.
+    -- (Specs whose gating resource is BUILT -- Maelstrom, Holy Power -- leave this off so
+    -- the usable check still withholds unaffordable spenders.)
+    softPowerUsable = true,
+
     -- Named presets surfaced in the condition editor (meaning, not mechanics).
     condPresets = {
         { key = "maxCP",     label = "Max combo points (>=6)", clause = cpMin(6) },

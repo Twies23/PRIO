@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.4.1", {
+        "Fix (regression from 0.4.0): the 'keep showing a spender only blocked by resource' behavior was applied to every spec, wrongly recommending Elemental Shaman Maelstrom spenders before you had enough Maelstrom. That relaxation is now Outlaw-only (Energy regens passively); built-resource specs (Maelstrom, Holy Power) again wait until you can afford the spender.",
+    } },
     { "0.4.0", {
         "Third stable release -- headlined by full Outlaw Rogue (Trickster) support, plus engine improvements for every spec. Everything since 0.3.0.",
         "Outlaw: complete ST and AoE priorities and the opener. Roll the Bones is read EXACTLY from combo-point timing (a stage-2+ roll makes Sinister Strike give an extra combo point, an instant before a double-strike does), so it rerolls a stage-1 roll and never a good one.",

@@ -164,4 +164,18 @@ test("outlaw AoE: Blade Flurry blocked only by energy still shows", function()
     eq(r and r.primary and r.primary.name, "Spell13877", "Blade Flurry shows despite low energy")
 end)
 
+test("engine: without softPowerUsable, an unaffordable spender IS withheld (built-resource specs)", function()
+    setOutlaw()
+    H.outlawSpec.softPowerUsable = false                  -- simulate a Maelstrom/Holy-Power spec
+    H.S.power[COMBO] = 6
+    H.S.auras[ROLLBONES] = true
+    H.S.ready[315341] = false; H.S.ready[271877] = false  -- BtE / Blade Rush on CD
+    H.S.usable = { [2098] = false }; H.S.usableNoPower = { [2098] = true }   -- Dispatch unaffordable
+    H.rebind()
+    local r = H.Engine:Evaluate()
+    falsy(r and r.primary and r.primary.name == "Spell2098",
+          "strict IsUsable withholds the unaffordable spender (no soft-power opt-in)")
+    H.outlawSpec.softPowerUsable = true                   -- restore
+end)
+
 H.reset(); H.rebind()   -- restore Windwalker for later suites

@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.4.1
+- **Fix (regression from 0.4.0):** the "keep showing a spender that's only blocked by resource" behavior was applied to every spec, which wrongly recommended **Elemental Shaman** Maelstrom spenders before you had enough Maelstrom. That relaxation is now Outlaw-only (Energy regenerates passively); specs whose spenders need a *built* resource — Maelstrom, Holy Power — again correctly wait until you can afford them.
+
 ## 0.4.0
 Third stable release — headlined by full **Outlaw Rogue** support, plus engine improvements that help every spec. Everything since 0.3.0.
 
