@@ -169,13 +169,26 @@ local spec = {
     -- having drained Maelstrom when you cast it. Inert without the 4-set (nothing glows).
     freeSpendGlow = { EarthShock = true, ElementalBlast = true, Earthquake = true },
     maelstromMax = 150,
+    -- On-cast Maelstrom generation. A number is a flat gain; a function receives the enemy
+    -- count and returns the gain (Chain Lightning generates 2 per target it hits). Flame
+    -- Shock's generation is PERIODIC (DoT ticks), not on cast -- see maelstromPassive below.
     maelstromGen = {
         LightningBolt  = 8,
-        ChainLightning = 12,
+        ChainLightning = function(enemies) return 2 * math.max(1, enemies or 1) end,
         LavaBurst      = 8,
         Tempest        = 0,
-        FlameShock     = 0,
+        FlameShock     = 0,     -- generation is periodic (maelstromPassive), not on cast
         VoltaicBlaze   = 0,
+    },
+
+    -- PASSIVE (periodic) Maelstrom. Flame Shock is a DoT kept up ~100% of the time and its
+    -- ticks generate Maelstrom continuously -- the on-cast model missed this entirely, which
+    -- is why the prediction lagged real Maelstrom and let you overcap. ~3 per tick; ticks
+    -- come faster with haste (tickBase = un-hasted period). The engine accrues this over
+    -- time while the aura is active AND only in combat (out of combat Maelstrom syncs to the
+    -- real value). If it now over-predicts (spends too early), lower perTick.
+    maelstromPassive = {
+        { aura = "FlameShock", perTick = 3, tickBase = 2.0 },
     },
 
     -- Advance the prediction model on the player's own casts.

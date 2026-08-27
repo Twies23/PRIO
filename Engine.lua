@@ -967,6 +967,10 @@ function Engine:ApplyMaelstrom(P, sid, key)
     end
     if cost then P.maelstrom = math.max(0, P.maelstrom - cost) end
     local gen = spec and spec.maelstromGen and key and spec.maelstromGen[key]
+    if type(gen) == "function" then                       -- per-target etc (e.g. Chain Lightning)
+        local ok, g = pcall(gen, API.EnemyCount())
+        gen = (ok and type(g) == "number") and g or nil
+    end
     if gen then P.maelstrom = math.min(cap, P.maelstrom + gen) end
 end
 
@@ -1045,6 +1049,29 @@ local function BuildState(self, mode, enemies)
     if realMs ~= nil then P.maelstrom = realMs end
     local realMax = spec.resource and API.PowerMax(spec.resource) or nil
     if realMax ~= nil then P.maelstromMax = realMax end
+
+    -- PASSIVE Maelstrom accrual (spec.maelstromPassive, e.g. Flame Shock DoT ticks):
+    -- continuous generation the on-cast model misses. Only while the real value is SECRET
+    -- (in combat) -- out of combat we sync to the real value above, so just reset the
+    -- accrual baseline. Haste speeds up ticks; dt is clamped so a paused UI / long frame
+    -- can't leap the prediction. Accrues only while the source aura reads active.
+    if spec.maelstromPassive and realMs == nil then
+        local last = P.lastMaelAccrue or now
+        local dt = now - last
+        if dt > 2 then dt = 2 end
+        if dt > 0 then
+            local haste = 1 + (API.Haste() or 0) / 100
+            local cap2  = P.maelstromMax or (spec and spec.maelstromMax) or 150
+            for _, g in ipairs(spec.maelstromPassive) do
+                local aid = spec.spells[g.aura] or (spec.auras and spec.auras[g.aura])
+                if aid and API.IsAuraActive(aid) == true then
+                    local perSec = (g.perTick or 0) * (haste / (g.tickBase or 2.0))
+                    P.maelstrom = math.min(cap2, (P.maelstrom or 0) + perSec * dt)
+                end
+            end
+        end
+    end
+    P.lastMaelAccrue = now
 
     -- (Roll the Bones stage is read from the instant combo-point bump in the
     -- UNIT_POWER_UPDATE handler -- see spec.stageInfer -- not here.)

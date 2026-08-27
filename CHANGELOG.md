@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.4.4
+- **Elemental — fixed overcapping.** PRIO's predicted Maelstrom was running low because it never counted **Flame Shock's passive generation** (its DoT ticks generate Maelstrom continuously, and you keep it up the whole fight) — so spenders were held back until you were already capped. PRIO now accrues Flame Shock's ticks over time (haste-scaled, ~3 per tick), and **Chain Lightning** now generates per target (2 × targets) instead of a flat amount. Net result: the prediction tracks your real Maelstrom far better and recommends spenders before you overcap. *(If it now spends slightly early, the Flame Shock tick value is a one-line tune — let me know.)*
+
 ## 0.4.3
 - **Elemental 4-set (Ophidian Oracle):** PRIO now understands the free spender. When the proc lights up your next **Earth Shock / Elemental Blast / Earthquake** on the Cooldown Manager, PRIO reads that glow and treats the spender as costing no Maelstrom — so it isn't withheld by the affordability gate (0.4.2), and it no longer mispredicts your Maelstrom as drained after you cast the free one. Reading the glow is latched, so it still counts even though the proc clears the instant you cast.
 

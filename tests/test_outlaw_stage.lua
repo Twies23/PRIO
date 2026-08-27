@@ -252,4 +252,46 @@ test("Elemental 4-set: a free spender doesn't drain predicted Maelstrom (one cas
     eq(H.Engine.P.maelstrom, 25, "the following cast drains normally (100 - 75)")
 end)
 
+test("Elemental: Flame Shock ticks accrue predicted Maelstrom over time (fixes overcap)", function()
+    H.reset(); H.S.specID = 262
+    H.S.power[11] = nil; H.S.powerMax[11] = 150         -- Maelstrom secret (in combat)
+    H.S.haste = 0
+    H.S.auras[470411] = true                            -- Flame Shock up (tracked)
+    H.rebind()
+    H.Engine.P.maelstrom = 10
+    H.Engine:CurrentState()                             -- baseline (dt = 0)
+    H.S.now = H.S.now + 2                               -- two seconds of DoT ticks pass
+    H.Engine:CurrentState()
+    -- perSec = 3 * (1 / 2.0) = 1.5 at 0 haste; over 2s = +3
+    eq(H.Engine.P.maelstrom, 13, "~3 Maelstrom accrued from Flame Shock over 2s")
+end)
+
+test("Elemental: Flame Shock accrual is haste-scaled and stops when it drops", function()
+    H.reset(); H.S.specID = 262
+    H.S.power[11] = nil; H.S.powerMax[11] = 150
+    H.S.haste = 50                                      -- +50% haste -> ticks 50% faster
+    H.S.auras[470411] = true
+    H.rebind()
+    H.Engine.P.maelstrom = 0
+    H.Engine:CurrentState()
+    H.S.now = H.S.now + 2
+    H.Engine:CurrentState()
+    -- perSec = 3 * (1.5 / 2.0) = 2.25; over 2s = +4.5
+    eq(H.Engine.P.maelstrom, 4.5, "haste speeds up tick accrual")
+    H.S.auras[470411] = false                           -- Flame Shock drops
+    H.S.now = H.S.now + 2
+    H.Engine:CurrentState()
+    eq(H.Engine.P.maelstrom, 4.5, "no accrual once Flame Shock is gone")
+end)
+
+test("Elemental: Chain Lightning generates 2 Maelstrom per target", function()
+    H.reset(); H.S.specID = 262
+    H.S.power[11] = nil; H.S.powerMax[11] = 150
+    H.S.enemies = 5
+    H.rebind()
+    H.Engine.P.maelstrom = 0
+    H.Engine:ApplyMaelstrom(H.Engine.P, 188443, "ChainLightning")
+    eq(H.Engine.P.maelstrom, 10, "2 x 5 targets = 10")
+end)
+
 H.reset(); H.rebind()   -- restore Windwalker for later suites
