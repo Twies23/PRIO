@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.4.10", {
+        "Outlaw -- new default priority lists (both hero trees, ST + AoE). Shipped defaults are now the tuned list: opens with Stealth, supercharge-aware finishers (spend a Supercharged CP with Between the Eyes / Killing Spree), Killing Spree during Adrenaline Rush, the 4-set free Dispatch, and a Fatebound Deal Fate line that self-activates only on that talent. Trickster and Fatebound share the list (still customizable separately); AoE is the same core with the two Blade Flurry lines up top. Reset to default (per mode) to pick these up if you've customized.",
+    } },
     { "0.4.9", {
         "Outlaw -- Supercharged Combo Points (Supercharger talent): Adrenaline Rush supercharges 2, and each damaging finisher (Dispatch, Between the Eyes, Killing Spree) consumes one. New editable conditions 'Supercharged CP >= / <= / = N'. Predicted from your own casts; shown in Rotation Debug; inert unless talented.",
         "New '=' (equals) condition operator alongside >= and <= -- for Combo Points/Resource, Opportunity, Supercharged CP, Buff stacks, Charges, and Enemies.",

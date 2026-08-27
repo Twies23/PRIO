@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.4.10
+- **Outlaw — new default priority lists (both hero trees, ST + AoE).** Shipped defaults are now the tuned list: opens with **Stealth**, supercharge-aware finishers (spend a Supercharged CP with Between the Eyes / Killing Spree), Killing Spree during Adrenaline Rush, the 4-set free Dispatch, and a Fatebound **Deal Fate** line that self-activates only on that talent. Trickster and Fatebound share the same list (each still customizable separately); AoE is the same core with the two Blade Flurry lines up top. *Reset to default (per mode) to pick these up if you've customized.*
+
 ## 0.4.9
 - **Outlaw — Supercharged Combo Points (Supercharger talent).** PRIO now tracks supercharged combo points: Adrenaline Rush supercharges 2, and each damaging finisher (Dispatch, Between the Eyes, Killing Spree) consumes one. New editable conditions **"Supercharged CP ≥ / ≤ / = N"** let you build around it (e.g. finish early while you have a supercharged point). Predicted from your own casts (secret in combat); shows live in Rotation Debug. Inert unless talented.
 - **New "=" (equals) condition operator.** Comparison conditions now come in an **exactly-equals** flavour alongside ≥ and ≤ — for Combo Points/Resource, Opportunity, Supercharged CP, Buff stacks, Charges, and Enemies. (Continuous ones like time-left and Energy % stay ≥/≤.)

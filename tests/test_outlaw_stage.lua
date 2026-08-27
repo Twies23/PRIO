@@ -15,6 +15,7 @@ local function setOutlaw()
     H.reset(); H.S.specID = 260
     H.S.power[COMBO] = 0; H.S.powerMax[COMBO] = 6
     H.S.tracked[ROLLBONES] = true
+    H.S.usable[1784] = false      -- Stealth: unusable in combat (top-of-list "always" line)
     H.rebind()
 end
 
@@ -135,7 +136,7 @@ test("outlaw: a spender blocked only by low energy still shows (no collapse to S
     H.S.ready[315341] = false                              -- Between the Eyes on CD -> Dispatch is the finisher
     H.S.ready[271877] = false                              -- Blade Rush on CD (higher "always" line)
     -- Dispatch reads unusable via IsUsable (low energy) but is "usable if it weren't for power"
-    H.S.usable = { [2098] = false }
+    H.S.usable = { [2098] = false, [1784] = false }        -- Stealth unusable in combat
     H.S.usableNoPower = { [2098] = true }
     H.rebind()
     local r = H.Engine:Evaluate()
@@ -149,7 +150,7 @@ test("outlaw: Pistol Shot blocked only by energy still shows when it's the prior
     H.S.auras[ROLLBONES] = true                            -- roll active
     H.S.ready[13750] = false; H.S.ready[271877] = false; H.S.ready[51690] = false  -- AR/BladeRush/KS on CD
     H.S.glows[185763] = true                               -- Opportunity up (glow)
-    H.S.usable = { [185763] = false }; H.S.usableNoPower = { [185763] = true }     -- energy-blocked only
+    H.S.usable = { [185763] = false, [1784] = false }; H.S.usableNoPower = { [185763] = true }  -- energy-blocked only (+Stealth unusable)
     H.rebind(); H.Engine.P.predFlags = { rtbStage2 = true }
     local r = H.Engine:Evaluate()
     eq(r and r.primary and r.primary.name, "Spell185763", "Pistol Shot shows despite low energy")
@@ -158,7 +159,7 @@ end)
 test("outlaw AoE: Blade Flurry blocked only by energy still shows", function()
     setOutlaw()
     H.S.power[COMBO] = 2; H.S.enemies = 3                  -- AoE mode
-    H.S.usable = { [13877] = false }; H.S.usableNoPower = { [13877] = true }        -- energy-blocked only
+    H.S.usable = { [13877] = false, [1784] = false }; H.S.usableNoPower = { [13877] = true }  -- energy-blocked only (+Stealth unusable)
     H.rebind()
     local r = H.Engine:Evaluate()
     eq(r and r.primary and r.primary.name, "Spell13877", "Blade Flurry shows despite low energy")
@@ -308,12 +309,12 @@ test("outlaw hero split: Unseen Blade selects Trickster, its absence selects Fat
     eq(s.activeHero(), "trickster", "Unseen Blade known -> Trickster")
     H.reset(); H.S.knownStrict[441146] = false; H.rebind()
     eq(s.activeHero(), "fatebound", "no Unseen Blade -> Fatebound")
-    -- Fatebound defaults are an INDEPENDENT clone of Trickster (same content, own tables),
-    -- so reworking one won't disturb the other.
-    truthy(s.priorityByVariant.fatebound.st ~= s.priorityByVariant.trickster.st, "independent st tables")
-    truthy(s.priorityByVariant.fatebound.aoe ~= s.priorityByVariant.trickster.aoe, "independent aoe tables")
-    eq(#s.priorityByVariant.fatebound.st, #s.priorityByVariant.trickster.st, "cloned st length")
-    eq(#s.priorityByVariant.fatebound.aoe, #s.priorityByVariant.trickster.aoe, "cloned aoe length")
+    -- Trickster and Fatebound share the SAME default lists (per-hero customization still
+    -- stores separately in db, so they can diverge without a code change).
+    eq(s.priorityByVariant.fatebound.st, s.priorityByVariant.trickster.st, "shared st table")
+    eq(s.priorityByVariant.fatebound.aoe, s.priorityByVariant.trickster.aoe, "shared aoe table")
+    truthy(s.priorityByVariant.trickster.aoe[1].spell == "Stealth", "AoE opens with Stealth")
+    truthy(s.priorityByVariant.trickster.aoe[2].spell == "BladeFlurry", "AoE has Blade Flurry right after Stealth")
 end)
 
 test("outlaw finisher: a finisher fires below its reported (max) cost, gated by the user's CP", function()

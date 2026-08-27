@@ -55,6 +55,7 @@ local ID_AMBUSH     = 8676
 local ID_GHOSTLY    = 196937
 local ID_STEALTH    = 1784     -- baseline Stealth
 local ID_SUPERCHARGER = 470347 -- Supercharger talent: AR supercharges 2 combo points
+local ID_DEALFATE   = 454419   -- Deal Fate (Fatebound): SS +1 CP when it grants Opportunity
 local ID_THISTLETEA = 381623
 -- ROLL THE BONES STAGE (12.1 rework, confirmed live 2026-08-26): RtB grants ONE named
 -- buff whose identity IS the stage -- not six separate buffs, and the RtB bar (#1214909)
@@ -88,6 +89,9 @@ local function glow(id)      return { type = "glowing", spell = id } end        
 local function enemiesMin(n) return { type = "enemiesMin", v = n } end               -- nameplate count >= n
 local function lastCast(id)  return { type = "lastCast", spell = id } end            -- previous cast was this
 local function oppMin(n)     return { type = "oppStacksMin", v = n } end             -- Opportunity charges >= n (editable)
+local function cpEq(n)       return { type = "resourceEq", v = n } end               -- combo points == n
+local function scMin(n)      return { type = "superChargeMin", v = n } end            -- supercharged CP >= n
+local function talent(id)    return { type = "talentYes", spell = id } end            -- talent selected
 local function preset(key)   return { type = "preset:" .. key } end                  -- named condPreset (editable chip)
 
 --------------------------------------------------------------------------------
@@ -111,54 +115,49 @@ local function rtbReroll() return OR(buffDown(ID_ROLLBONES), predStage2False()) 
 -- buff. So instead of guessing, PRIO ALERTS when KiR is ready and the roll is a
 -- confirmed good one (stage 2+), and leaves the call to you (see spec.alerts).
 
--- Default lists = user-tuned (0.3.23). Sinister Strike as the bottom filler is CORRECT:
--- Outlaw doesn't pool Energy, so it's the baseline builder you fall back to (Icy Veins).
-local st = {
-    { spell = "RollTheBones",  cond = preset("rtbReroll") },                          -- reroll: nothing up, or inferred stage 1
+-- Default lists = user-tuned (0.4.10). ONE list drives every mode/hero: the same core is
+-- used for Trickster and Fatebound ST/AoE, so hero- and mode-specific lines are gated to
+-- self-select (the Deal Fate line goes inert without that Fatebound talent; the Blade
+-- Flurry lines are AoE-only). Sinister Strike at the bottom is the baseline builder
+-- (Outlaw doesn't pool Energy). The core, from Stealth down:
+local core = {
+    { spell = "Stealth" },                                                          -- opener / re-stealth
+    { spell = "RollTheBones",  cond = preset("rtbReroll") },                        -- reroll a stage-1 (or no) roll
     { spell = "Preparation",   cond = AND(cdDown(ID_BTE), cdDown(ID_ADRENALINE), cdDown(ID_KILLSPREE)) },
     { spell = "AdrenalineRush", cond = cpMax(2) },                                  -- on CD at <=2 CP
-    { spell = "KillingSpree",  cond = lastCast(ID_ADRENALINE) },                    -- right after Adrenaline Rush
-    { spell = "Dispatch",      cond = buffUp(ID_FANGSTRIKE) },                       -- free Dispatch (4pc Fang Strike up)
+    { spell = "BetweenTheEyes", cond = AND(scMin(2), cpMin(6)) },                   -- spend a supercharge with BtE
+    { spell = "KillingSpree",  cond = AND(scMin(1), cpMin(6)) },                    -- spend a supercharge with KS
+    { spell = "KillingSpree",  cond = buffUp(ID_ADRENALINE) },                      -- during Adrenaline Rush
+    { spell = "Dispatch",      cond = buffUp(ID_FANGSTRIKE) },                      -- free Dispatch (4pc Fang Strike)
     { spell = "BladeRush" },                                                        -- on CD
     { spell = "BetweenTheEyes", cond = cpMin(6) },                                  -- finisher at >=6 CP
     { spell = "Dispatch",      cond = cpMin(6) },                                   -- finisher at >=6 CP
-    { spell = "PistolShot",    cond = oppMin(6) },                                  -- dump at cap (6 tracked charges)
+    { spell = "SinisterStrike", cond = AND(talent(ID_DEALFATE), preset("rtbGood"), cpEq(1)) }, -- Fatebound: Deal Fate build at 1 CP on a good roll
+    { spell = "PistolShot",    cond = oppMin(6) },                                  -- dump at cap
     { spell = "PistolShot",    cond = AND(preset("oppUp"), cpMax(3)) },            -- or spend at low CP (Opportunity up)
     { spell = "SinisterStrike", cond = cpMax(5) },                                  -- baseline builder at <=5 CP
 }
 
-local aoe = {
-    { spell = "BladeFlurry",   cond = buffDown(ID_BLADEFLURRY) },                   -- put the cleave buff up
-    { spell = "BladeFlurry",   cond = AND(buffUp(ID_BLADEFLURRY), enemiesMin(4), cpMax(4)) }, -- recast on 4+ at low CP
-    { spell = "RollTheBones",  cond = preset("rtbReroll") },
-    { spell = "Preparation",   cond = AND(cdDown(ID_BTE), cdDown(ID_ADRENALINE),
-                                          cdDown(ID_KILLSPREE), cdDown(ID_BLADERUSH)) },
-    { spell = "AdrenalineRush", cond = cpMax(2) },
-    { spell = "KillingSpree",  cond = lastCast(ID_ADRENALINE) },
-    { spell = "Dispatch",      cond = buffUp(ID_FANGSTRIKE) },                       -- free Dispatch (4pc Fang Strike up)
-    { spell = "BladeRush" },
-    { spell = "BetweenTheEyes", cond = cpMin(6) },
-    { spell = "Dispatch",      cond = cpMin(6) },
-    { spell = "PistolShot",    cond = oppMin(6) },                                  -- dump at cap
-    { spell = "PistolShot",    cond = AND(preset("oppUp"), cpMax(3)) },            -- or spend at low CP
-    { spell = "SinisterStrike", cond = cpMax(5) },
+-- ST = the core as-is. AoE = the core with the two Blade Flurry lines inserted right after
+-- Stealth (keep the cleave buff up; recast it on 4+ at low CP). Built programmatically so
+-- the shared core stays the single source of truth.
+local st = core
+local aoe = { core[1],
+    { spell = "BladeFlurry", cond = buffDown(ID_BLADEFLURRY) },                     -- put the cleave buff up
+    { spell = "BladeFlurry", cond = AND(buffUp(ID_BLADEFLURRY), enemiesMin(4), cpMax(4)) }, -- recast on 4+ at low CP
 }
+for i = 2, #core do aoe[#aoe + 1] = core[i] end
 
 --------------------------------------------------------------------------------
--- HERO SPLIT. Fatebound plays very similarly to Trickster, so for now its lists are a
--- CLONE of Trickster's (independent copies) -- placeholder to be reworked in-game and
--- re-tuned, then shipped as real Fatebound defaults. Active hero is decided by a STRICT
+-- HERO SPLIT. Trickster and Fatebound share the SAME default lists (the user tunes one
+-- set; hero-specific lines like Deal Fate self-gate). Active hero is decided by a STRICT
 -- known-check on the Trickster keystone Unseen Blade (441146) -- talent/spellbook state,
--- not an aura -- which Fatebound rogues lack. Default is Trickster (the tuned list).
--- TODO: once the Fatebound keystone ID is confirmed in-game, make this a POSITIVE Fatebound
--- check defaulting to Trickster (mirrors Arms' Demolish->Colossus signature).
+-- not an aura -- which Fatebound rogues lack; default is Trickster. Per-hero customization
+-- still stores separately in db, so the two can diverge later without a code change.
 --------------------------------------------------------------------------------
-local fatebound_st  = CopyTable(st)
-local fatebound_aoe = CopyTable(aoe)
-
 local heroLists = {
-    trickster = { st = st,           aoe = aoe },
-    fatebound = { st = fatebound_st, aoe = fatebound_aoe },
+    trickster = { st = st, aoe = aoe },
+    fatebound = { st = st, aoe = aoe },
 }
 
 local function activeHero()
