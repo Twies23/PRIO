@@ -492,47 +492,47 @@ function Cond.ClauseStatus(cl, S, selfSid)
         return a and "pass" or "fail"
     elseif t == "stacksMin" or t == "stacksMax" then
         local s = API.AuraStackCount(sid); if s == nil then return "open" end
-        local ok = (t == "stacksMin") and (s >= (cl.v or 1)) or (s <= (cl.v or 1))
+        local ok; if t == "stacksMin" then ok = s >= (cl.v or 1) else ok = s <= (cl.v or 1) end
         return ok and "pass" or "fail"
     elseif t == "glowing" or t == "notGlowing" then
         local g = API.SpellGlowing(sid); if g == nil then return "open" end
-        local ok = (t == "glowing") and g or (not g)
+        local ok; if t == "glowing" then ok = g else ok = not g end
         return ok and "pass" or "fail"
     elseif t == "predStackMin" or t == "predStackMax" then
         local s = PredStacks(sid, S)
-        local ok = (t == "predStackMin") and (s >= (cl.v or 1)) or (s <= (cl.v or 1))
+        local ok; if t == "predStackMin" then ok = s >= (cl.v or 1) else ok = s <= (cl.v or 1) end
         return ok and "pass" or "fail"
     elseif t == "oppStacksMin" or t == "oppStacksMax" then
         local s = PredStacks(spec and spec.oppInfer and spec.oppInfer.aura, S)
-        local ok = (t == "oppStacksMin") and (s >= (cl.v or 0)) or (s <= (cl.v or 0))
+        local ok; if t == "oppStacksMin" then ok = s >= (cl.v or 0) else ok = s <= (cl.v or 0) end
         return ok and "pass" or "fail"
     elseif t == "chargesMin" or t == "chargesMax" then
         local c = ChargeCount(sid); if c == nil then return "open" end
-        local ok = (t == "chargesMin") and (c >= (cl.v or 1)) or (c <= (cl.v or 1))
+        local ok; if t == "chargesMin" then ok = c >= (cl.v or 1) else ok = c <= (cl.v or 1) end
         return ok and "pass" or "fail"
     elseif t == "auraRemainMin" or t == "auraRemainMax" then
         local r = Engine:AuraRemaining(sid); if r == nil then return "fail" end
-        local ok = (t == "auraRemainMin") and (r >= (cl.v or 0)) or (r <= (cl.v or 0))
+        local ok; if t == "auraRemainMin" then ok = r >= (cl.v or 0) else ok = r <= (cl.v or 0) end
         return ok and "pass" or "fail"
     elseif t == "cdRemainMin" or t == "cdRemainMax" then
         local r = Engine:CooldownRemaining(sid); if r == nil then return "open" end
-        local ok = (t == "cdRemainMin") and (r >= (cl.v or 0)) or (r <= (cl.v or 0))
+        local ok; if t == "cdRemainMin" then ok = r >= (cl.v or 0) else ok = r <= (cl.v or 0) end
         return ok and "pass" or "fail"
     elseif t == "resourceMin" or t == "resourceMax" then
         local v = S and S.maelstrom; if v == nil then return "open" end
-        local ok = (t == "resourceMin") and (v >= (cl.v or 0)) or (v <= (cl.v or 0))
+        local ok; if t == "resourceMin" then ok = v >= (cl.v or 0) else ok = v <= (cl.v or 0) end
         return ok and "pass" or "fail"
     elseif t == "energyNearCap" or t == "energyNotNearCap" then
         local n = EnergyNearCap(); if n == nil then return "open" end
-        local ok = (t == "energyNearCap") and n or (not n)
+        local ok; if t == "energyNearCap" then ok = n else ok = not n end
         return ok and "pass" or "fail"
     elseif t == "energyPctMin" or t == "energyPctMax" then
         local p = EnergyPct(); if p == nil then return "open" end
-        local ok = (t == "energyPctMin") and (p >= (cl.v or 0)) or (p <= (cl.v or 0))
+        local ok; if t == "energyPctMin" then ok = p >= (cl.v or 0) else ok = p <= (cl.v or 0) end
         return ok and "pass" or "fail"
     elseif t == "usable" or t == "notUsable" then
         local u = API.IsUsable(sid); if u == nil then return "open" end
-        local ok = (t == "usable") and u or not u
+        local ok; if t == "usable" then ok = u else ok = not u end
         return ok and "pass" or "fail"
     end
     return EvalClause(cl, S, selfSid) and "pass" or "fail"

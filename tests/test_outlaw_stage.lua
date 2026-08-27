@@ -316,4 +316,19 @@ test("outlaw hero split: Unseen Blade selects Trickster, its absence selects Fat
     eq(#s.priorityByVariant.fatebound.aoe, #s.priorityByVariant.trickster.aoe, "cloned aoe length")
 end)
 
+test("rotdebug label: resource >=/<= pass-fail is not inverted (Lua and/or trap)", function()
+    -- Regression: ClauseStatus used `(t=='Min') and (v>=n) or (v<=n)`, which fell through to
+    -- v<=n whenever v>=n was false -- so a "Combo Pts >= 6" line showed PASS at 5 CP. The
+    -- rotation eval was always correct; only the debug label lied and confused the read.
+    H.reset(); H.S.specID = 260
+    H.S.power[4] = 5; H.S.powerMax[4] = 6         -- combo points = 5
+    H.rebind()
+    local S = H.Engine:CurrentState()
+    eq(H.Cond.ClauseStatus({ type = "resourceMin", v = 6 }, S), "fail", ">= 6 at 5 CP -> fail")
+    eq(H.Cond.ClauseStatus({ type = "resourceMin", v = 5 }, S), "pass", ">= 5 at 5 CP -> pass")
+    eq(H.Cond.ClauseStatus({ type = "resourceMin", v = 4 }, S), "pass", ">= 4 at 5 CP -> pass")
+    eq(H.Cond.ClauseStatus({ type = "resourceMax", v = 5 }, S), "pass", "<= 5 at 5 CP -> pass")
+    eq(H.Cond.ClauseStatus({ type = "resourceMax", v = 4 }, S), "fail", "<= 4 at 5 CP -> fail")
+end)
+
 H.reset(); H.rebind()   -- restore Windwalker for later suites

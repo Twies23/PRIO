@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.4.7", {
+        "Fix: the Rotation Debug window showed some conditions' pass/fail inverted. A '>= N' line (e.g. Combo Pts >= 6) wrongly showed PASS whenever you were BELOW N, likewise for other >=/glowing/usable checks. Display-only -- the actual rotation always evaluated correctly -- but it made it look like a finisher should be firing before you had the combo points. The debug now reports true pass/fail.",
+    } },
     { "0.4.6", {
         "Outlaw -- Fatebound hero tree added. Outlaw now has a Trickster / Fatebound hero split (auto-selected from your talents, like Arms' Slayer / Colossus). Fatebound's default lists are a clone of Trickster's for now -- a starting point to rework in-game and re-tune. Pick either tree under Options -> Priorities to view and edit its lists.",
     } },
