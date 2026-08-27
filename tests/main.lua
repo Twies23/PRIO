@@ -33,6 +33,7 @@ dofile(TESTS_DIR .. "\\test_arms_hero.lua")
 dofile(TESTS_DIR .. "\\test_arms_stacks.lua")
 dofile(TESTS_DIR .. "\\test_outlaw_stage.lua")
 dofile(TESTS_DIR .. "\\test_outlaw_opportunity.lua")
+dofile(TESTS_DIR .. "\\test_outlaw_supercharge.lua")
 dofile(TESTS_DIR .. "\\test_queue.lua")
 
 print(string.format("\n=== PRIO tests: %d passed, %d failed ===", pass, fail))

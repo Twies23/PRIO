@@ -1,5 +1,10 @@
 # PRIO Changelog
 
+## 0.4.9
+- **Outlaw — Supercharged Combo Points (Supercharger talent).** PRIO now tracks supercharged combo points: Adrenaline Rush supercharges 2, and each damaging finisher (Dispatch, Between the Eyes, Killing Spree) consumes one. New editable conditions **"Supercharged CP ≥ / ≤ / = N"** let you build around it (e.g. finish early while you have a supercharged point). Predicted from your own casts (secret in combat); shows live in Rotation Debug. Inert unless talented.
+- **New "=" (equals) condition operator.** Comparison conditions now come in an **exactly-equals** flavour alongside ≥ and ≤ — for Combo Points/Resource, Opportunity, Supercharged CP, Buff stacks, Charges, and Enemies. (Continuous ones like time-left and Energy % stay ≥/≤.)
+- **Outlaw — Stealth added as an ability, plus a "Stealthed" condition.** Stealth (and Vanish, already present) can be added to your lists, and a new **Stealthed / Not stealthed** condition reads the game's stealth state (covers Stealth, Vanish, and Shadow Dance) so you can gate opener/re-stealth lines like *Ambush when Stealthed*.
+
 ## 0.4.8
 - **Outlaw — finishers now fire at the combo points you set, not only at max.** A finisher (Dispatch, Between the Eyes, Slice and Dice) is castable at any combo points, but the game reports its *cost* as the maximum — so PRIO's affordability check was withholding it below max and overriding your own condition. A "Dispatch at ≥ 5 CP" line now fires at 5 (a finisher is still correctly withheld at 0 CP). This is the real fix behind the "it should be recommending Dispatch, not Sinister Strike" case.
 

@@ -36,6 +36,7 @@ function H.reset()
         talents = {},                          -- IsTalentSelected
         stacks = {},                           -- AuraStackCount
         glows = {},                            -- SpellGlowing (proc overlay)
+        stealthed = false,                     -- API.Stealthed
         lastCastKey = nil,
     }
     H.S = S
@@ -100,6 +101,7 @@ function API.IsReady(id) return truthy(S.ready, id, true) end
 function API.IsUsable(id) return truthy(S.usable, id, true) end
 function API.UsableClean(id) local v = S.usableClean[id]; if v == nil then return nil end; return v and true or false end
 function API.InsufficientPower(id) local v = S.insufficientPower[id]; if v == nil then return nil end; return v and true or false end
+function API.Stealthed() return S.stealthed and true or false end
 function API.UsableOrNoPower(id)
     local v = S.usableNoPower and S.usableNoPower[id]
     if v ~= nil then return v and true or false end

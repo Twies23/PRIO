@@ -53,6 +53,8 @@ local ID_FANGSTRIKE = 1301405  -- Fang Strike: 4pc tier buff -> next Dispatch is
 local ID_VANISH     = 1856
 local ID_AMBUSH     = 8676
 local ID_GHOSTLY    = 196937
+local ID_STEALTH    = 1784     -- baseline Stealth
+local ID_SUPERCHARGER = 470347 -- Supercharger talent: AR supercharges 2 combo points
 local ID_THISTLETEA = 381623
 -- ROLL THE BONES STAGE (12.1 rework, confirmed live 2026-08-26): RtB grants ONE named
 -- buff whose identity IS the stage -- not six separate buffs, and the RtB bar (#1214909)
@@ -305,6 +307,7 @@ local spec = {
         Preparation    = ID_PREPARATION,
         Ambush         = ID_AMBUSH,
         Vanish         = ID_VANISH,
+        Stealth        = ID_STEALTH,
         GhostlyStrike  = ID_GHOSTLY,
         ThistleTea     = ID_THISTLETEA,
     },
@@ -322,7 +325,7 @@ local spec = {
     pickable = {
         "SinisterStrike", "PistolShot", "Dispatch", "BetweenTheEyes", "RollTheBones",
         "SliceandDice", "BladeFlurry", "BladeRush", "AdrenalineRush", "KillingSpree",
-        "KeepItRolling", "Preparation", "Ambush", "Vanish", "GhostlyStrike", "ThistleTea",
+        "KeepItRolling", "Preparation", "Ambush", "Vanish", "Stealth", "GhostlyStrike", "ThistleTea",
     },
 
     fillers = { [ID_SINISTER] = true },   -- Sinister Strike is the no-cooldown builder
@@ -337,7 +340,20 @@ local spec = {
         PistolShot = { type = "buffActive", spell = ID_OPPORTUNITY },   -- free/empowered shot
     },
 
-    OnCast = function(P, key, now) end,
+    -- SUPERCHARGED COMBO POINTS (Supercharger talent 470347). Adrenaline Rush supercharges 2
+    -- combo points; each DAMAGING finisher (Dispatch, Between the Eyes, Killing Spree) consumes
+    -- one. The count is secret in combat, so PRIO predicts it from your own casts (reliable --
+    -- no drift). Inert unless talented. Reset to 0 on combat end (Engine). Read via the
+    -- "Supercharged CP >=/<=/=" conditions and S.superCharge.
+    OnCast = function(P, key, now)
+        if not API.IsKnown(ID_SUPERCHARGER) then return end
+        P.superCharge = P.superCharge or 0
+        if key == "AdrenalineRush" then
+            P.superCharge = 2                                   -- AR supercharges 2 (rank 2/2)
+        elseif key == "Dispatch" or key == "BetweenTheEyes" or key == "KillingSpree" then
+            if P.superCharge > 0 then P.superCharge = P.superCharge - 1 end
+        end
+    end,
 
     -- LOOK-AHEAD combo-point modelling: how each cast changes combo points, so the queue
     -- (the "next" icons) predicts building toward a finisher and spending it. Combo points
@@ -407,6 +423,9 @@ local spec = {
             -- Read from the instant combo-point bump: false = stage 1 (reroll), true =
             -- stage 2+ (good), unknown = not read yet this roll.
             { label = "Roll good? (read)",       kind = "predFlag", key = "rtbStage2" },
+            -- Supercharger (470347): predicted 0-2, set to 2 by Adrenaline Rush, -1 per
+            -- damaging finisher (Dispatch / Between the Eyes / Killing Spree).
+            { label = "Supercharged CP",         kind = "predCount", field = "superCharge" },
         },
     },
 }

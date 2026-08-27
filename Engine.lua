@@ -54,22 +54,26 @@ Cond.types = {
     { value = "skStacks",    text = "SK stacks \226\137\165", needsValue = true, min = 1, max = 4, def = 1, tag = "ele" },
     { value = "stacksMin",   text = "Buff stacks \226\137\165", needsSpell = true, needsValue = true, min = 1, max = 10, def = 2, target = "buff" },
     { value = "stacksMax",   text = "Buff stacks \226\137\164", needsSpell = true, needsValue = true, min = 0, max = 10, def = 1, target = "buff" },
+    { value = "stacksEq",    text = "Buff stacks =", needsSpell = true, needsValue = true, min = 0, max = 10, def = 1, target = "buff" },
     -- NOTE: proc-glow (glowing/notGlowing) and predicted-stack (predStackMin/Max) clause
     -- types are still evaluated below, but are NOT offered as raw picker options -- they
     -- are surfaced only as named spec.condPresets (e.g. "Sudden Death up"), so the user
     -- never has to know "Execute glow == Sudden Death".
     { value = "chargesMin",  text = "Charges \226\137\165", needsValue = true, min = 1, max = 5, def = 2 },
     { value = "chargesMax",  text = "Charges \226\137\164", needsValue = true, min = 0, max = 5, def = 1 },
+    { value = "chargesEq",   text = "Charges =", needsValue = true, min = 0, max = 5, def = 1 },
     { value = "auraRemainMin", text = "Buff time left \226\137\165", needsSpell = true, needsValue = true, min = 0, max = 30, def = 3, target = "duration" },
     { value = "auraRemainMax", text = "Buff time left \226\137\164", needsSpell = true, needsValue = true, min = 0, max = 30, def = 3, target = "duration" },
     { value = "cdRemainMin", text = "Cooldown \226\137\165", needsSpell = true, needsValue = true, min = 0, max = 180, def = 10, target = "ability" },
     { value = "cdRemainMax", text = "Cooldown \226\137\164", needsSpell = true, needsValue = true, min = 0, max = 180, def = 10, target = "ability" },
     { value = "resourceMin", text = "Resource \226\137\165", needsValue = true, min = 0, max = 12, def = 2 },
     { value = "resourceMax", text = "Resource \226\137\164", needsValue = true, min = 0, max = 12, def = 2 },
+    { value = "resourceEq",  text = "Resource =", needsValue = true, min = 0, max = 12, def = 2 },
     { value = "usable",      text = "Usable",       needsSpell = true, target = "ability" },
     { value = "notUsable",   text = "Not usable",   needsSpell = true, target = "ability" },
     { value = "enemiesMin",  text = "Enemies \226\137\165",   needsValue = true, min = 1, max = 10, def = 2 },
     { value = "enemiesMax",  text = "Enemies \226\137\164",   needsValue = true, min = 1, max = 10, def = 1 },
+    { value = "enemiesEq",   text = "Enemies =",   needsValue = true, min = 1, max = 10, def = 1 },
     { value = "energyNearCap",    text = "Energy near cap",     tag = "energy" },
     { value = "energyNotNearCap", text = "Energy not near cap", tag = "energy" },
     { value = "energyPctMin", text = "Energy % \226\137\165", needsValue = true, min = 0, max = 100, def = 80, tag = "energy" },
@@ -78,6 +82,14 @@ Cond.types = {
     -- max-charges read. Only offered when the spec opts in (condTags.outlaw).
     { value = "oppStacksMin", text = "Opportunity \226\137\165", needsValue = true, min = 0, max = 6, def = 6, tag = "outlaw" },
     { value = "oppStacksMax", text = "Opportunity \226\137\164", needsValue = true, min = 0, max = 6, def = 3, tag = "outlaw" },
+    { value = "oppStacksEq",  text = "Opportunity =",  needsValue = true, min = 0, max = 6, def = 3, tag = "outlaw" },
+    -- Outlaw: Supercharged combo points (Supercharger talent) -- PRIO's predicted 0-2 count.
+    { value = "superChargeMin", text = "Supercharged CP \226\137\165", needsValue = true, min = 0, max = 2, def = 1, tag = "outlaw" },
+    { value = "superChargeMax", text = "Supercharged CP \226\137\164", needsValue = true, min = 0, max = 2, def = 1, tag = "outlaw" },
+    { value = "superChargeEq",  text = "Supercharged CP =",  needsValue = true, min = 0, max = 2, def = 1, tag = "outlaw" },
+    -- Player is stealthed (Stealth / Vanish / Shadow Dance) -- reads IsStealthed() clean.
+    { value = "stealthed",    text = "Stealthed",     tag = "outlaw" },
+    { value = "notStealthed", text = "Not stealthed", tag = "outlaw" },
 }
 
 -- A spec.condPresets entry -> a picker option. Presets are NAMED boolean conditions
@@ -138,18 +150,21 @@ function Cond.ClauseLabel(cl, selfSid)
     elseif t == "refreshable" then return name .. " in pandemic"
     elseif t == "stacksMin" then return name .. " \226\137\165 " .. (cl.v or 1) .. " stk"
     elseif t == "stacksMax" then return name .. " \226\137\164 " .. (cl.v or 1) .. " stk"
+    elseif t == "stacksEq" then return name .. " = " .. (cl.v or 1) .. " stk"
     elseif t == "glowing" then return name .. " glowing"
     elseif t == "notGlowing" then return name .. " not glowing"
     elseif t == "predStackMin" then return name .. " \226\137\165 " .. (cl.v or 1) .. " stk~"
     elseif t == "predStackMax" then return name .. " \226\137\164 " .. (cl.v or 1) .. " stk~"
     elseif t == "chargesMin" then return name .. " \226\137\165 " .. (cl.v or 1) .. " chg"
     elseif t == "chargesMax" then return name .. " \226\137\164 " .. (cl.v or 1) .. " chg"
+    elseif t == "chargesEq" then return name .. " = " .. (cl.v or 1) .. " chg"
     elseif t == "auraRemainMin" then return name .. " \226\137\165 " .. (cl.v or 0) .. "s left"
     elseif t == "auraRemainMax" then return name .. " \226\137\164 " .. (cl.v or 0) .. "s left"
     elseif t == "cdRemainMin" then return name .. " CD \226\137\165 " .. (cl.v or 0) .. "s"
     elseif t == "cdRemainMax" then return name .. " CD \226\137\164 " .. (cl.v or 0) .. "s"
     elseif t == "resourceMin" then return (spec and spec.resourceLabel or "resource") .. " \226\137\165 " .. (cl.v or 0)
     elseif t == "resourceMax" then return (spec and spec.resourceLabel or "resource") .. " \226\137\164 " .. (cl.v or 0)
+    elseif t == "resourceEq" then return (spec and spec.resourceLabel or "resource") .. " = " .. (cl.v or 0)
     elseif t == "energyNearCap" then return "Energy near cap"
     elseif t == "energyNotNearCap" then return "Energy not near cap"
     elseif t == "energyPctMin" then return "Energy \226\137\165 " .. (cl.v or 0) .. "%"
@@ -161,8 +176,15 @@ function Cond.ClauseLabel(cl, selfSid)
     elseif t == "skStacks" then return "SK \226\137\165 " .. (cl.v or 1)
     elseif t == "enemiesMin" then return "\226\137\165 " .. (cl.v or 1) .. " enemies"
     elseif t == "enemiesMax" then return "\226\137\164 " .. (cl.v or 1) .. " enemies"
+    elseif t == "enemiesEq" then return "= " .. (cl.v or 1) .. " enemies"
     elseif t == "oppStacksMin" then return "Opportunity \226\137\165 " .. (cl.v or 0)
     elseif t == "oppStacksMax" then return "Opportunity \226\137\164 " .. (cl.v or 0)
+    elseif t == "oppStacksEq" then return "Opportunity = " .. (cl.v or 0)
+    elseif t == "superChargeMin" then return "Supercharged CP \226\137\165 " .. (cl.v or 0)
+    elseif t == "superChargeMax" then return "Supercharged CP \226\137\164 " .. (cl.v or 0)
+    elseif t == "superChargeEq" then return "Supercharged CP = " .. (cl.v or 0)
+    elseif t == "stealthed" then return "Stealthed"
+    elseif t == "notStealthed" then return "Not stealthed"
     end
     return "?"
 end
@@ -404,6 +426,7 @@ local function EvalClause(cl, S, selfSid)
     -- reads as 0 stacks -> below any min, within any max.
     elseif t == "stacksMin" then return (API.AuraStackCount(sid) or 0) >= (cl.v or 1)
     elseif t == "stacksMax" then return (API.AuraStackCount(sid) or 0) <= (cl.v or 1)
+    elseif t == "stacksEq"  then return (API.AuraStackCount(sid) or 0) == (cl.v or 1)
     -- Proc glow: clean boolean when readable; nil (API missing) -> treat as not glowing.
     elseif t == "glowing" then return API.SpellGlowing(sid) == true
     elseif t == "notGlowing" then return API.SpellGlowing(sid) == false
@@ -413,6 +436,14 @@ local function EvalClause(cl, S, selfSid)
     -- Opportunity charges: PRIO's tracked count (spec.oppInfer.aura), value-adjustable.
     elseif t == "oppStacksMin" then return PredStacks(spec and spec.oppInfer and spec.oppInfer.aura, S) >= (cl.v or 0)
     elseif t == "oppStacksMax" then return PredStacks(spec and spec.oppInfer and spec.oppInfer.aura, S) <= (cl.v or 0)
+    elseif t == "oppStacksEq"  then return PredStacks(spec and spec.oppInfer and spec.oppInfer.aura, S) == (cl.v or 0)
+    -- Supercharged combo points (Supercharger talent): PRIO's predicted 0-2 count (S.superCharge).
+    elseif t == "superChargeMin" then return (S.superCharge or 0) >= (cl.v or 0)
+    elseif t == "superChargeMax" then return (S.superCharge or 0) <= (cl.v or 0)
+    elseif t == "superChargeEq"  then return (S.superCharge or 0) == (cl.v or 0)
+    -- Stealthed: clean boolean (Stealth / Vanish / Shadow Dance), readable in combat.
+    elseif t == "stealthed"    then return API.Stealthed() == true
+    elseif t == "notStealthed" then return API.Stealthed() == false
     -- Latched execute-range flag (secret-safe: usable-without-proc, debounced).
     elseif t == "inExecuteRange" then
         if S and S.execRange ~= nil then return S.execRange end
@@ -422,6 +453,7 @@ local function EvalClause(cl, S, selfSid)
         return not Engine:InExecuteRange()
     elseif t == "chargesMin" then return (ChargeCount(sid) or 0) >= (cl.v or 1)
     elseif t == "chargesMax" then return (ChargeCount(sid) or 0) <= (cl.v or 1)
+    elseif t == "chargesEq"  then return (ChargeCount(sid) or 0) == (cl.v or 1)
     -- Buff time-left (Zenith ending): predicted from the cast, since remaining is secret
     -- in combat. nil (buff not up / unknown) -> the threshold is not met.
     elseif t == "auraRemainMin" then local r = Engine:AuraRemaining(sid); return r ~= nil and r >= (cl.v or 0)
@@ -433,6 +465,7 @@ local function EvalClause(cl, S, selfSid)
     -- secret bars use the predicted value). S.maelstrom is the spec resource amount.
     elseif t == "resourceMin" then return (S.maelstrom or 0) >= (cl.v or 0)
     elseif t == "resourceMax" then return (S.maelstrom or 0) <= (cl.v or 0)
+    elseif t == "resourceEq"  then return (S.maelstrom or 0) == (cl.v or 0)
     -- Energy percent (secret-safe via UnitPowerPercent). Unknown -> threshold not met.
     elseif t == "energyNearCap" then return EnergyNearCap() == true
     elseif t == "energyNotNearCap" then return EnergyNearCap() == false
@@ -448,6 +481,7 @@ local function EvalClause(cl, S, selfSid)
     elseif t == "skStacks" then return (S.skStacks or 0) >= (cl.v or 1)
     elseif t == "enemiesMin" then return (S.enemies or 1) >= (cl.v or 1)
     elseif t == "enemiesMax" then return (S.enemies or 1) <= (cl.v or 1)
+    elseif t == "enemiesEq"  then return (S.enemies or 1) == (cl.v or 1)
     -- Inferred predicted flags (e.g. Outlaw's rtbStage2 from combo-point observation).
     -- false = proven low; true = proven high; nil = unknown (both read as "not that").
     elseif t == "predFalse" then return (S.predFlags and S.predFlags[cl.key]) == false
@@ -845,7 +879,7 @@ PRIO:On("PLAYER_REGEN_ENABLED", function()
     -- Combat ended: clear volatile procs; Maelstrom and charges keep syncing from
     -- the real values now that they're readable again.
     local P = Engine.P
-    if P then P.fsExpire = 0; P.mote = false; P.skStacks = 0; P.ssT0 = nil; P.ssCP0 = nil; P.ssBumps = nil; P.ssLastCP = nil; P.oppStacks = 0; if P.auraExpire then wipe(P.auraExpire) end; if P.stacks then wipe(P.stacks) end; if P.predFlags then wipe(P.predFlags) end end
+    if P then P.fsExpire = 0; P.mote = false; P.skStacks = 0; P.ssT0 = nil; P.ssCP0 = nil; P.ssBumps = nil; P.ssLastCP = nil; P.oppStacks = 0; P.superCharge = 0; if P.auraExpire then wipe(P.auraExpire) end; if P.stacks then wipe(P.stacks) end; if P.predFlags then wipe(P.predFlags) end end
     Engine:ResetExecuteRange()
     Engine.openerActive = false
 end)
@@ -1139,6 +1173,7 @@ local function BuildState(self, mode, enemies)
         maelstromMax = P.maelstromMax or (spec and spec.maelstromMax) or 0,
         maelstromReadable = realMs ~= nil,
         freeSpend = P.freeSpend and true or false,     -- 4-set: next spender costs nothing
+        superCharge = P.superCharge or 0,              -- Outlaw Supercharger: predicted 0-2
         mote      = P.mote and true or false,
         skStacks  = P.skStacks or 0,
         fsActive  = fsActive,                          -- true/false/nil (real read)

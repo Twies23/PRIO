@@ -200,6 +200,14 @@ function API.UsableOrNoPower(spellID)
     return noPower and true or false
 end
 
+-- True while stealthed (Stealth / Vanish / Shadow Dance). IsStealthed() is a clean
+-- boolean, readable in combat -- so a "Stealthed" condition is exact, not predicted.
+function API.Stealthed()
+    if type(IsStealthed) ~= "function" then return false end
+    local ok, s = pcall(IsStealthed)
+    return (ok and s) and true or false
+end
+
 --------------------------------------------------------------------------------
 -- Cooldown: the reliable clean-boolean readiness test.
 --   ready = not (isActive and not isOnGCD)

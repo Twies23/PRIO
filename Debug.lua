@@ -593,6 +593,11 @@ function RotationDebug:Update()
                 local st = PRIO.Engine and PRIO.Engine.P and PRIO.Engine.P.stacks
                 local v = (st and st[r.spell]) or 0
                 return v > 0 and "|cff0cd29fup|r" or "|cff5a6a76down|r"
+            elseif r.kind == "predCount" then
+                -- A predicted numeric counter on Engine.P (e.g. Outlaw superCharge).
+                local P = PRIO.Engine and PRIO.Engine.P
+                local v = (P and r.field and P[r.field]) or 0
+                return ("|cff0cd29f%s|r"):format(tostring(v))
             end
             return "-"
         end)
