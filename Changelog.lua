@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.4.8", {
+        "Outlaw -- finishers now fire at the combo points you set, not only at max. A finisher (Dispatch, Between the Eyes, Slice and Dice) is castable at any combo points, but the game reports its COST as the maximum -- so PRIO's affordability check withheld it below max and overrode your own condition. A 'Dispatch at >= 5 CP' line now fires at 5 (still correctly withheld at 0 CP). The real fix behind 'it should recommend Dispatch, not Sinister Strike'.",
+    } },
     { "0.4.7", {
         "Fix: the Rotation Debug window showed some conditions' pass/fail inverted. A '>= N' line (e.g. Combo Pts >= 6) wrongly showed PASS whenever you were BELOW N, likewise for other >=/glowing/usable checks. Display-only -- the actual rotation always evaluated correctly -- but it made it look like a finisher should be firing before you had the combo points. The debug now reports true pass/fail.",
     } },

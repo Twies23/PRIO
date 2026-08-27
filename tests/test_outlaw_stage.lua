@@ -316,6 +316,33 @@ test("outlaw hero split: Unseen Blade selects Trickster, its absence selects Fat
     eq(#s.priorityByVariant.fatebound.aoe, #s.priorityByVariant.trickster.aoe, "cloned aoe length")
 end)
 
+test("outlaw finisher: a finisher fires below its reported (max) cost, gated by the user's CP", function()
+    -- Dispatch is a finisher: castable at any combo points >= 1, but the game reports its
+    -- cost as the MAX (6). Without the finisher clamp the affordability gate withheld it below
+    -- 6, overriding a "Dispatch at >= 5" line. spec.finishers clamps the gate to 1 CP.
+    local savedST = H.outlawSpec.priorityByVariant.trickster.st
+    local function run(cp)
+        setOutlaw()
+        H.S.power[COMBO] = cp
+        H.S.auras[ROLLBONES] = true
+        H.S.ready[271877] = false; H.S.ready[13750] = false; H.S.ready[51690] = false
+        H.S.powerCost = { [2098] = { type = COMBO, cost = 6 } }   -- Dispatch max-cost = 6
+        H.outlawSpec.priorityByVariant.trickster.st = {
+            { spell = "BetweenTheEyes", cond = { type = "resourceMin", v = 6 } },
+            { spell = "Dispatch",       cond = { type = "resourceMin", v = 5 } },
+            { spell = "SinisterStrike", cond = { type = "resourceMax", v = 5 } },
+        }
+        H.S.knownStrict[441146] = true                            -- Trickster variant
+        H.rebind()
+        local r = H.Engine:Evaluate()
+        return r and r.primary and r.primary.name
+    end
+    eq(run(5), "Spell2098",   "Dispatch fires at 5 CP despite its cost reading 6")
+    eq(run(6), "Spell315341", "Between the Eyes still leads at 6 CP")
+    eq(run(0), "Spell193315", "a finisher is still blocked at 0 CP (builds instead)")
+    H.outlawSpec.priorityByVariant.trickster.st = savedST        -- restore built-in default
+end)
+
 test("rotdebug label: resource >=/<= pass-fail is not inverted (Lua and/or trap)", function()
     -- Regression: ClauseStatus used `(t=='Min') and (v>=n) or (v<=n)`, which fell through to
     -- v<=n whenever v>=n was false -- so a "Combo Pts >= 6" line showed PASS at 5 CP. The

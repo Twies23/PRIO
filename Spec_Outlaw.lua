@@ -327,6 +327,12 @@ local spec = {
 
     fillers = { [ID_SINISTER] = true },   -- Sinister Strike is the no-cooldown builder
 
+    -- FINISHERS: spend ALL combo points and are castable at ANY combo points >= 1. The game
+    -- reports their cost as the MAX, so the affordability gate would wrongly withhold them
+    -- below max -- these are clamped to a 1-CP minimum so YOUR combo-point condition (e.g.
+    -- "Dispatch at >= 5") decides when to spend. (Slice and Dice is a finisher too.)
+    finishers = { Dispatch = true, BetweenTheEyes = true, SliceandDice = true },
+
     flash = {
         PistolShot = { type = "buffActive", spell = ID_OPPORTUNITY },   -- free/empowered shot
     },

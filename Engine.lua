@@ -1477,6 +1477,11 @@ function Engine:Evaluate()
             if cost and S.freeSpend and spec.freeSpendGlow and spec.freeSpendGlow[idToKey[sid]] then
                 cost = 0
             end
+            -- FINISHERS spend ALL combo points and are castable at ANY amount >=1, but the
+            -- game reports their cost as the MAX -- so the gate would withhold them below max
+            -- and override the user's own combo-point condition. Clamp to the true minimum (1)
+            -- so a "Dispatch at >=5 CP" line fires at 5, while 0 CP still (correctly) blocks it.
+            if cost and spec.finishers and spec.finishers[idToKey[sid]] then cost = 1 end
             if cost and S.maelstrom < cost then ready = false end
         end
         -- Energy prediction gate (soft): the bar is secret, so this is a dead-reckoned
