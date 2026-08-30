@@ -307,6 +307,7 @@ end
 
 function Setup:Update()
     if not (win and win:IsShown()) then return end
+    pcall(API.RefreshTracked)   -- re-scan the Cooldown Manager so dots update live as you edit it
     local specID = API.GetSpecID()
     local spec = specID and PRIO.specs and PRIO.specs[specID]
     if (spec and spec.key or "none") ~= builtKey then self:Rebuild(spec) end
@@ -344,5 +345,18 @@ function Setup:MaybeAutoOpen()
     db.setupSeenVer = db.setupSeenVer or {}
     if db.setupSeenVer[spec.key] == ver then return end   -- already verified on this version
     db.setupSeenVer[spec.key] = ver
-    self:Open()
+    -- If the changelog auto-opened for this same update, wait until it's closed so the two
+    -- windows don't stack on top of each other.
+    local cw = _G.PRIOChangelog
+    if cw and cw:IsShown() then
+        self._deferred = true
+        if not cw._prioSetupHook then
+            cw._prioSetupHook = true
+            cw:HookScript("OnHide", function()
+                if Setup._deferred then Setup._deferred = false; Setup:Open() end
+            end)
+        end
+    else
+        self:Open()
+    end
 end
