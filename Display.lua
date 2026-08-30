@@ -393,23 +393,27 @@ function Display:BuildModeButtons(spec)
     for _, b in ipairs(modeBar.buttons) do b:Hide(); b:SetParent(nil) end
     wipe(modeBar.buttons)
 
-    -- Auto + the spec's base modes (drop the auto-only execute variants).
+    -- Auto + the spec's base modes. Drop the AUTO-ONLY variants the engine swaps in on its
+    -- own -- execute range (_execute) and phase/form (_meta, e.g. Devourer's Void Meta) --
+    -- since you never pick those by hand; that also keeps the bar from overflowing.
     local defs = { { value = "auto", text = "Auto" } }
     local modes = PRIO.Cond and PRIO.Cond.SpecModes and PRIO.Cond.SpecModes(spec) or {}
     for _, m in ipairs(modes) do
-        if not tostring(m.value):find("_execute") then defs[#defs + 1] = m end
+        local v = tostring(m.value)
+        if not (v:find("_execute") or v:find("_meta")) then defs[#defs + 1] = m end
     end
 
     local font = PRIO.db.font or "Fonts\\FRIZQT__.TTF"
-    local BW, BH, GAP = 44, 18, 4
-    modeBar:SetSize(#defs * BW + (#defs - 1) * GAP, BH)
+    local BH, GAP, PAD, MINW = 18, 4, 14, 44
     local x = 0
     for _, d in ipairs(defs) do
         local b = CreateFrame("Button", nil, modeBar, "BackdropTemplate")
-        b:SetSize(BW, BH); b:SetPoint("LEFT", x, 0)
         b:SetBackdrop({ bgFile = WHITE, edgeFile = WHITE, edgeSize = 1 })
         b.text = b:CreateFontString(nil, "OVERLAY"); b.text:SetPoint("CENTER")
         pcall(b.text.SetFont, b.text, font, 11, "OUTLINE"); b.text:SetText(d.text)
+        -- Auto-size each button to its label (min width) so longer labels don't clip.
+        local bw = math.max(MINW, math.ceil(b.text:GetStringWidth() + 0.5) + PAD)
+        b:SetSize(bw, BH); b:SetPoint("LEFT", x, 0)
         b.value = d.value
         b:SetScript("OnClick", function()
             PRIO.db.mode = d.value
@@ -425,8 +429,9 @@ function Display:BuildModeButtons(spec)
             modeBar:StopMovingOrSizing(); modeBar.isMoving = false; SaveModeBarPoint()
         end)
         modeBar.buttons[#modeBar.buttons + 1] = b
-        x = x + BW + GAP
+        x = x + bw + GAP
     end
+    modeBar:SetSize(math.max(1, x - GAP), BH)
     self:PositionModeBar()
 end
 

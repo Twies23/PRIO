@@ -90,6 +90,15 @@ Cond.types = {
     -- Player is stealthed (Stealth / Vanish / Shadow Dance) -- reads IsStealthed() clean.
     { value = "stealthed",    text = "Stealthed",     tag = "outlaw" },
     { value = "notStealthed", text = "Not stealthed", tag = "outlaw" },
+    -- Devourer: souls on the GROUND (uncollected). The count is SECRET in combat, so this
+    -- is PRIO's dead-reckoned ESTIMATE (spawns from casts, swept by Reap/Cull) -- see
+    -- Spec_Devourer OnCast. Drives the Reap-at-4 / Eradicate-at-10 breakpoints.
+    { value = "soulsGroundMin", text = "Ground souls \226\137\165", needsValue = true, min = 0, max = 10, def = 4, tag = "devourer" },
+    { value = "soulsGroundMax", text = "Ground souls \226\137\164", needsValue = true, min = 0, max = 10, def = 4, tag = "devourer" },
+    -- Devourer: COLLECTED souls (0-50, progress to Void Metamorphosis). Reads CLEAN in
+    -- combat from the soul-count aura's applications (spec.soulTrack.countAura).
+    { value = "soulsHeldMin", text = "Collected souls \226\137\165", needsValue = true, min = 0, max = 50, def = 30, tag = "devourer" },
+    { value = "soulsHeldMax", text = "Collected souls \226\137\164", needsValue = true, min = 0, max = 50, def = 30, tag = "devourer" },
 }
 
 -- A spec.condPresets entry -> a picker option. Presets are NAMED boolean conditions
@@ -183,6 +192,10 @@ function Cond.ClauseLabel(cl, selfSid)
     elseif t == "superChargeMin" then return "Supercharged CP \226\137\165 " .. (cl.v or 0)
     elseif t == "superChargeMax" then return "Supercharged CP \226\137\164 " .. (cl.v or 0)
     elseif t == "superChargeEq" then return "Supercharged CP = " .. (cl.v or 0)
+    elseif t == "soulsGroundMin" then return "Ground souls \226\137\165 " .. (cl.v or 0)
+    elseif t == "soulsGroundMax" then return "Ground souls \226\137\164 " .. (cl.v or 0)
+    elseif t == "soulsHeldMin" then return "Collected souls \226\137\165 " .. (cl.v or 0)
+    elseif t == "soulsHeldMax" then return "Collected souls \226\137\164 " .. (cl.v or 0)
     elseif t == "stealthed" then return "Stealthed"
     elseif t == "notStealthed" then return "Not stealthed"
     end
@@ -441,6 +454,16 @@ local function EvalClause(cl, S, selfSid)
     elseif t == "superChargeMin" then return (S.superCharge or 0) >= (cl.v or 0)
     elseif t == "superChargeMax" then return (S.superCharge or 0) <= (cl.v or 0)
     elseif t == "superChargeEq"  then return (S.superCharge or 0) == (cl.v or 0)
+    -- Devourer souls. Ground = PREDICTED (spawns - readable collected). "Ground souls >= N"
+    -- fails CLOSED (withhold when unknown): the user would rather NOT cast a soul-gated
+    -- spender below the threshold than fire it on an unreadable count. (The "<= N" and the
+    -- readable "Collected souls" checks keep the usual fail-OPEN so they never blank.)
+    elseif t == "soulsGroundMin" then return S.groundSouls ~= nil and S.groundSouls >= (cl.v or 0)
+    elseif t == "soulsGroundMax" then return S.groundSouls == nil or S.groundSouls <= (cl.v or 0)
+    -- Collected reads clean; Min still fails CLOSED (withhold when unreadable) to honor
+    -- "never cast a soul-gated spender below its threshold".
+    elseif t == "soulsHeldMin"   then return S.collectedSouls ~= nil and S.collectedSouls >= (cl.v or 0)
+    elseif t == "soulsHeldMax"   then return S.collectedSouls == nil or S.collectedSouls <= (cl.v or 0)
     -- Stealthed: clean boolean (Stealth / Vanish / Shadow Dance), readable in combat.
     elseif t == "stealthed"    then return API.Stealthed() == true
     elseif t == "notStealthed" then return API.Stealthed() == false
@@ -863,6 +886,21 @@ PRIO:On("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
         Engine.P.cdExpire = Engine.P.cdExpire or {}
         Engine.P.cdExpire[spellID] = GetTime() + cd
     end
+    -- Cast-triggered cooldown resets (spec.cdResets): casting `key` refreshes these targets
+    -- (gated on the enabling talent). The live off-cooldown bool already reflects the reset,
+    -- so this just keeps the PREDICTED remaining (cdExpire) in sync for cdRemain conditions.
+    local resets = spec.cdResets and spec.cdResets[key]
+    if resets then
+        for _, r in ipairs(resets) do
+            if (not r.talent) or API.IsTalentSelected(r.talent) then
+                local tsid = r.target and spec.spells and spec.spells[r.target]
+                if tsid then
+                    Engine.P.cdExpire = Engine.P.cdExpire or {}
+                    Engine.P.cdExpire[tsid] = GetTime()   -- ready now
+                end
+            end
+        end
+    end
     -- Assume a just-applied aura is up briefly, since the Cooldown Viewer read can lag
     -- a tick or two after you apply it (e.g. Flame Shock via Voltaic Blaze). The short
     -- window means a genuine immune/miss corrects itself once it expires.
@@ -873,13 +911,14 @@ PRIO:On("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
     end
     Engine:ApplyMaelstrom(Engine.P, spellID, key)   -- advance predicted Maelstrom
     Engine:AdvanceOpener(key)
+    Engine:AdvanceSequence(key)
 end)
 
 PRIO:On("PLAYER_REGEN_ENABLED", function()
     -- Combat ended: clear volatile procs; Maelstrom and charges keep syncing from
     -- the real values now that they're readable again.
     local P = Engine.P
-    if P then P.fsExpire = 0; P.mote = false; P.skStacks = 0; P.ssT0 = nil; P.ssCP0 = nil; P.ssBumps = nil; P.ssLastCP = nil; P.oppStacks = 0; P.superCharge = 0; if P.auraExpire then wipe(P.auraExpire) end; if P.stacks then wipe(P.stacks) end; if P.predFlags then wipe(P.predFlags) end end
+    if P then P.fsExpire = 0; P.mote = false; P.skStacks = 0; P.ssT0 = nil; P.ssCP0 = nil; P.ssBumps = nil; P.ssLastCP = nil; P.oppStacks = 0; P.superCharge = 0; P.groundSouls = 0; P.seq = nil; if P.auraExpire then wipe(P.auraExpire) end; if P.auraWasActive then wipe(P.auraWasActive) end; if P.stacks then wipe(P.stacks) end; if P.predFlags then wipe(P.predFlags) end end
     Engine:ResetExecuteRange()
     Engine.openerActive = false
 end)
@@ -1164,7 +1203,50 @@ local function BuildState(self, mode, enemies)
         P.fsExpire = now + 18
     end
 
+    -- Devourer souls (spec.soulTrack). COLLECTED (0-50) reads clean from the soul-count
+    -- aura's applications. GROUND (0-10, uncollected) is SECRET, so predict it: spawns
+    -- (P.soulSpawn, advanced by the spec's OnCast) minus what's been collected (the read).
+    -- Every pickup lands in the readable collected count, so passive pickup can't drift us;
+    -- and the "souls nearby" boolean is a hard anchor (false => nothing on the ground).
+    -- Rising-edge predicted buff timers (spec.auraGainTimers[auraID] = seconds): when a
+    -- tracked buff is GAINED (false -> true), start a predicted countdown, since its
+    -- remaining is secret in combat. Drives "Buff time left <= N" (dump-before-expiry).
+    if spec.auraGainTimers then
+        P.auraWasActive = P.auraWasActive or {}
+        for aid, dur in pairs(spec.auraGainTimers) do
+            local act = API.IsAuraActive(aid)
+            if act == true then
+                if not P.auraWasActive[aid] then P.auraExpire[aid] = now + dur end
+            elseif act == false then
+                P.auraExpire[aid] = nil
+            end
+            P.auraWasActive[aid] = (act == true)
+        end
+    end
+
+    -- GROUND souls (0-10): a simple running counter. OnCast bumps P.groundSouls UP by what a
+    -- cast drops on the floor and resets it to 0 when you Reap/Cull/Eradicate (they sweep the
+    -- ground). Here we just anchor it to the readable "souls on ground" boolean (none out ->
+    -- 0) and clamp to the 10 cap (souls made at cap are auto-collected instead, so ground
+    -- never exceeds 10). The collected count is still read (for the "Collected souls"
+    -- condition) but does NOT drive ground.
+    local collectedSouls, groundSouls
+    if spec.soulTrack then
+        local stk = spec.soulTrack
+        local inForm = stk.formAura and API.IsAuraActive(stk.formAura) == true
+        local cAura = (inForm and stk.countAuraForm) or stk.countAura
+        collectedSouls = cAura and API.AuraStackCount(cAura) or nil   -- readable count (soulsHeld condition)
+        local gActive = stk.groundAura and API.IsAuraActive(stk.groundAura)   -- souls on ground? (clean bool)
+        P.groundSouls = P.groundSouls or 0
+        if gActive == false then P.groundSouls = 0 end                -- nothing on the ground
+        if P.groundSouls < 0 then P.groundSouls = 0 end
+        if P.groundSouls > 10 then P.groundSouls = 10 end             -- cap: souls made at 10 are absorbed
+        groundSouls = P.groundSouls
+    end
+
     return {
+        collectedSouls = collectedSouls,               -- Devourer: 0-50, read clean
+        groundSouls    = groundSouls,                  -- Devourer: 0-10 predicted (nil = unknown)
         now       = now,
         mode      = mode,
         enemies   = enemies,
@@ -1204,6 +1286,107 @@ end
 function Engine:EntrySpellID(e)
     if type(e.spell) == "number" then return e.spell end
     return spec and spec.spells[e.spell]
+end
+
+--------------------------------------------------------------------------------
+-- SEQUENCE FOLLOWER. A spec.sequences[id] = { start=, stop=, steps={ {spell=,cond=} } }
+-- referenced by a priority entry { sequence = id }. When its START trigger fires (and the
+-- entry is in the active list) the sequence OVERRIDES the priority and steps through the
+-- fixed order as you cast (like the opener), until STOP, completion, or a rotational
+-- deviation. start/stop may be a condition table OR a plain function returning a boolean.
+--------------------------------------------------------------------------------
+local function seqTrig(t, S)
+    if t == nil then return false end
+    if type(t) == "function" then return t() and true or false end
+    return PRIO.Cond.Eval(t, S, nil) and true or false
+end
+
+-- Sequence definition: a user-authored one (db.customSequences) wins over the spec default.
+function Engine:SeqDef(id)
+    local cs = PRIO.db and PRIO.db.customSequences and spec and PRIO.db.customSequences[spec.key]
+    if cs and cs[id] then return cs[id] end
+    return spec and spec.sequences and spec.sequences[id]
+end
+
+-- The next SHOWABLE step at/after `from`: skip steps that are unknown / on cooldown /
+-- unusable / whose per-step cond is false (e.g. Vengeful Retreat without Voidstep).
+function Engine:SeqStep(seq, S, from)
+    local i = from or 1
+    while i <= #seq.steps do
+        local st  = seq.steps[i]
+        local sid = st.spell and spec.spells[st.spell]
+        if sid and API.IsKnown(sid) and API.IsReady(sid) and API.IsUsable(sid)
+           and (not st.cond or PRIO.Cond.Eval(st.cond, S, sid)) then
+            return i, sid, st.spell
+        end
+        i = i + 1
+    end
+    return nil
+end
+
+-- Advance the active sequence on cast. Casting the current showable step -> step forward
+-- (complete at the end). An OFF-sequence cast does NOT end it by default (that could be a
+-- defensive / interrupt / off-GCD); it only aborts if seq.deviations is set, after that many
+-- CONSECUTIVE off-sequence casts. (Other end triggers: completion, the stop condition, and
+-- combat end -- P.seq is cleared on PLAYER_REGEN_ENABLED.)
+function Engine:AdvanceSequence(key)
+    local s = self.P.seq; if not s then return end
+    local seq = self:SeqDef(s.id); if not seq then self.P.seq = nil; return end
+    local i, _, stepKey = self:SeqStep(seq, self:CurrentState(), s.index)
+    if not stepKey then self.P.seq = nil; return end
+    if key == stepKey then
+        s.index = i + 1
+        s.dev = 0
+        if s.index > #seq.steps then self.P.seq = nil end          -- completed
+    elseif key and seq.deviations then
+        s.dev = (s.dev or 0) + 1
+        if s.dev >= seq.deviations then self.P.seq = nil end        -- too many off-sequence casts
+    end
+end
+
+-- Build the primary + queue from the sequence starting at `index`.
+function Engine:SeqBuild(seq, index, S, want)
+    local picks, i = {}, index
+    for _ = 1, want do
+        local ni, sid = self:SeqStep(seq, S, i)
+        if not ni then break end
+        picks[#picks + 1] = Entry(sid)
+        i = ni + 1
+    end
+    if #picks == 0 then return nil end
+    return {
+        title = (spec.label or "") .. "  \194\183  Sequence",
+        primary = picks[1], queue = { unpack(picks, 2) },
+        debug = { mode = "sequence", enemies = API.EnemyCount(), primary = picks[1].name },
+    }
+end
+
+-- If a sequence is active (or a listed one should START now), drive it and return picks.
+function Engine:SequenceDrive(list, S, want)
+    local P = self.P
+    if P.seq then
+        local seq = self:SeqDef(P.seq.id)
+        local inList = false
+        if seq then for _, e in ipairs(list) do if e.sequence == P.seq.id then inList = true; break end end end
+        if not seq or not inList or seqTrig(seq.stop, S) then
+            P.seq = nil                                    -- left the list / stopped / gone
+        else
+            local r = self:SeqBuild(seq, P.seq.index, S, want)
+            if r then return r end
+            P.seq = nil                                    -- no castable steps left -> end
+        end
+    end
+    for _, e in ipairs(list) do
+        if e.sequence and not e.off then
+            local seq = self:SeqDef(e.sequence)
+            if seq and (not e.cond or PRIO.Cond.Eval(e.cond, S, nil))
+               and seqTrig(seq.start, S) and self:SeqStep(seq, S, 1) then
+                P.seq = { id = e.sequence, index = 1, dev = 0 }
+                return self:SeqBuild(seq, 1, S, want)
+            end
+        end
+    end
+    return nil
 end
 
 -- The effective list for a spec/mode: the user's custom copy if present, else the
@@ -1410,6 +1593,10 @@ function Engine:Evaluate()
     self:UpdateExecuteRange()
     local exMode = spec.executeMode and spec.executeMode[mode]
     if exMode and self:InExecuteRange() then mode = exMode end
+    -- Phase overlay (generic): swap to the mode's phase variant (st -> st_meta, aoe ->
+    -- aoe_meta) while spec.phaseActive() is true -- e.g. Devourer's Void Metamorphosis form.
+    local phMode = spec.phaseMode and spec.phaseMode[mode]
+    if phMode and spec.phaseActive and spec.phaseActive() then mode = phMode end
     local list    = self:EffectiveList(spec.key, mode)
     local S        = BuildState(self, mode, enemies)
     local db       = PRIO.db
@@ -1417,12 +1604,22 @@ function Engine:Evaluate()
     self:UpdateCharges(S.now)
     self:UpdateEnergy(S.now)
 
+    -- Sequence follower: if a listed sequence is active or its start trigger fires, it
+    -- drives the rotation (strict fixed order) until its stop trigger / completion.
+    local seqPick = self:SequenceDrive(list, S, want)
+    if seqPick then return seqPick end
+
     -- Simple, predictable model: walk the list top-to-bottom, take the first entry
     -- that evaluates true as the pick, then EXCLUDE that row and walk again for the
     -- next -- unless the ability is repeatable (charges left, or a no-cooldown
     -- filler), in which case its row stays eligible.
     local picks = {}
     local usedRow, usedCharges, usedSpell = {}, {}, {}
+    -- Cast-triggered cooldown RESETS (spec.cdResets): when an earlier queue pick resets a
+    -- target's cooldown, force it ready again for later slots. The sim has no virtual-CD
+    -- timer -- it gates on live IsReady -- so this override is how a reset shows up in the
+    -- queue (e.g. Devourer Void Ray resetting Reap). Inert unless the spec defines cdResets.
+    local simReady = {}
 
     -- Look-ahead sim: aura overrides + predicted buffs advanced as we pick, so each
     -- queue slot evaluates against the state AFTER the earlier picks "cast".
@@ -1480,7 +1677,7 @@ function Engine:Evaluate()
             return nil
         end
 
-        local ready = e.ignoreCD or API.IsReady(sid)
+        local ready = e.ignoreCD or simReady[sid] or API.IsReady(sid)
         -- Primary-resource affordability gate.
         if ready and spec.affordGate and spec.affordGate[idToKey[sid]] then
             -- Preferred: the game's own insufficient-power flag. It reads CLEAN in combat
@@ -1569,6 +1766,23 @@ function Engine:Evaluate()
         ApplyResourceDelta(sim, fkey, pick.sid, S)
         ApplyEnergy(sim, fkey)                              -- spend the Energy floor
         sim.lastCastKey, sim.lastCastID = fkey, pick.sid    -- "this slot cast" for the next
+        -- Cast-triggered cooldown resets: make each (talent-enabled) target ready for the
+        -- rest of the queue and clear its single-use dedup so it can be picked again.
+        local resets = spec.cdResets and fkey and spec.cdResets[fkey]
+        if resets then
+            for _, r in ipairs(resets) do
+                if (not r.talent) or API.IsTalentSelected(r.talent) then
+                    local tsid = r.target and spec.spells and spec.spells[r.target]
+                    if tsid then
+                        simReady[tsid] = true
+                        usedSpell[tsid] = nil
+                        for ri = 1, #list do
+                            if self:EntrySpellID(list[ri]) == tsid then usedRow[ri] = false end
+                        end
+                    end
+                end
+            end
+        end
         if pick.maxC then                                   -- charge spell
             usedCharges[pick.sid] = (usedCharges[pick.sid] or 0) + 1
             if (usedCharges[pick.sid]) >= pick.maxC then usedRow[pick.i] = true end

@@ -697,7 +697,10 @@ function API.AuraStackCount(spellID)
         local function consider(fs)
             if type(fs) == "table" and fs.GetText and fs.GetObjectType and fs:GetObjectType() == "FontString" then
                 local txt = fs:GetText()
-                if type(txt) == "string" and txt ~= "" then
+                -- type() reports "string" even for a SECRET string, and comparing one
+                -- (txt ~= "") taints/throws -- so guard with IsSecret and SKIP secret
+                -- fontstrings, continuing the scan (a later clean one may hold the count).
+                if type(txt) == "string" and not IsSecret(txt) and txt ~= "" then
                     local num = tonumber((txt:gsub("%D", "")))
                     if num and (not best or num > best) then best = num end
                 end
@@ -761,7 +764,11 @@ function API.StackProbe(spellID)
                     for _, r in ipairs(regions) do
                         if type(r) == "table" and r.GetObjectType and r:GetObjectType() == "FontString" then
                             local t = r.GetText and r:GetText()
-                            if type(t) == "string" and t ~= "" then
+                            -- Guard: comparing a SECRET string taints/throws -- log it as
+                            -- <secret> and keep scanning so we can see clean fontstrings too.
+                            if type(t) == "string" and IsSecret(t) then
+                                out[#out + 1] = ("  %s FontString=<secret>"):format(tag)
+                            elseif type(t) == "string" and t ~= "" then
                                 out[#out + 1] = ("  %s FontString=%q"):format(tag, t)
                             end
                         end

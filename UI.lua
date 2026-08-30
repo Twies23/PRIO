@@ -177,20 +177,26 @@ function UI.Segmented(parent, choices, get, set, onChange)
     row:SetBackdropColor(C.control[1], C.control[2], C.control[3], 1)
     row:SetBackdropBorderColor(1, 1, 1, 0.08)
 
+    -- Segments auto-size to their label (min width so short ones aren't cramped), so many
+    -- or long-labelled choices (e.g. ST / ST (Meta) / AoE / AoE (Meta)) stay compact and
+    -- don't overflow the row instead of a fixed per-segment width.
     local btns, n = {}, #choices
-    local segW = 74
-    row:SetSize(segW * n + 6, 28)
+    local pad, minSegW = 18, 44
+    local x = 3
     for i, ch in ipairs(choices) do
         local b = CreateFrame("Button", nil, row)
-        b:SetSize(segW, 22)
-        b:SetPoint("LEFT", 3 + (i - 1) * segW, 0)
-        local hl = UI.Solid(b, "BACKGROUND", C.accent); hl:SetAllPoints(); hl:Hide()
-        b.hl = hl
         local fs = UI.Font(b, 12, C.muted); fs:SetPoint("CENTER"); fs:SetText(ch.text)
         b.fs = fs
+        local w = math.max(minSegW, math.ceil(fs:GetStringWidth() + 0.5) + pad)
+        b:SetSize(w, 22)
+        b:SetPoint("LEFT", x, 0)
+        x = x + w
+        local hl = UI.Solid(b, "BACKGROUND", C.accent); hl:SetAllPoints(); hl:Hide()
+        b.hl = hl
         b:SetScript("OnClick", function() set(ch.value); row.Update(); if onChange then onChange() end end)
         btns[i] = b
     end
+    row:SetSize(x + 3, 28)
     row.Update = function()
         for i, ch in ipairs(choices) do
             local on = get() == ch.value

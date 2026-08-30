@@ -388,6 +388,54 @@ SlashCmdList.PRIO = function(msg)
             print(("|cffffffff%s|r #%s"):format(b[1], tostring(b[2])))
             print(API.StackProbe(b[2]))
         end
+    elseif msg == "souls" then
+        -- Can the Soul Fragment COUNT be read? Two possible carriers:
+        --   (1) a secondary POWER  -> would read clean like combo points (best case),
+        --   (2) a stacking BUFF    -> readable in combat IF tracked in the Cooldown
+        --       Manager (API.AuraStackCount reads the rendered count). Vengeance's is
+        --       aura 203981; Devourer may use its own -- the enumeration below reveals it.
+        -- Run with fragments UP: OOC first (always readable), then IN COMBAT to confirm.
+        local API = PRIO.API
+        print(("|cff0cd29fPRIO|r soul-fragment probe (%s):")
+            :format(InCombatLockdown() and "|cff0cd29fin combat|r" or "|cffe0a03aOOC - values always readable here|r"))
+        -- 1) Power scan: every power type, current / max, with secret status. A soul-
+        -- fragment secondary power would show a nonzero max here and read clean.
+        print("|cff6fb3ffPower types (name (id): cur / max):|r")
+        if Enum and Enum.PowerType then
+            local names = {}
+            for name, val in pairs(Enum.PowerType) do
+                if type(val) == "number" then names[#names + 1] = { name, val } end
+            end
+            table.sort(names, function(a, b) return a[2] < b[2] end)
+            for _, nv in ipairs(names) do
+                local okc, cur = pcall(UnitPower, "player", nv[2])
+                local okm, mx  = pcall(UnitPowerMax, "player", nv[2])
+                local curOK = okc and not API.IsSecret(cur)
+                local mxOK  = okm and type(mx) == "number" and not API.IsSecret(mx)
+                -- Only list powers that actually exist for this unit (max > 0) or that
+                -- read a live value -- keeps the noise down.
+                if (mxOK and mx > 0) or curOK then
+                    print(("   %s (%d): %s / %s"):format(nv[1], nv[2],
+                        curOK and tostring(cur) or "<secret>", mxOK and tostring(mx) or "?"))
+                end
+            end
+        end
+        -- 2) Candidate soul auras. 1245577 = Devourer "Soul Fragments" (from the in-game
+        -- tooltip, in the spec's spell-ID cluster) -- the prime suspect for the count.
+        -- 203981 is Vengeance's classic counter (fallback). Section 1 of the dump also
+        -- ENUMERATES every player buff (OOC) so you can spot the real ID + its stack.
+        local SOULS = { 1245577, 203981, 1227619, 1237270, 1227702 }
+        print("|cff6fb3ffCandidate soul auras (enumerate + direct probe):|r")
+        print(API.DumpPlayerAuras(SOULS))
+        -- 3) Stack read per candidate: tracked? .applications (clean?)? rendered count?
+        -- This is the real test of whether the fragment COUNT is readable in combat --
+        -- track the aura in the Cooldown Manager and its rendered stack reads clean.
+        print("|cff6fb3ffStack reads (track the aura to read its count in combat):|r")
+        for _, sid in ipairs(SOULS) do
+            print(("|cffffffff%s|r #%s"):format(API.SpellName(sid) or "?", tostring(sid)))
+            local ok, res = pcall(API.StackProbe, sid)   -- guard: one bad read can't abort the rest
+            print(ok and res or ("  |cffe0685aStackProbe error:|r " .. tostring(res)))
+        end
     elseif msg == "spells" then
         local API = PRIO.API
         local id = API.GetSpecID()

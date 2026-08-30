@@ -411,13 +411,12 @@ function Pages.rotation()
     local list = PRIO.Engine:EffectiveList(spec.key, mode, variant)
 
     for i, e in ipairs(list) do
-        local sid = PRIO.Engine:EntrySpellID(e)
         local row = Track(UI.Card(content, C.surface, 0.07))
         row:SetSize(contentW, 42)
         row:SetPoint("TOPLEFT", 0, -cursorY)
         cursorY = cursorY + 48
 
-        -- reorder up/down (materialize custom on use)
+        -- reorder up/down (materialize custom on use) -- common to all row kinds
         local up = IconButton(row, "\226\150\178", i > 1, function()
             local L = EnsureCustom(spec, mode, variant); L[i], L[i - 1] = L[i - 1], L[i]; refresh()
         end)
@@ -426,51 +425,71 @@ function Pages.rotation()
             local L = EnsureCustom(spec, mode, variant); L[i], L[i + 1] = L[i + 1], L[i]; refresh()
         end)
         dn:SetPoint("BOTTOMLEFT", 6, 3)
-
         local idx = UI.Font(row, 11, C.faint); idx:SetPoint("LEFT", 30, 0); idx:SetText(tostring(i))
 
-        local ic = row:CreateTexture(nil, "ARTWORK")
-        ic:SetSize(28, 28); ic:SetPoint("LEFT", 44, 0)
-        ic:SetTexture(sid and API.SpellTexture(sid)); ic:SetTexCoord(0.1, 0.9, 0.1, 0.9)
-        ic:SetDesaturated(e.off and true or false)
-
-        local nm = UI.Font(row, 13, e.off and C.faint or C.head)
-        nm:SetPoint("LEFT", ic, "RIGHT", 10, 6); nm:SetWidth(120); nm:SetJustifyH("LEFT")
-        nm:SetWordWrap(false); nm:SetText(sid and API.SpellName(sid) or tostring(e.spell))
-        local pid = UI.Font(row, 10, C.faint); pid:SetPoint("LEFT", ic, "RIGHT", 10, -8)
-        pid:SetText(sid and ("#" .. sid) or "")
-
-        -- remove
+        -- remove + enable toggle -- common
         local rm = IconButton(row, "\195\151", true, function()
             local L = EnsureCustom(spec, mode, variant); table.remove(L, i); refresh()
         end)
         rm:SetSize(18, 18); rm:SetPoint("RIGHT", -8, 0)
-
-        -- enable toggle
         local t = UI.Toggle(row, function() return not e.off end, function(v)
             local L = EnsureCustom(spec, mode, variant); L[i].off = (not v) and true or nil
         end, refresh)
         t:SetPoint("RIGHT", rm, "LEFT", -10, 0)
 
-        -- live pass/fail dot for this row's condition
-        local dot = UI.Solid(row, "OVERLAY", C.muted); dot:SetSize(9, 9)
-        statusRows[#statusRows + 1] = { dot = dot, cond = e.cond, sid = sid }
+        if e.sequence then
+            -- Strict-sequence row: chain icon, name + step count, and an Edit chip that
+            -- opens the sequence editor (reuses the builder UI).
+            local seq = PRIO.Engine:SeqDef(e.sequence)
+            local nsteps = seq and #seq.steps or 0
+            local ic = row:CreateTexture(nil, "ARTWORK")
+            ic:SetSize(28, 28); ic:SetPoint("LEFT", 44, 0)
+            ic:SetTexture("Interface\\Icons\\spell_shadow_soulgem"); ic:SetTexCoord(0.1, 0.9, 0.1, 0.9)
+            ic:SetDesaturated(e.off and true or false)
+            local nm = UI.Font(row, 13, e.off and C.faint or C.head)
+            nm:SetPoint("LEFT", ic, "RIGHT", 10, 6); nm:SetText("Strict Sequence")
+            local pid = UI.Font(row, 10, C.faint); pid:SetPoint("LEFT", ic, "RIGHT", 10, -8)
+            pid:SetText(nsteps .. (nsteps == 1 and " step" or " steps"))
 
-        -- condition chip (click to open the editor)
-        local summary = Cond.Summary(e.cond, sid)
-        local isAlways = (summary == "always")
-        local cc = isAlways and C.muted or C.accent
-        local chip = CreateFrame("Button", nil, row, "BackdropTemplate")
-        chip:SetBackdrop({ bgFile = WHITE, edgeFile = WHITE, edgeSize = 1 })
-        chip:SetBackdropColor(cc[1], cc[2], cc[3], isAlways and 0.06 or 0.14)
-        chip:SetBackdropBorderColor(cc[1], cc[2], cc[3], 0.3)
-        local ct = UI.Font(chip, 11, cc); ct:SetPoint("CENTER", 0, 0)
-        ct:SetWidth(150); ct:SetJustifyH("CENTER"); ct:SetWordWrap(false); ct:SetText(summary)
-        chip:SetSize(math.min(164, math.max(50, ct:GetStringWidth() + 18)), 18)
-        chip:SetPoint("RIGHT", t, "LEFT", -10, 0)
-        chip:SetScript("OnClick", function() Options:OpenCondEditor(spec, mode, i, variant) end)
+            local chip = CreateFrame("Button", nil, row, "BackdropTemplate")
+            chip:SetBackdrop({ bgFile = WHITE, edgeFile = WHITE, edgeSize = 1 })
+            chip:SetBackdropColor(C.accent[1], C.accent[2], C.accent[3], 0.14)
+            chip:SetBackdropBorderColor(C.accent[1], C.accent[2], C.accent[3], 0.3)
+            local ct = UI.Font(chip, 11, C.accent); ct:SetPoint("CENTER"); ct:SetText("Edit steps")
+            chip:SetSize(math.max(60, ct:GetStringWidth() + 18), 18)
+            chip:SetPoint("RIGHT", t, "LEFT", -10, 0)
+            chip:SetScript("OnClick", function() Options:OpenSequenceEditor(spec, e.sequence) end)
+        else
+            local sid = PRIO.Engine:EntrySpellID(e)
+            local ic = row:CreateTexture(nil, "ARTWORK")
+            ic:SetSize(28, 28); ic:SetPoint("LEFT", 44, 0)
+            ic:SetTexture(sid and API.SpellTexture(sid)); ic:SetTexCoord(0.1, 0.9, 0.1, 0.9)
+            ic:SetDesaturated(e.off and true or false)
+            local nm = UI.Font(row, 13, e.off and C.faint or C.head)
+            nm:SetPoint("LEFT", ic, "RIGHT", 10, 6); nm:SetWidth(120); nm:SetJustifyH("LEFT")
+            nm:SetWordWrap(false); nm:SetText(sid and API.SpellName(sid) or tostring(e.spell))
+            local pid = UI.Font(row, 10, C.faint); pid:SetPoint("LEFT", ic, "RIGHT", 10, -8)
+            pid:SetText(sid and ("#" .. sid) or "")
 
-        dot:SetPoint("RIGHT", chip, "LEFT", -7, 0)
+            -- live pass/fail dot for this row's condition
+            local dot = UI.Solid(row, "OVERLAY", C.muted); dot:SetSize(9, 9)
+            statusRows[#statusRows + 1] = { dot = dot, cond = e.cond, sid = sid }
+
+            -- condition chip (click to open the editor)
+            local summary = Cond.Summary(e.cond, sid)
+            local isAlways = (summary == "always")
+            local cc = isAlways and C.muted or C.accent
+            local chip = CreateFrame("Button", nil, row, "BackdropTemplate")
+            chip:SetBackdrop({ bgFile = WHITE, edgeFile = WHITE, edgeSize = 1 })
+            chip:SetBackdropColor(cc[1], cc[2], cc[3], isAlways and 0.06 or 0.14)
+            chip:SetBackdropBorderColor(cc[1], cc[2], cc[3], 0.3)
+            local ct = UI.Font(chip, 11, cc); ct:SetPoint("CENTER", 0, 0)
+            ct:SetWidth(150); ct:SetJustifyH("CENTER"); ct:SetWordWrap(false); ct:SetText(summary)
+            chip:SetSize(math.min(164, math.max(50, ct:GetStringWidth() + 18)), 18)
+            chip:SetPoint("RIGHT", t, "LEFT", -10, 0)
+            chip:SetScript("OnClick", function() Options:OpenCondEditor(spec, mode, i, variant) end)
+            dot:SetPoint("RIGHT", chip, "LEFT", -7, 0)
+        end
     end
 
     -- Add ability
@@ -486,6 +505,22 @@ function Pages.rotation()
             L[#L + 1] = { spell = sid, cond = nil }
             refresh()
         end)
+    end)
+    cursorY = cursorY + 36
+
+    -- Add strict sequence
+    local addSeq = Track(CreateFrame("Button", nil, content, "BackdropTemplate"))
+    addSeq:SetSize(contentW, 30); addSeq:SetPoint("TOPLEFT", 0, -cursorY)
+    addSeq:SetBackdrop({ bgFile = WHITE, edgeFile = WHITE, edgeSize = 1 })
+    addSeq:SetBackdropColor(C.accent[1], C.accent[2], C.accent[3], 0.06)
+    addSeq:SetBackdropBorderColor(C.accent[1], C.accent[2], C.accent[3], 0.3)
+    local sl = UI.Font(addSeq, 13, C.accent); sl:SetPoint("CENTER"); sl:SetText("+  Add strict sequence")
+    addSeq:SetScript("OnClick", function()
+        local id = Options:NewSequence(spec)
+        local L = EnsureCustom(spec, mode, variant)
+        L[#L + 1] = { sequence = id }
+        AfterChange(); Options:ShowPage("rotation")
+        Options:OpenSequenceEditor(spec, id)
     end)
     cursorY = cursorY + 38
 end
@@ -504,9 +539,20 @@ end
 function Options:OpenCondEditor(spec, mode, index, variant)
     local L = EnsureCustom(spec, mode, variant)
     local e = L[index]
-    e.cond = NormalizeCond(e.cond)
-    local cond = e.cond
-    local sid  = PRIO.Engine:EntrySpellID(e)
+    local sid = PRIO.Engine:EntrySpellID(e)
+    Options:OpenCondEditorCore(spec, e, "cond", sid, function()
+        AfterChange()
+        if currentPage == "rotation" then Options:ShowPage("rotation") end
+    end)
+end
+
+-- Generalized condition editor: edits holder[field] (a cond table) for any owner -- a
+-- priority row, or a sequence's start/stop/step -- with `selfSid` as the "Self" spell and
+-- `onChange` fired on every edit. OpenCondEditor above is the priority-row wrapper.
+function Options:OpenCondEditorCore(spec, holder, field, selfSid, onChange)
+    holder[field] = NormalizeCond(holder[field])
+    local cond = holder[field]
+    local sid  = selfSid
 
     if not editor then
         editor = UI.Window("PRIOCondEditor", 372, 300, "Conditions", "\226\128\148")
@@ -581,18 +627,21 @@ function Options:OpenCondEditor(spec, mode, index, variant)
             if L then for _, en in ipairs(L) do collectCond(en.cond) end end
         end
     end
-    -- Duration list: only buffs the spec tracks a duration for (e.g. Zenith, HoJS).
+    -- Duration list: only buffs the spec tracks a duration for (e.g. Zenith, HoJS), plus
+    -- rising-edge timed buffs (spec.auraGainTimers, e.g. Devourer's Moment of Craving).
     local seenD = {}
-    for _, entry in pairs(spec.auraDurations or {}) do
-        local grants = entry.spell and { entry } or entry
-        for _, g in ipairs(grants) do
-            if g.spell and not seenD[g.spell] then
-                seenD[g.spell] = true
-                durationOpts[#durationOpts + 1] =
-                    { value = g.spell, text = API.SpellName(g.spell) or ("#" .. g.spell), icon = API.SpellTexture(g.spell) }
-            end
+    local function addDuration(s)
+        if s and not seenD[s] then
+            seenD[s] = true
+            durationOpts[#durationOpts + 1] =
+                { value = s, text = API.SpellName(s) or ("#" .. s), icon = API.SpellTexture(s) }
         end
     end
+    for _, entry in pairs(spec.auraDurations or {}) do
+        local grants = entry.spell and { entry } or entry
+        for _, g in ipairs(grants) do addDuration(g.spell) end
+    end
+    for aid in pairs(spec.auraGainTimers or {}) do addDuration(aid) end
     local function optsFor(target)
         if target == "ability" then return abilityOpts
         elseif target == "duration" then return durationOpts end
@@ -602,10 +651,7 @@ function Options:OpenCondEditor(spec, mode, index, variant)
     local talentOpts = { { value = 0, text = "\226\128\148 pick talent \226\128\148" } }
     for _, o in ipairs(API.GetTalentList()) do talentOpts[#talentOpts + 1] = o end
 
-    local function editorChanged()
-        AfterChange()
-        if currentPage == "rotation" then Options:ShowPage("rotation") end
-    end
+    local editorChanged = onChange or function() end
 
     -- Match ALL / ANY (rebuilt each open so it captures this cond).
     if editor.seg then editor.seg:Hide() end
@@ -700,6 +746,118 @@ function Options:OpenCondEditor(spec, mode, index, variant)
     rebuild()
     editor:Show()
     editor:Raise()
+end
+
+--------------------------------------------------------------------------------
+-- Strict-sequence editor. User sequences live in db.customSequences[specKey][id] =
+-- { start=<cond>, stop=<cond>, deviations=N|nil, steps={ {spell=<key>, cond=<cond>} } }.
+-- The engine's SeqDef resolves these over the spec defaults. Reuses the spell picker and
+-- the generalized condition editor for start/stop/per-step triggers.
+--------------------------------------------------------------------------------
+local function EnsureCustomSequences(spec)
+    PRIO.db.customSequences = PRIO.db.customSequences or {}
+    PRIO.db.customSequences[spec.key] = PRIO.db.customSequences[spec.key] or {}
+    return PRIO.db.customSequences[spec.key]
+end
+
+function Options:NewSequence(spec)
+    local store = EnsureCustomSequences(spec)
+    local n = 1; while store["seq" .. n] do n = n + 1 end
+    local id = "seq" .. n
+    store[id] = { start = { op = "and", clauses = {} }, stop = { op = "and", clauses = {} }, steps = {} }
+    return id
+end
+
+local seqEditor
+function Options:OpenSequenceEditor(spec, id)
+    local seq = EnsureCustomSequences(spec)[id]
+    if not seq then return end
+    if not seqEditor then
+        seqEditor = UI.Window("PRIOSeqEditor", 384, 360, "Strict Sequence", "\226\128\148")
+        seqEditor:SetFrameStrata("DIALOG")
+        seqEditor.rows = {}
+    end
+    local rebuild
+    rebuild = function()
+        for _, f in ipairs(seqEditor.rows) do f:Hide() end
+        wipe(seqEditor.rows)
+        local y = 58
+        local function Row(h)
+            local f = CreateFrame("Frame", nil, seqEditor)
+            f:SetSize(352, h); f:SetPoint("TOPLEFT", 16, -y); y = y + h + 6
+            seqEditor.rows[#seqEditor.rows + 1] = f
+            return f
+        end
+        local function condChip(parent, holder, field, selfSid, maxW)
+            local sum = Cond.Summary(holder[field], selfSid)
+            local isA = (sum == "always")
+            local cc = isA and C.muted or C.accent
+            local chip = CreateFrame("Button", nil, parent, "BackdropTemplate")
+            chip:SetBackdrop({ bgFile = WHITE, edgeFile = WHITE, edgeSize = 1 })
+            chip:SetBackdropColor(cc[1], cc[2], cc[3], isA and 0.06 or 0.14)
+            chip:SetBackdropBorderColor(cc[1], cc[2], cc[3], 0.3)
+            local ct = UI.Font(chip, 11, cc); ct:SetPoint("CENTER")
+            ct:SetWidth(maxW - 18); ct:SetJustifyH("CENTER"); ct:SetWordWrap(false); ct:SetText(sum)
+            chip:SetSize(math.min(maxW, math.max(56, ct:GetStringWidth() + 18)), 18)
+            chip:SetScript("OnClick", function()
+                Options:OpenCondEditorCore(spec, holder, field, selfSid, function() AfterChange(); rebuild() end)
+            end)
+            return chip
+        end
+
+        -- Start / Stop triggers
+        for _, def in ipairs({ { "Start when", "start" }, { "Stop when", "stop" } }) do
+            local r = Row(24)
+            local lb = UI.Font(r, 12, C.muted); lb:SetPoint("LEFT", 0, 0); lb:SetText(def[1])
+            condChip(r, seq, def[2], nil, 220):SetPoint("RIGHT", 0, 0)
+        end
+
+        -- End after N off-sequence casts (0 = never)
+        local dr = Row(24)
+        local dl = UI.Font(dr, 12, C.muted); dl:SetPoint("LEFT", 0, 0)
+        dl:SetText("End after off-seq casts (0=never)")
+        local sp = UI.Stepper(dr, 74, 0, 3, function() return seq.deviations or 0 end,
+            function(v) seq.deviations = (v > 0) and v or nil; AfterChange() end)
+        sp:SetPoint("RIGHT", 0, 0)
+
+        local hr = Row(16); local hl = UI.Font(hr, 11, C.faint); hl:SetPoint("LEFT", 0, 0); hl:SetText("STEPS")
+
+        for i, stp in ipairs(seq.steps) do
+            local r = Row(30)
+            local up = IconButton(r, "\226\150\178", i > 1, function()
+                seq.steps[i], seq.steps[i - 1] = seq.steps[i - 1], seq.steps[i]; AfterChange(); rebuild()
+            end); up:SetPoint("TOPLEFT", 0, -2)
+            local dn = IconButton(r, "\226\150\188", i < #seq.steps, function()
+                seq.steps[i], seq.steps[i + 1] = seq.steps[i + 1], seq.steps[i]; AfterChange(); rebuild()
+            end); dn:SetPoint("BOTTOMLEFT", 0, 2)
+            local sid = stp.spell and spec.spells[stp.spell]
+            local nm = UI.Font(r, 12, C.head); nm:SetPoint("LEFT", 24, 0)
+            nm:SetWidth(120); nm:SetJustifyH("LEFT"); nm:SetWordWrap(false)
+            nm:SetText(sid and API.SpellName(sid) or tostring(stp.spell))
+            local rm = IconButton(r, "\195\151", true, function()
+                table.remove(seq.steps, i); AfterChange(); rebuild()
+            end); rm:SetSize(18, 18); rm:SetPoint("RIGHT", 0, 0)
+            condChip(r, stp, "cond", sid, 140):SetPoint("RIGHT", rm, "LEFT", -10, 0)
+        end
+
+        -- Add step
+        local ar = Row(26)
+        local ab = CreateFrame("Button", nil, ar, "BackdropTemplate"); ab:SetAllPoints()
+        ab:SetBackdrop({ bgFile = WHITE, edgeFile = WHITE, edgeSize = 1 })
+        ab:SetBackdropColor(C.accent[1], C.accent[2], C.accent[3], 0.06)
+        ab:SetBackdropBorderColor(C.accent[1], C.accent[2], C.accent[3], 0.3)
+        local af = UI.Font(ab, 12, C.accent); af:SetPoint("CENTER"); af:SetText("+  Add step")
+        ab:SetScript("OnClick", function()
+            ShowSpellPicker(ab, spec, function(sid)
+                local key; for k, s in pairs(spec.spells) do if s == sid then key = k; break end end
+                if key then seq.steps[#seq.steps + 1] = { spell = key }; AfterChange(); rebuild() end
+            end)
+        end)
+
+        seqEditor:SetHeight(math.max(200, y + 16))
+    end
+    rebuild()
+    seqEditor:Show(); seqEditor:Raise()
 end
 
 --------------------------------------------------------------------------------
