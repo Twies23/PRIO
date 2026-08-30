@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.4.11
+- **Outlaw — finalized Trickster default lists.** Two tuning tweaks: Killing Spree during Adrenaline Rush now also requires AR to be on cooldown (fires inside the AR window), and single-target **Stealth** only shows when you're **not already stealthed** (AoE keeps it on always). Reset to default (per mode) to pick these up if you've customized. Also corrected two tracked-aura IDs (Loaded Dice → 256171, Flawless Form → 441326, the buff auras rather than the talents).
+
 ## 0.4.10
 Fourth stable release — full **Outlaw Fatebound** support and a big round of Elemental & Outlaw fixes. Everything since 0.4.0.
 

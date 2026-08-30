@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.4.11", {
+        "Outlaw -- finalized Trickster default lists. Killing Spree during Adrenaline Rush now also requires AR on cooldown (fires inside the AR window); single-target Stealth only shows when you're NOT already stealthed (AoE keeps it always). Reset to default (per mode) to pick up if you've customized. Also fixed two tracked-aura IDs (Loaded Dice 256171, Flawless Form 441326 -- the buffs, not the talents).",
+    } },
     { "0.4.10", {
         "Fourth stable release -- full Outlaw Fatebound support and a big round of Elemental & Outlaw fixes. Everything since 0.4.0.",
         "Outlaw: Fatebound hero tree (Trickster / Fatebound split, auto-selected from talents; both share tuned ST/AoE defaults, each customizable per hero). New tuned default lists -- Stealth opener, supercharge-aware finishers, Killing Spree during Adrenaline Rush, 4-set free Dispatch, and a self-gating Fatebound Deal Fate line.",

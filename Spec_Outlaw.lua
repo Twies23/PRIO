@@ -46,9 +46,9 @@ local ID_KILLSPREE  = 51690
 local ID_KEEPROLLING = 381989  -- Keep It Rolling
 local ID_PREPARATION = 1277933
 local ID_OPPORTUNITY = 279876  -- Opportunity (stacks: 3 / 6 gates)
-local ID_LOADEDDICE = 256170
+local ID_LOADEDDICE = 256171   -- Loaded Dice BUFF aura (256170 is the talent); verified in-game
 local ID_UNSEENBLADE = 441146  -- Trickster
-local ID_FLAWLESS   = 441321   -- Flawless Form (Trickster)
+local ID_FLAWLESS   = 441326   -- Flawless Form BUFF aura (Trickster; 441321 is the talent), verified in-game
 local ID_FANGSTRIKE = 1301405  -- Fang Strike: 4pc tier buff -> next Dispatch is free/empowered
 local ID_VANISH     = 1856
 local ID_AMBUSH     = 8676
@@ -115,19 +115,20 @@ local function rtbReroll() return OR(buffDown(ID_ROLLBONES), predStage2False()) 
 -- buff. So instead of guessing, PRIO ALERTS when KiR is ready and the roll is a
 -- confirmed good one (stage 2+), and leaves the call to you (see spec.alerts).
 
--- Default lists = user-tuned (0.4.10). ONE list drives every mode/hero: the same core is
--- used for Trickster and Fatebound ST/AoE, so hero- and mode-specific lines are gated to
--- self-select (the Deal Fate line goes inert without that Fatebound talent; the Blade
--- Flurry lines are AoE-only). Sinister Strike at the bottom is the baseline builder
--- (Outlaw doesn't pool Energy). The core, from Stealth down:
+local function notStealthed() return { type = "notStealthed" } end
+
+-- Default lists = user-tuned (0.4.11). A shared `core` (Roll the Bones down) drives every
+-- mode/hero -- hero/mode-specific lines self-select (the Deal Fate line is inert without
+-- that Fatebound talent; Blade Flurry is AoE-only). Sinister Strike at the bottom is the
+-- baseline builder (Outlaw doesn't pool Energy). Stealth leads each mode but is gated per
+-- the tuned lists (below). The shared core:
 local core = {
-    { spell = "Stealth" },                                                          -- opener / re-stealth
     { spell = "RollTheBones",  cond = preset("rtbReroll") },                        -- reroll a stage-1 (or no) roll
     { spell = "Preparation",   cond = AND(cdDown(ID_BTE), cdDown(ID_ADRENALINE), cdDown(ID_KILLSPREE)) },
     { spell = "AdrenalineRush", cond = cpMax(2) },                                  -- on CD at <=2 CP
     { spell = "BetweenTheEyes", cond = AND(scMin(2), cpMin(6)) },                   -- spend a supercharge with BtE
     { spell = "KillingSpree",  cond = AND(scMin(1), cpMin(6)) },                    -- spend a supercharge with KS
-    { spell = "KillingSpree",  cond = buffUp(ID_ADRENALINE) },                      -- during Adrenaline Rush
+    { spell = "KillingSpree",  cond = AND(buffUp(ID_ADRENALINE), cdDown(ID_ADRENALINE)) }, -- during the Adrenaline Rush window
     { spell = "Dispatch",      cond = buffUp(ID_FANGSTRIKE) },                      -- free Dispatch (4pc Fang Strike)
     { spell = "BladeRush" },                                                        -- on CD
     { spell = "BetweenTheEyes", cond = cpMin(6) },                                  -- finisher at >=6 CP
@@ -138,15 +139,17 @@ local core = {
     { spell = "SinisterStrike", cond = cpMax(5) },                                  -- baseline builder at <=5 CP
 }
 
--- ST = the core as-is. AoE = the core with the two Blade Flurry lines inserted right after
--- Stealth (keep the cleave buff up; recast it on 4+ at low CP). Built programmatically so
--- the shared core stays the single source of truth.
-local st = core
-local aoe = { core[1],
+-- Stealth leads both modes (unusable in combat either way): ST only when NOT already
+-- stealthed; AoE always, plus the two Blade Flurry lines. Rest is the shared core.
+local st = { { spell = "Stealth", cond = notStealthed() } }
+for i = 1, #core do st[#st + 1] = core[i] end
+
+local aoe = {
+    { spell = "Stealth" },
     { spell = "BladeFlurry", cond = buffDown(ID_BLADEFLURRY) },                     -- put the cleave buff up
     { spell = "BladeFlurry", cond = AND(buffUp(ID_BLADEFLURRY), enemiesMin(4), cpMax(4)) }, -- recast on 4+ at low CP
 }
-for i = 2, #core do aoe[#aoe + 1] = core[i] end
+for i = 1, #core do aoe[#aoe + 1] = core[i] end
 
 --------------------------------------------------------------------------------
 -- HERO SPLIT. Trickster and Fatebound share the SAME default lists (the user tunes one
