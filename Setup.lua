@@ -13,7 +13,7 @@ local Setup = {}
 PRIO.Setup = Setup
 
 Setup.confirmed = {}          -- [spell] = true once a pandemic window is seen this session
-local win, body, elapsed = nil, nil, 0
+local win, body, elapsed, introFS = nil, nil, 0, nil
 local rows, pool, builtKey = {}, {}, nil
 local cpool, heads = {}, {}   -- compact column rows; column-header fontstrings
 
@@ -128,12 +128,24 @@ local function modelFor(spec)
             local nm = API.SpellName(id)
             if nm and nm ~= "" then abilities[#abilities + 1] = { kind = "ability", spell = id, label = nm } end
         end
+        -- spec.setup entries flagged optional (e.g. a 4-set buff) stay amber, not red, when
+        -- untracked -- they only matter for that build.
+        local handOpt = {}
+        if spec.setup then
+            for _, it in ipairs(spec.setup) do
+                if it.kind == "trackedAura" and it.spell and it.optional then handOpt[it.spell] = true end
+            end
+        end
         local ids = {}
         for id in pairs(requiredAuras(spec)) do ids[#ids + 1] = id end
         table.sort(ids)
         for _, id in ipairs(ids) do
             local nm = API.SpellName(id)
-            if nm and nm ~= "" then auras[#auras + 1] = { kind = "trackedAura", spell = id, label = nm } end
+            if nm and nm ~= "" then
+                local opt = handOpt[id]
+                auras[#auras + 1] = { kind = "trackedAura", spell = id, optional = opt,
+                    label = nm .. (opt and " (optional)" or "") }
+            end
         end
     end
     return general, abilities, auras
@@ -147,7 +159,8 @@ local function statusOf(it)
     elseif it.kind == "nameplates" then
         return API.NameplatesEnabled() and "ok" or "bad"
     elseif it.kind == "trackedAura" then
-        return API.IsTracked(it.spell) and "ok" or "bad"
+        if API.IsTracked(it.spell) then return "ok" end
+        return it.optional and "warn" or "bad"
     elseif it.kind == "ability" then
         return API.IsTracked(it.spell) and "ok" or "warn"
     elseif it.kind == "pandemic" then
@@ -211,8 +224,8 @@ function Setup:Rebuild(spec)
 
     local general, abilities, auras = modelFor(spec)
 
-    -- General checks (full-width rows with hints).
-    local y = 92
+    -- General checks (full-width rows with hints). Start below the (2-3 line) intro.
+    local y = 74 + math.ceil((introFS and introFS:GetStringHeight()) or 40) + 14
     for _, it in ipairs(general) do
         local r = acquireRow()
         r:ClearAllPoints(); r:SetPoint("TOPLEFT", 22, -y)
@@ -258,6 +271,7 @@ function Setup:Build()
     intro:SetPoint("TOPLEFT", 22, -68); intro:SetPoint("RIGHT", body, "RIGHT", -22, 0)
     intro:SetJustifyH("LEFT"); intro:SetWordWrap(true)
     intro:SetText("Each dot turns green once it's set. Add the spells below to your Cooldown Manager (Edit Mode). |cffe0685aAuras are required|r -- PRIO reads them from buff tracking. |cffe0a03aAbilities are recommended|r for your cooldown display.")
+    introFS = intro
 
     -- Footer buttons.
     local function mkButton(text, w, onClick, filled)

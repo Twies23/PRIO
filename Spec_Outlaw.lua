@@ -290,7 +290,7 @@ local spec = {
           hint = "Track Between the Eyes so its debuff window reads." },
         { kind = "info", label = "Combo Points",
           hint = "No tracking needed -- combo points are a discrete resource PRIO reads directly, so finisher / builder combo-point gates are exact." },
-        { kind = "trackedAura", label = "Fang Strike tracked (4-set)", spell = ID_FANGSTRIKE,
+        { kind = "trackedAura", label = "Fang Strike tracked (4-set)", spell = ID_FANGSTRIKE, optional = true,
           hint = "Only if you have the 4-piece tier set: track Fang Strike so PRIO can suggest the free Dispatch while it's up. Harmless to skip if you don't have the set." },
     },
 

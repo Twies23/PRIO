@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.4.14", {
+        "Setup polish: intro text no longer overlaps the first row, and a build-specific aura like Fang Strike (4-set) shows amber 'optional' instead of red 'required' when you don't have the set.",
+    } },
     { "0.4.13", {
         "Setup redesigned. /prio setup now shows general checks up top, then two columns: Abilities (left -- add to the Cooldown Manager's Essential/Utility, recommended) and Auras (right -- add to Tracked Buffs, REQUIRED, PRIO reads these). Rows grow to fit their text (no overlap), misleading entries dropped (e.g. the bogus 'Between the Eyes debuff window'), and it re-opens after each update so you re-verify (an update can add a newly-required aura).",
         "'Apply recommended settings' now enables the opener and the primary glow.",

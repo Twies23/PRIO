@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.4.14
+- **Setup polish:** the intro text no longer overlaps the first row (rows start below it now), and a build-specific aura like **Fang Strike (4-set)** shows amber "optional" instead of red "required" when you don't have the set — so non-tier-set players aren't told to track something they don't need.
+
 ## 0.4.13
 - **Setup redesigned into a cleaner, clearer checklist.** `/prio setup` now shows general checks up top (Cooldown Manager active, nameplates), then a two-column layout: **Abilities** on the left (add to your Cooldown Manager's Essential/Utility — recommended, so your cooldowns show) and **Auras** on the right (add to Tracked Buffs — *required*, PRIO reads these). Rows grow to fit their text (no more overlap), and it drops the misleading entries that weren't actually needed (e.g. the "Between the Eyes debuff window"). It also **re-opens after each update** so you can re-verify — handy since an update can add a newly-required aura.
 - **"Apply recommended settings" now enables the opener and the primary glow.**
