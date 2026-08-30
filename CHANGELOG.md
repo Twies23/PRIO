@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.4.12
+- **Setup (`/prio setup`) is now robust — it can't miss a required aura.** Two additions: a **"Cooldown Manager active"** check at the top (PRIO reads all your buffs/debuffs from Blizzard's Cooldown Manager — without it, it's blind in combat, and now you're told so directly), and the checklist now **auto-derives every aura your rotation actually gates on** from the priority lists themselves and lists any that were missing. This closes gaps like Outlaw's Adrenaline Rush, and Elemental's Stormkeeper / Purging Flames, that the hand-written lists had omitted. Nothing existing was removed — only missing items added.
+
 ## 0.4.11
 - **Outlaw — finalized Trickster default lists.** Two tuning tweaks: Killing Spree during Adrenaline Rush now also requires AR to be on cooldown (fires inside the AR window), and single-target **Stealth** only shows when you're **not already stealthed** (AoE keeps it on always). Reset to default (per mode) to pick these up if you've customized. Also corrected two tracked-aura IDs (Loaded Dice → 256171, Flawless Form → 441326, the buff auras rather than the talents).
 

@@ -17,22 +17,101 @@ local win, body, elapsed = nil, nil, 0
 local rows, pool, builtKey = {}, {}, nil
 
 --------------------------------------------------------------------------------
--- Checklist items for the active spec = global checks + spec.setup metadata.
+-- Auto-derive the auras the rotation ACTUALLY gates on, so the checklist can never
+-- silently miss one. We collect the spell IDs from every aura-PRESENCE clause across
+-- all of the spec's priority lists (every hero variant + mode), its alerts, and any
+-- named presets those reference. Cooldown / charge / glow / predicted clauses need no
+-- Cooldown-Manager tracking, so they're intentionally excluded.
+--------------------------------------------------------------------------------
+local AURA_CLAUSES = {
+    buffActive = true, buffMissing = true, refreshable = true,
+    stacksMin = true, stacksMax = true, stacksEq = true,
+    auraRemainMin = true, auraRemainMax = true,
+}
+
+local function presetClause(spec, t)
+    local key = type(t) == "string" and t:match("^preset:(.+)$")
+    if not (key and spec.condPresets) then return nil end
+    for _, p in ipairs(spec.condPresets) do if p.key == key then return p.clause end end
+    return nil
+end
+
+local function collectFromCond(cond, out, spec, depth)
+    depth = depth or 0
+    if type(cond) ~= "table" or depth > 8 then return end
+    if cond.clauses then
+        for _, c in ipairs(cond.clauses) do collectFromCond(c, out, spec, depth + 1) end
+        return
+    end
+    local t = cond.type
+    if type(t) == "string" and t:find("^preset:") then
+        collectFromCond(presetClause(spec, t), out, spec, depth + 1)
+    elseif t and AURA_CLAUSES[t] and type(cond.spell) == "number" then
+        out[cond.spell] = true
+    end
+end
+
+local function requiredAuras(spec)
+    local out = {}
+    if not spec then return out end
+    local function walk(list)
+        if type(list) ~= "table" then return end
+        for _, e in ipairs(list) do collectFromCond(e.cond, out, spec) end
+    end
+    if spec.priorityByVariant then
+        for _, lists in pairs(spec.priorityByVariant) do
+            for _, list in pairs(lists) do walk(list) end
+        end
+    elseif type(spec.priority) == "table" then
+        for _, list in pairs(spec.priority) do walk(list) end
+    end
+    if spec.alerts then
+        for _, a in ipairs(spec.alerts) do collectFromCond(a.when, out, spec) end
+    end
+    return out
+end
+
+--------------------------------------------------------------------------------
+-- Checklist items for the active spec = global checks + spec.setup metadata +
+-- any auto-derived tracked auras the spec.setup list didn't already cover.
 --------------------------------------------------------------------------------
 local function itemsFor(spec)
     local list = {
+        { kind = "cdm", label = "Cooldown Manager active",
+          hint = "PRIO reads your buffs and debuffs from Blizzard's Cooldown Manager -- without it, it's blind to them in combat. Enable it in Edit Mode (Cooldown Manager) and add the spells below." },
         { kind = "nameplates", label = "Enemy nameplates",
           hint = "Needed to count targets for Cleave/AoE. PRIO turns these on for you." },
     }
+    local covered = {}
     if spec and spec.setup then
-        for _, it in ipairs(spec.setup) do list[#list + 1] = it end
+        for _, it in ipairs(spec.setup) do
+            list[#list + 1] = it
+            if it.kind == "trackedAura" and it.spell then covered[it.spell] = true end
+        end
+    end
+    -- Auto-derived: every aura the rotation checks that isn't already listed.
+    if spec then
+        local ids = {}
+        for id in pairs(requiredAuras(spec)) do if not covered[id] then ids[#ids + 1] = id end end
+        table.sort(ids)
+        for _, id in ipairs(ids) do
+            local nm = API.SpellName(id)
+            if nm and nm ~= "" then
+                list[#list + 1] = { kind = "trackedAura", spell = id, derived = true,
+                    label = nm .. " tracked",
+                    hint = "The rotation checks this buff -- add it to your Cooldown Manager so PRIO can read it in combat." }
+            end
+        end
     end
     return list
 end
 
 -- Returns "ok" / "bad" / "warn" and a short status word.
 local function statusOf(it)
-    if it.kind == "nameplates" then
+    if it.kind == "cdm" then
+        local ok, t = pcall(API.EnumerateTracked)
+        return (ok and type(t) == "table" and #t > 0) and "ok" or "bad"
+    elseif it.kind == "nameplates" then
         return API.NameplatesEnabled() and "ok" or "bad"
     elseif it.kind == "trackedAura" then
         return API.IsTracked(it.spell) and "ok" or "bad"
