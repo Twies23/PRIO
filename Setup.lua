@@ -15,6 +15,7 @@ PRIO.Setup = Setup
 Setup.confirmed = {}          -- [spell] = true once a pandemic window is seen this session
 local win, body, elapsed = nil, nil, 0
 local rows, pool, builtKey = {}, {}, nil
+local cpool, heads = {}, {}   -- compact column rows; column-header fontstrings
 
 --------------------------------------------------------------------------------
 -- Auto-derive the auras the rotation ACTUALLY gates on, so the checklist can never
@@ -68,42 +69,74 @@ local function requiredAuras(spec)
     if spec.alerts then
         for _, a in ipairs(spec.alerts) do collectFromCond(a.when, out, spec) end
     end
+    -- Also the player's CUSTOM lists, so a custom condition on an untracked buff is caught.
+    local cp = PRIO.db and PRIO.db.customPriorities and PRIO.db.customPriorities[spec.key]
+    if type(cp) == "table" then
+        for k, v in pairs(cp) do
+            if k == "variants" and type(v) == "table" then
+                for _, lists in pairs(v) do
+                    if type(lists) == "table" then for _, l in pairs(lists) do walk(l) end end
+                end
+            elseif type(v) == "table" then
+                walk(v)
+            end
+        end
+    end
+    return out
+end
+
+-- Distinct rotational abilities, in order of first appearance across the spec's lists.
+-- Recommended (not required) for the Cooldown Manager's cooldown display -- PRIO reads
+-- cooldowns DIRECTLY (GetSpellCooldown), so these don't have to be tracked for it to work.
+local function priorityAbilities(spec)
+    local out, seen = {}, {}
+    if not spec then return out end
+    local function walk(list)
+        if type(list) ~= "table" then return end
+        for _, e in ipairs(list) do
+            local id = (type(e.spell) == "number") and e.spell or (spec.spells and spec.spells[e.spell])
+            if id and not seen[id] then seen[id] = true; out[#out + 1] = id end
+        end
+    end
+    if spec.priorityByVariant then
+        local v = spec.priorityVariants and spec.priorityVariants[1] and spec.priorityVariants[1].key
+        local lists = v and spec.priorityByVariant[v]
+        if lists then walk(lists.st); walk(lists.aoe); walk(lists.cleave) end
+    elseif type(spec.priority) == "table" then
+        walk(spec.priority.st); walk(spec.priority.aoe); walk(spec.priority.cleave)
+    end
     return out
 end
 
 --------------------------------------------------------------------------------
--- Checklist items for the active spec = global checks + spec.setup metadata +
--- any auto-derived tracked auras the spec.setup list didn't already cover.
+-- The setup model: GENERAL checks + two columns.
+--   * Abilities (recommended): add to the Cooldown Manager's Essential / Utility so your
+--     cooldowns show. Not required by PRIO -- it reads cooldowns directly.
+--   * Auras (required): PRIO reads these from the Cooldown Manager's buff tracking, so they
+--     MUST be added there or it can't see them in combat. Derived from the real conditions.
 --------------------------------------------------------------------------------
-local function itemsFor(spec)
-    local list = {
+local function modelFor(spec)
+    local general = {
         { kind = "cdm", label = "Cooldown Manager active",
-          hint = "PRIO reads your buffs and debuffs from Blizzard's Cooldown Manager -- without it, it's blind to them in combat. Enable it in Edit Mode (Cooldown Manager) and add the spells below." },
+          hint = "PRIO reads your buffs from Blizzard's Cooldown Manager -- without it, it's blind to them in combat. Enable it in Edit Mode." },
         { kind = "nameplates", label = "Enemy nameplates",
-          hint = "Needed to count targets for Cleave/AoE. PRIO turns these on for you." },
+          hint = "Needed to count targets for AoE -- PRIO turns these on for you." },
     }
-    local covered = {}
-    if spec and spec.setup then
-        for _, it in ipairs(spec.setup) do
-            list[#list + 1] = it
-            if it.kind == "trackedAura" and it.spell then covered[it.spell] = true end
-        end
-    end
-    -- Auto-derived: every aura the rotation checks that isn't already listed.
+    local abilities, auras = {}, {}
     if spec then
+        for _, id in ipairs(priorityAbilities(spec)) do
+            local nm = API.SpellName(id)
+            if nm and nm ~= "" then abilities[#abilities + 1] = { kind = "ability", spell = id, label = nm } end
+        end
         local ids = {}
-        for id in pairs(requiredAuras(spec)) do if not covered[id] then ids[#ids + 1] = id end end
+        for id in pairs(requiredAuras(spec)) do ids[#ids + 1] = id end
         table.sort(ids)
         for _, id in ipairs(ids) do
             local nm = API.SpellName(id)
-            if nm and nm ~= "" then
-                list[#list + 1] = { kind = "trackedAura", spell = id, derived = true,
-                    label = nm .. " tracked",
-                    hint = "The rotation checks this buff -- add it to your Cooldown Manager so PRIO can read it in combat." }
-            end
+            if nm and nm ~= "" then auras[#auras + 1] = { kind = "trackedAura", spell = id, label = nm } end
         end
     end
-    return list
+    return general, abilities, auras
 end
 
 -- Returns "ok" / "bad" / "warn" and a short status word.
@@ -115,6 +148,8 @@ local function statusOf(it)
         return API.NameplatesEnabled() and "ok" or "bad"
     elseif it.kind == "trackedAura" then
         return API.IsTracked(it.spell) and "ok" or "bad"
+    elseif it.kind == "ability" then
+        return API.IsTracked(it.spell) and "ok" or "warn"
     elseif it.kind == "pandemic" then
         if API.InPandemic and API.InPandemic(it.spell) == true then Setup.confirmed[it.spell] = true end
         return Setup.confirmed[it.spell] and "ok" or "warn"
@@ -143,26 +178,74 @@ local function acquireRow()
     f.name = UI.Font(f, 14, C.head);  f.name:SetPoint("TOPLEFT", 22, -3)
     f.state = UI.Font(f, 12, C.muted); f.state:SetPoint("TOPRIGHT", -2, -4); f.state:SetJustifyH("RIGHT")
     f.hint = UI.Font(f, 11.5, C.muted); f.hint:SetPoint("TOPLEFT", 22, -22)
-    f.hint:SetPoint("RIGHT", f, "RIGHT", -8, 0); f.hint:SetJustifyH("LEFT"); f.hint:SetWordWrap(true)
+    f.hint:SetWidth(430); f.hint:SetJustifyH("LEFT"); f.hint:SetWordWrap(true)
     f._used = true
     pool[#pool + 1] = f
     return f
 end
 
+-- Compact row for the columns: status dot + single-line name (colour carries status).
+local function acquireCompact()
+    for _, f in ipairs(cpool) do if not f._used then f._used = true; f:Show(); return f end end
+    local f = CreateFrame("Frame", nil, body)
+    f:SetSize(220, 20)
+    f.dot = UI.Solid(f, "ARTWORK", C.accent); f.dot:SetSize(9, 9); f.dot:SetPoint("LEFT", 2, 0)
+    f.name = UI.Font(f, 12.5, C.text); f.name:SetPoint("LEFT", 18, 0)
+    f.name:SetPoint("RIGHT", f, "RIGHT", -2, 0); f.name:SetJustifyH("LEFT")
+    f._used = true; cpool[#cpool + 1] = f
+    return f
+end
+
+local function acquireHeader()
+    for _, h in ipairs(heads) do if not h._used then h._used = true; h:Show(); return h end end
+    local h = UI.Font(body, 12, C.accent); h:SetJustifyH("LEFT"); h:SetWidth(230); h:SetWordWrap(true)
+    h._used = true; heads[#heads + 1] = h
+    return h
+end
+
 function Setup:Rebuild(spec)
     for _, f in ipairs(pool) do f._used = false; f:Hide() end
+    for _, f in ipairs(cpool) do f._used = false; f:Hide() end
+    for _, h in ipairs(heads) do h._used = false; h:Hide() end
     wipe(rows)
-    local y = 96
-    for _, it in ipairs(itemsFor(spec)) do
+
+    local general, abilities, auras = modelFor(spec)
+
+    -- General checks (full-width rows with hints).
+    local y = 92
+    for _, it in ipairs(general) do
         local r = acquireRow()
         r:ClearAllPoints(); r:SetPoint("TOPLEFT", 22, -y)
-        r.name:SetText(it.label or "?")
-        r.hint:SetText(it.hint or "")
+        r.name:SetText(it.label or "?"); r.hint:SetText(it.hint or "")
+        local hintH = (it.hint and it.hint ~= "") and math.ceil(r.hint:GetStringHeight() or 0) or 0
+        local rowH = math.max(34, 22 + hintH + 8)
+        r:SetSize(452, rowH)
         rows[#rows + 1] = { frame = r, item = it }
-        y = y + 46
+        y = y + rowH + 6
     end
+
+    -- Two columns: Abilities (left) | Auras (right).
+    y = y + 8
+    local LX, RX = 22, 262
+    local ha = acquireHeader(); ha:ClearAllPoints(); ha:SetPoint("TOPLEFT", LX, -y)
+    ha:SetText("Abilities \226\128\148 add to Cooldown Manager\n(Essential / Utility)")
+    local hb = acquireHeader(); hb:ClearAllPoints(); hb:SetPoint("TOPLEFT", RX, -y)
+    hb:SetText("Auras \226\128\148 add to Cooldown Manager\n(Tracked Buffs) \226\128\148 required")
+    y = y + 34
+
+    local colY = { y, y }
+    local function addCol(colIndex, x, item)
+        local r = acquireCompact()
+        r:ClearAllPoints(); r:SetPoint("TOPLEFT", x, -colY[colIndex])
+        r.name:SetText(item.label or "?")
+        rows[#rows + 1] = { frame = r, item = item }
+        colY[colIndex] = colY[colIndex] + 22
+    end
+    for _, a in ipairs(abilities) do addCol(1, LX, a) end
+    for _, a in ipairs(auras) do addCol(2, RX, a) end
+
     builtKey = spec and spec.key or "none"
-    if win then win:SetHeight(y + 58) end
+    if win then win:SetHeight(math.max(colY[1], colY[2]) + 58) end
 end
 
 function Setup:Build()
@@ -174,7 +257,7 @@ function Setup:Build()
     local intro = UI.Font(body, 12.5, C.muted)
     intro:SetPoint("TOPLEFT", 22, -68); intro:SetPoint("RIGHT", body, "RIGHT", -22, 0)
     intro:SetJustifyH("LEFT"); intro:SetWordWrap(true)
-    intro:SetText("Each item turns green once it's set. \"Action needed\" items are required; \"Optional\" ones improve accuracy.")
+    intro:SetText("Each dot turns green once it's set. Add the spells below to your Cooldown Manager (Edit Mode). |cffe0685aAuras are required|r -- PRIO reads them from buff tracking. |cffe0a03aAbilities are recommended|r for your cooldown display.")
 
     -- Footer buttons.
     local function mkButton(text, w, onClick, filled)
@@ -216,8 +299,10 @@ function Setup:Update()
     for _, row in ipairs(rows) do
         local st = STATE[statusOf(row.item)] or STATE.warn
         row.frame.dot:SetColorTexture(st.col[1], st.col[2], st.col[3], 1)
-        row.frame.state:SetText(st.txt)
-        row.frame.state:SetTextColor(st.col[1], st.col[2], st.col[3], 1)
+        if row.frame.state then   -- full rows only; compact column rows carry status via the dot
+            row.frame.state:SetText(st.txt)
+            row.frame.state:SetTextColor(st.col[1], st.col[2], st.col[3], 1)
+        end
     end
 end
 
@@ -232,15 +317,18 @@ function Setup:Toggle()
     if win:IsShown() then win:Hide() else self:Open() end
 end
 
--- Auto-open once per spec (tracked in saved vars).
+-- Auto-open per spec whenever the addon VERSION changes (so people re-verify setup after
+-- an update -- new versions can add newly-required auras). Tracked per spec in saved vars.
 function Setup:MaybeAutoOpen()
     local db = PRIO.db
     if not db then return end
-    db.setupSeen = db.setupSeen or {}
     local specID = API.GetSpecID()
     local spec = specID and PRIO.specs and PRIO.specs[specID]
     if not spec then return end
-    if db.setupSeen[spec.key] then return end
-    db.setupSeen[spec.key] = true
+    local ver = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata(ADDON, "Version"))
+             or (GetAddOnMetadata and GetAddOnMetadata(ADDON, "Version")) or "dev"
+    db.setupSeenVer = db.setupSeenVer or {}
+    if db.setupSeenVer[spec.key] == ver then return end   -- already verified on this version
+    db.setupSeenVer[spec.key] = ver
     self:Open()
 end

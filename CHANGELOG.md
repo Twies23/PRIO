@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.4.13
+- **Setup redesigned into a cleaner, clearer checklist.** `/prio setup` now shows general checks up top (Cooldown Manager active, nameplates), then a two-column layout: **Abilities** on the left (add to your Cooldown Manager's Essential/Utility — recommended, so your cooldowns show) and **Auras** on the right (add to Tracked Buffs — *required*, PRIO reads these). Rows grow to fit their text (no more overlap), and it drops the misleading entries that weren't actually needed (e.g. the "Between the Eyes debuff window"). It also **re-opens after each update** so you can re-verify — handy since an update can add a newly-required aura.
+- **"Apply recommended settings" now enables the opener and the primary glow.**
+
 ## 0.4.12
 - **Setup (`/prio setup`) is now robust — it can't miss a required aura.** Two additions: a **"Cooldown Manager active"** check at the top (PRIO reads all your buffs/debuffs from Blizzard's Cooldown Manager — without it, it's blind in combat, and now you're told so directly), and the checklist now **auto-derives every aura your rotation actually gates on** from the priority lists themselves and lists any that were missing. This closes gaps like Outlaw's Adrenaline Rush, and Elemental's Stormkeeper / Purging Flames, that the hand-written lists had omitted. Nothing existing was removed — only missing items added.
 

@@ -239,9 +239,9 @@ PRIO.presets = {
     -- The author's tuned layout: compact strip, left growth, faster polling.
     Recommended = {
         numQueue = 2, primarySize = 50, queueSize = 50, spacing = 5, growth = "LEFT",
-        showKeybinds = true, showNames = false, showGlow = false, showTitle = true,
+        showKeybinds = true, showNames = false, showGlow = true, showTitle = true,
         showCooldown = true, showFlash = true,
-        showOOC = true, useOpener = false, showPrecombat = false, advanceWhileCasting = true,
+        showOOC = true, useOpener = true, showPrecombat = false, advanceWhileCasting = true,
         enemyDetect = "engaged", cleaveAt = 2, aoeAt = 4, combatRate = 0.05, idleRate = 0.1,
         font = "Fonts\\ARIALN.TTF", titleSize = 12, keybindSize = 15, nameSize = 11,
     },
