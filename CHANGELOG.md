@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.4.16
+- **Setup: glow-driving abilities are now flagged as required.** Some reads use an ability's proc *glow* (e.g. Outlaw reads Opportunity from Pistol Shot's glow), which only lights up when that spell is present — so those show in the Abilities column tagged **(glow)** and turn red until added, instead of being merely recommended. Columns reframed: left is **"ability cooldowns — validation"** (confirm your cooldowns are tracked for your own display), right is **"auras to add to your Cooldown Manager"** (required — PRIO reads these).
+- Dots update **live** as you add/remove spells in the Cooldown Manager, and on an update the Setup no longer stacks on top of the changelog (it opens after you close it).
+
 ## 0.4.14
 - **Setup polish:** the intro text no longer overlaps the first row (rows start below it now), and a build-specific aura like **Fang Strike (4-set)** shows amber "optional" instead of red "required" when you don't have the set — so non-tier-set players aren't told to track something they don't need.
 

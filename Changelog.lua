@@ -11,6 +11,10 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.4.16", {
+        "Setup: glow-driving abilities are now flagged as required. Some reads use an ability's proc glow (e.g. Outlaw reads Opportunity from Pistol Shot's glow), which only lights up when that spell is present -- so those show in the Abilities column tagged (glow) and turn red until added. Columns reframed: left 'ability cooldowns -- validation' (for your own cooldown display), right 'auras to add to your Cooldown Manager' (required).",
+        "Setup dots update live as you edit the Cooldown Manager, and on an update the setup opens after you close the changelog instead of stacking on top of it.",
+    } },
     { "0.4.14", {
         "Setup polish: intro text no longer overlaps the first row, and a build-specific aura like Fang Strike (4-set) shows amber 'optional' instead of red 'required' when you don't have the set.",
     } },

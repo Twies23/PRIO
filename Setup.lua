@@ -48,12 +48,16 @@ local function collectFromCond(cond, out, spec, depth)
     if type(t) == "string" and t:find("^preset:") then
         collectFromCond(presetClause(spec, t), out, spec, depth + 1)
     elseif t and AURA_CLAUSES[t] and type(cond.spell) == "number" then
-        out[cond.spell] = true
+        out.auras[cond.spell] = true
+    elseif (t == "glowing" or t == "notGlowing") and type(cond.spell) == "number" then
+        out.glows[cond.spell] = true   -- proc-glow reads need the spell's overlay to register
     end
 end
 
-local function requiredAuras(spec)
-    local out = {}
+-- Returns { auras = <set>, glows = <set> }: auras the rotation reads via buff tracking, and
+-- spells whose proc GLOW it reads (those need the spell present for the overlay to light up).
+local function requiredSpells(spec)
+    local out = { auras = {}, glows = {} }
     if not spec then return out end
     local function walk(list)
         if type(list) ~= "table" then return end
@@ -124,12 +128,26 @@ local function modelFor(spec)
     }
     local abilities, auras = {}, {}
     if spec then
-        for _, id in ipairs(priorityAbilities(spec)) do
+        local req = requiredSpells(spec)
+
+        -- Abilities column. Priority spells (recommended, for your cooldown display), plus
+        -- glow-driving spells marked REQUIRED -- PRIO reads their proc glow, which only lights
+        -- up when the spell is present, so those must be added.
+        local seenAb = {}
+        local function addAbility(id)
+            if seenAb[id] then return end
             local nm = API.SpellName(id)
-            if nm and nm ~= "" then abilities[#abilities + 1] = { kind = "ability", spell = id, label = nm } end
+            if not (nm and nm ~= "") then return end
+            seenAb[id] = true
+            local glow = req.glows[id]
+            abilities[#abilities + 1] = { kind = "ability", spell = id, required = glow,
+                label = nm .. (glow and " (glow)" or "") }
         end
-        -- spec.setup entries flagged optional (e.g. a 4-set buff) stay amber, not red, when
-        -- untracked -- they only matter for that build.
+        for _, id in ipairs(priorityAbilities(spec)) do addAbility(id) end
+        for id in pairs(req.glows) do addAbility(id) end   -- ensure glow spells appear even if not a priority ability
+
+        -- Auras column (required). spec.setup entries flagged optional (e.g. a 4-set buff)
+        -- stay amber, not red, when untracked.
         local handOpt = {}
         if spec.setup then
             for _, it in ipairs(spec.setup) do
@@ -137,7 +155,7 @@ local function modelFor(spec)
             end
         end
         local ids = {}
-        for id in pairs(requiredAuras(spec)) do ids[#ids + 1] = id end
+        for id in pairs(req.auras) do ids[#ids + 1] = id end
         table.sort(ids)
         for _, id in ipairs(ids) do
             local nm = API.SpellName(id)
@@ -162,7 +180,8 @@ local function statusOf(it)
         if API.IsTracked(it.spell) then return "ok" end
         return it.optional and "warn" or "bad"
     elseif it.kind == "ability" then
-        return API.IsTracked(it.spell) and "ok" or "warn"
+        if API.IsTracked(it.spell) then return "ok" end
+        return it.required and "bad" or "warn"   -- glow-driving abilities are required
     elseif it.kind == "pandemic" then
         if API.InPandemic and API.InPandemic(it.spell) == true then Setup.confirmed[it.spell] = true end
         return Setup.confirmed[it.spell] and "ok" or "warn"
@@ -241,9 +260,9 @@ function Setup:Rebuild(spec)
     y = y + 8
     local LX, RX = 22, 262
     local ha = acquireHeader(); ha:ClearAllPoints(); ha:SetPoint("TOPLEFT", LX, -y)
-    ha:SetText("Abilities \226\128\148 add to Cooldown Manager\n(Essential / Utility)")
+    ha:SetText("Ability cooldowns \226\128\148 validation\n(check they're in Essential / Utility)")
     local hb = acquireHeader(); hb:ClearAllPoints(); hb:SetPoint("TOPLEFT", RX, -y)
-    hb:SetText("Auras \226\128\148 add to Cooldown Manager\n(Tracked Buffs) \226\128\148 required")
+    hb:SetText("Auras to add to your Cooldown Manager\n(Tracked Buffs) \226\128\148 required")
     y = y + 34
 
     local colY = { y, y }
