@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.5.15
+- **Beast Mastery — fixed the "no Nature's Ally talent" Kill Command condition.** It was pointing at the Nature's Ally *buff* ID instead of the *talent node*, so it showed "—" in the condition editor and didn't resolve. It now uses the correct talent (1273126) and reads as "Nature's Ally", so the plain Kill Command line correctly applies only on builds that don't take Nature's Ally.
+
 ## 0.5.14
 - **Beast Mastery — Pack Leader default lists updated to the tuned in-game version.** Single-target and AoE now ship the hand-tuned Pack Leader priority: Focus-gated spenders (shown only when affordable), the Howl / Nature's Ally Kill Command split with last-charge banking before Bestial Wrath, Wild Thrash right after Bestial Wrath and on cooldown, Bestial Wrath held for Wild Thrash / Beast Cleave, and Hunter's Mark upkeep. Reset a mode to default to pick these up if you've customized.
 

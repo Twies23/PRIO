@@ -64,7 +64,8 @@ local ID_HUNTERSMARK  = 257284
 local ID_FRENZY      = 272790     -- PET buff -> UNTRACKABLE (see header). Documented only.
 local ID_BEASTCLEAVE = 115939     -- Beast Cleave (verified from the live Cooldown Viewer TrackedBar, 2026-08-31)
 local ID_COBRAFANG   = 1299389    -- PLAYER buff, stacks to 4 -> spend with Cobra Shot (4-SET tier bonus)
-local ID_NATURESALLY = 1273145    -- PLAYER buff -> empowers Kill Command
+local ID_NATURESALLY = 1273145    -- Nature's Ally BUFF (empowers next Kill Command) -- unverified until the user has the talent
+local ID_NATURESALLY_TALENT = 1273126  -- Nature's Ally TALENT node (verified in-game 2026-08-31) -- for talent checks
 local ID_HOWL        = 471876     -- Howl of the Pack Leader (ready = next KC summons a Beast)
 local ID_WITHERING   = 471877     -- Withering Fire (Dark Ranger) -- UNVERIFIED, set via /prio spells
 
@@ -115,7 +116,7 @@ local pl_st = {
     { spell = "BestialWrath", cond = cdReady(ID_BESTIALWRATH) },                      -- on cooldown (triggers Howl)
     { spell = "KillCommand", cond = AND(preset("howlReady"), usable(ID_KILLCOMMAND)) }, -- Howl ready -> summon a Beast
     { spell = "KillCommand", cond = AND(buffUp(ID_NATURESALLY), cdRemainMin(ID_BESTIALWRATH, 3), usable(ID_KILLCOMMAND)) }, -- Nature's Ally (BW not imminent)
-    { spell = "KillCommand", cond = AND(talentNo(ID_NATURESALLY), usable(ID_KILLCOMMAND)) }, -- plain KC (no Nature's Ally talent)
+    { spell = "KillCommand", cond = AND(talentNo(ID_NATURESALLY_TALENT), usable(ID_KILLCOMMAND)) }, -- plain KC (no Nature's Ally talent)
     { spell = "KillCommand", cond = AND(buffUp(ID_NATURESALLY), cdRemainMax(ID_BESTIALWRATH, 3), chargesEq(2), usable(ID_KILLCOMMAND)) }, -- bank the last charge for BW
     { spell = "CobraShot",   cond = AND(stacksMin(ID_COBRAFANG, 4), usable(ID_COBRASHOT)) }, -- spend a capped Cobra Fang
     { spell = "BarbedShot" },                                                         -- on cooldown (Frenzy upkeep)
@@ -133,7 +134,7 @@ local pl_aoe = {
     { spell = "BestialWrath", cond = OR(cdReady(ID_WILDTHRASH), buffUp(ID_BEASTCLEAVE)) }, -- with Wild Thrash ready / Beast Cleave up
     { spell = "WildThrash" },                                                         -- on cooldown (keep Beast Cleave up)
     { spell = "KillCommand", cond = OR(enemiesMin(4), preset("howlReady"), usable(ID_KILLCOMMAND)) }, -- 4+ targets / Howl / affordable
-    { spell = "KillCommand", cond = AND(talentNo(ID_NATURESALLY), usable(ID_KILLCOMMAND)) }, -- plain KC (no Nature's Ally talent)
+    { spell = "KillCommand", cond = AND(talentNo(ID_NATURESALLY_TALENT), usable(ID_KILLCOMMAND)) }, -- plain KC (no Nature's Ally talent)
     { spell = "CobraShot",   cond = AND(buffUp(ID_COBRAFANG), buffUp(ID_BEASTCLEAVE), usable(ID_COBRASHOT)) }, -- Cobra Fang cleaves (30%)
     { spell = "BarbedShot" },                                                         -- on cooldown
     { spell = "CobraShot" },                                                          -- filler
@@ -267,6 +268,7 @@ local spec = {
         DireSummons = ID_DIRESUMMONS, PackMentality = ID_PACKMENTALITY, WarOrders = ID_WARORDERS,
         BarbedScales = ID_BARBEDSCALES, TheBeastWithin = ID_BEASTWITHIN, KillerCobra = ID_KILLERCOBRA,
         MasterHandler = ID_MASTERHANDLER, SoulDrinker = ID_SOULDRINKER, EbonBowstring = ID_EBONBOWSTRING,
+        NaturesAlly = ID_NATURESALLY_TALENT,
     },
 
     setup = {
