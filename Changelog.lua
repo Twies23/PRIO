@@ -11,6 +11,12 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.6.0", {
+        "Sixth stable release -- headlined by Beast Mastery Hunter, built and tuned end-to-end for 12.1 (Midnight). Everything since 0.5.0.",
+        "Beast Mastery: full Pack Leader (default) and Dark Ranger single-target / AoE lists with verified IDs and the hand-tuned Pack Leader rotation as the default. Reads Howl from the Kill Command glow, Cobra Fang / Nature's Ally / Beast Cleave / Hunter's Mark / Bestial Wrath from the Cooldown Manager, and Focus affordability from the clean insufficient-power flag (the Focus number is secret).",
+        "Beast Mastery: charges rebuilt -- exact 0/1/2 count via the charge-aware cooldown (fixes a 'reads 1 when it's 0' bug on every 2-charge spell) + haste-correct next-charge prediction. Pet check at the top of each list (Call Pet / Revive Pet), Hunter's Mark upkeep, Bestial Wrath cooldown tracking, cooldown-reduction modelling.",
+        "All specs: unaffordable spenders are shown dimmed (desaturated) instead of hidden. New conditions -- Next charge <= / >= X sec, No pet / Pet dead, enemy target-debuff checks. Rotation Debug shows live charges + seconds and cooldown timers per ability.",
+    } },
     { "0.5.17", {
         "Beast Mastery -- the pet check is now editable list lines at the top of both ST and AoE (Call Pet if you have no pet, Revive Pet if it's dead), instead of a hidden guardian. Same behavior -- shown before everything else -- but now you can see and reorder them in the condition editor. Added No pet / Pet dead as conditions you can use on any line.",
     } },
