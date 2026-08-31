@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.5.17", {
+        "Beast Mastery -- the pet check is now editable list lines at the top of both ST and AoE (Call Pet if you have no pet, Revive Pet if it's dead), instead of a hidden guardian. Same behavior -- shown before everything else -- but now you can see and reorder them in the condition editor. Added No pet / Pet dead as conditions you can use on any line.",
+    } },
     { "0.5.16", {
         "Beast Mastery -- pet check. If your pet is dead or missing, PRIO now shows Revive Pet / Call Pet before anything else -- a guardian that runs in and out of combat and can't be edited away, since your whole rotation depends on having a pet.",
         "Empowered Kill Command now keys on the Nature's Ally buff (not the talent), with a plain Kill Command fallback beneath it so Kill Command still fires on cooldown when the buff isn't up.",

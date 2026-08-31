@@ -187,7 +187,7 @@ test("BM: Hunter's Mark maintenance reads the target-debuff state", function()
     truthy(H.Cond.Eval({ type = "debuffMissing", spell = HM }, H.S, HM), "mark down -> missing (reapply)")
 end)
 
-test("BM pet guardian: a dead or missing pet overrides the rotation", function()
+test("BM pet lines: a dead or missing pet is shown first", function()
     H.reset(); H.S.specID = 253; H.S.enemies = 1; H.rebind()
     H.Engine.openerActive = false
     local origE, origA = H.API.PetExists, H.API.PetAlive

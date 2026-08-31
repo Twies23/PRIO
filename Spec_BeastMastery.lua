@@ -113,6 +113,8 @@ local function petDead()       return { type = "petDead" } end
 -- Bestial Wrath), and a plain line that only applies when you DON'T have the Nature's Ally
 -- talent (with it, the two proc lines cover Kill Command).
 local pl_st = {
+    { spell = "CallPet",     cond = petMissing() },                                   -- no pet up -> summon one
+    { spell = "RevivePet",   cond = petDead() },                                      -- pet dead -> revive it
     { spell = "HuntersMark", cond = debuffDown(ID_HUNTERSMARK) },                     -- keep the 3% debuff up
     { spell = "BarbedShot",  cond = OR(cdRemainMax(ID_BESTIALWRATH, 3), chargesEq(2)) }, -- refresh before BW / at 2 charges
     { spell = "BestialWrath", cond = cdReady(ID_BESTIALWRATH) },                      -- on cooldown (triggers Howl)
@@ -131,6 +133,8 @@ local pl_st = {
 -- up on 4+ targets (or Howl / when affordable); Cobra Shot cleaves with Cobra Fang + Beast
 -- Cleave. Spenders gate on "usable" (Focus affordable).
 local pl_aoe = {
+    { spell = "CallPet",     cond = petMissing() },                                   -- no pet up -> summon one
+    { spell = "RevivePet",   cond = petDead() },                                      -- pet dead -> revive it
     { spell = "HuntersMark", cond = debuffDown(ID_HUNTERSMARK) },                     -- keep the 3% debuff up
     { spell = "WildThrash",  cond = lastCast(ID_BESTIALWRATH) },                      -- right after Bestial Wrath
     { spell = "BarbedShot",  cond = chargesMin(2) },                                  -- at 2 charges (Frenzy)
@@ -150,6 +154,8 @@ local pl_aoe = {
 -- and lets it hit at any health -> read via the Black Arrow button glow.
 --------------------------------------------------------------------------------
 local dr_st = {
+    { spell = "CallPet",    cond = petMissing() },                                    -- no pet up -> summon one
+    { spell = "RevivePet",  cond = petDead() },                                       -- pet dead -> revive it
     { spell = "BarbedShot", cond = OR(cdRemainMax(ID_BESTIALWRATH, 3), chargesMin(2)) }, -- refresh before BW / at 2 charges (the recharge time is secret in combat, so gate on the readable count)
     { spell = "BestialWrath" },                                   -- on CD -> opens Withering Fire
     { spell = "CallOfTheWild" },                                  -- major CD (talent)
@@ -168,6 +174,8 @@ local dr_st = {
 }
 
 local dr_aoe = {
+    { spell = "CallPet",    cond = petMissing() },               -- no pet up -> summon one
+    { spell = "RevivePet",  cond = petDead() },                  -- pet dead -> revive it
     { spell = "BlackArrow", cond = buffDown(ID_BEASTCLEAVE) },    -- DR: Black Arrow puts Beast Cleave up
     { spell = "WildThrash", cond = buffDown(ID_BEASTCLEAVE) },    -- fallback Beast Cleave source
     { spell = "BarbedShot", cond = chargesMin(2) },              -- at 2 charges (readable count; recharge time is secret)
@@ -294,7 +302,7 @@ local spec = {
         { kind = "info", label = "Focus",
           hint = "Focus is secret in combat, so PRIO doesn't read the number -- spenders still show, but a spender is dimmed (desaturated) while the game's insufficient-power flag says you can't afford it yet. No tracking needed." },
         { kind = "info", label = "Pet",
-          hint = "No tracking needed: PRIO checks whether your pet is up and, if it's dead or missing, shows Revive Pet / Call Pet before anything else (your whole rotation needs a pet)." },
+          hint = "No tracking needed: the top of each priority list checks your pet -- if it's missing it shows Call Pet, if it's dead it shows Revive Pet, before anything else (your whole rotation needs a pet)." },
     },
 
     spells = {
@@ -315,14 +323,10 @@ local spec = {
         MendPet       = 136,    -- heal the pet
     },
 
-    -- Pet guardian: BM does nothing without a pet, so if the pet is dead or missing that
-    -- overrides the whole rotation (checked before the priority list, in and out of combat,
-    -- regardless of custom lists). Revive a dead pet; summon one if you have none.
+    -- BM does nothing without a pet, so the Call Pet / Revive Pet lines sit at the top of
+    -- every priority list (below). condTags.pet exposes the No pet / Pet dead conditions in
+    -- the editor so you can tweak them.
     condTags = { pet = true },
-    guardians = {
-        { spell = "RevivePet", cond = petDead() },
-        { spell = "CallPet",   cond = petMissing() },
-    },
 
     -- Opener (Icy Veins 12.1): Hunter's Mark pre-pull, then Barbed Shot x2 around Bestial
     -- Wrath, Kill Command, Cobra Shot, hand off to the priority. AoE leads with Barbed +

@@ -1719,24 +1719,6 @@ function Engine:Evaluate()
     self:UpdateCharges(S.now)
     self:UpdateEnergy(S.now)
 
-    -- Guardian: a critical precondition (e.g. a Hunter's pet missing/dead -- the whole
-    -- rotation depends on it) overrides everything. Runs in AND out of combat and can't be
-    -- edited away by a custom list, so the fix always surfaces first. First match wins.
-    if spec.guardians then
-        for _, g in ipairs(spec.guardians) do
-            local sid = spec.spells[g.spell]
-            if sid and API.IsKnown(sid) and PRIO.Cond.Eval(g.cond, S, sid) then
-                local e = Entry(sid)
-                return {
-                    specLabel = spec.label or "", modeLabel = MODE_LABEL[mode] or mode,
-                    title = (spec.label or "") .. "  \194\183  " .. (MODE_LABEL[mode] or mode),
-                    primary = e, queue = {},
-                    debug = { mode = mode, enemies = enemies, primary = e.name, guardian = g.spell },
-                }
-            end
-        end
-    end
-
     -- Sequence follower: if a listed sequence is active or its start trigger fires, it
     -- drives the rotation (strict fixed order) until its stop trigger / completion.
     local seqPick = self:SequenceDrive(list, S, want)
