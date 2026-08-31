@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.6.15
+- **Marksmanship — Moonlight Chakram no longer double-recommended.** After you use it in Trueshot the button keeps reading "ready", so it was suggested a second time. Both Chakram lines now also gate on a "used this window" flag (reset when you press Trueshot), so it shows once per Trueshot. Rotation Debug shows the flag.
+
 ## 0.6.14
 - **Marksmanship — Sentinel default finalized (ST + AoE).** The tuned Sentinel priority now ships for both single-target and AoE — the Aspect of the Hydra Multi-Shot line self-gates on 2+ targets, so one list covers both — replacing the separate AoE list.
 

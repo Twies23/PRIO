@@ -108,13 +108,13 @@ local st = {
     { spell = "Volley",      cond = cdReady(ID_VOLLEY) },             -- on CD
     { spell = "Trueshot",    cond = AND(cdRemainMin(ID_EXPLOSIVE, 15), buffDown(ID_TRUESHOT), cdReady(ID_TRUESHOT)) }, -- hold until Explosive is >=15s out
     { spell = "Trueshot",    cond = lastCast(ID_EXPLOSIVE) },         -- pop right after Explosive Shot
-    { spell = "MoonlightChakram", cond = AND(auraRemainMax(ID_TRUESHOT, 7), cdReady(ID_MOONCHAKRAM)) }, -- ~end of Trueshot
+    { spell = "MoonlightChakram", cond = AND(auraRemainMax(ID_TRUESHOT, 7), cdReady(ID_MOONCHAKRAM), predFalse("chakramUsed")) }, -- ~end of Trueshot, once per window
     { spell = "RapidFire" },                                          -- on CD, builds Precise
     { spell = "KillShot",    cond = buffUp(ID_PRECISE) },             -- spend Precise (execute)
     { spell = "MultiShot",   cond = AND(buffUp(ID_PRECISE), enemiesMin(2), talentYes(ID_ASPECTHYDRA)) }, -- Hydra: spend Precise on 2+
     { spell = "ArcaneShot",  cond = buffUp(ID_PRECISE) },             -- spend Precise -> apply the mark
     { spell = "AimedShot" },                                          -- on CD (charges), consumes the mark
-    { spell = "MoonlightChakram", cond = AND(cdReady(ID_MOONCHAKRAM), buffUp(ID_TRUESHOT)) }, -- filler in Trueshot
+    { spell = "MoonlightChakram", cond = AND(cdReady(ID_MOONCHAKRAM), buffUp(ID_TRUESHOT), predFalse("chakramUsed")) }, -- filler in Trueshot, once per window
     { spell = "SteadyShot" },                                         -- Focus filler
 }
 
@@ -354,6 +354,8 @@ local spec = {
         },
         rangeProbes = {
             { label = "Focus", kind = "resource" },
+            -- Moonlight Chakram once-per-Trueshot: false = available this window, true = used.
+            { label = "Chakram used (window)", kind = "predFlag", key = "chakramUsed" },
         },
     },
 
