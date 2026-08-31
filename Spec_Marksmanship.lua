@@ -58,9 +58,10 @@ local ID_BULLETSTORM = 389019    -- Bulletstorm (bar) -- Aimed Shot stacking buf
 -- Not present at low level / without the talent (kept for reference, not tracked):
 -- Streamline 260242, Lunar Storm (Sentinel proc), Master Marksman 260309.
 
--- Talents that change Trueshot's timing (verified in-game 2026-08-31).
+-- Talents (verified in-game 2026-08-31).
 local ID_CANTMISS      = 1253830  -- Can't Miss, Won't Miss: Trueshot duration +2s (15 -> 17)
 local ID_CALLINGSHOTS  = 260404   -- Calling the Shots: Trueshot cooldown -30s (120 -> 90)
+local ID_UNBREAKABLE   = 1223323  -- Unbreakable Bond: regains Call Pet (MM is petless without it)
 
 local function AND(...) return { op = "and", clauses = { ... } } end
 local function OR(...)  return { op = "or",  clauses = { ... } } end
@@ -71,6 +72,10 @@ local function debuffUp(id)    return { type = "debuffActive", spell = id } end
 local function usable(id)      return { type = "usable",       spell = id } end
 local function petMissing()    return { type = "petMissing" } end
 local function petDead()       return { type = "petDead" } end
+local function talentYes(id)   return { type = "talentYes", spell = id } end
+-- MM only has a pet WITH Unbreakable Bond (petless Lone Wolf otherwise), so the pet-check
+-- lines gate on that talent -- inert on a Lone Wolf build, active once you take the pet.
+local function petGuarded(inner) return AND(talentYes(ID_UNBREAKABLE), inner) end
 -- The target's "mark" -- Spotter's Mark at base, Sentinel's Mark with the hero talent.
 -- Reads whichever is present, so it works while levelling and at max.
 local function markUp()   return OR(debuffUp(ID_SPOTTERMARK), debuffUp(ID_SENTMARK)) end
@@ -82,8 +87,8 @@ local function markDown() return AND(debuffDown(ID_SPOTTERMARK), debuffDown(ID_S
 -- Trick Shots. TO TUNE after the IDs are verified in-game.
 --------------------------------------------------------------------------------
 local st = {
-    { spell = "CallPet",       cond = petMissing() },                 -- no pet up -> summon
-    { spell = "RevivePet",     cond = petDead() },                    -- pet dead -> revive
+    { spell = "CallPet",       cond = petGuarded(petMissing()) },     -- (Unbreakable Bond) no pet up -> summon
+    { spell = "RevivePet",     cond = petGuarded(petDead()) },        -- (Unbreakable Bond) pet dead -> revive
     { spell = "HuntersMark",   cond = debuffDown(ID_HUNTERSMARK) },   -- keep the 3% debuff up
     { spell = "ExplosiveShot" },                                      -- on CD (2 casts, Unstable Trigger)
     { spell = "Volley" },                                             -- on CD

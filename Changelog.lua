@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.6.7", {
+        "Marksmanship -- pet lines gate on Unbreakable Bond. MM is petless (Lone Wolf) without the Unbreakable Bond talent, so the Call Pet / Revive Pet lines now only appear when you've taken it -- no stray pet suggestions on a Lone Wolf build.",
+    } },
     { "0.6.6", {
         "Marksmanship -- Trueshot duration and cooldown-reduction tracking. PRIO now times Trueshot's buff (15s, +2s with Can't Miss, Won't Miss) so 'seconds left on Trueshot' gates read (e.g. Moonlight Chakram near the end), and its predicted cooldown accounts for Calling the Shots (120s -> 90s). Rotation Debug shows both the duration and cooldown left.",
     } },

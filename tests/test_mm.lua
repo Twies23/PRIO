@@ -20,6 +20,30 @@ test("every MM priority row names a spell that exists in spec.spells", function(
     end
 end)
 
+test("MM pet lines gate on Unbreakable Bond (Lone Wolf -> no Call Pet)", function()
+    local CALLPET, UNBREAKABLE = 883, 1223323
+    H.reset(); H.S.specID = 254; H.S.enemies = 1
+    setmetatable(H.S.ready, { __index = function() return false end })
+    H.S.ready[CALLPET] = true
+    local origE = H.API.PetExists
+    H.API.PetExists = function() return false end        -- no pet -> petMissing true
+
+    -- Lone Wolf (no Unbreakable Bond): Call Pet must NOT show.
+    H.S.talents[UNBREAKABLE] = false
+    H.rebind(); H.Engine.openerActive = false
+    local r = H.Engine:Evaluate()
+    truthy(not (r and r.primary and r.primary.name == "Spell" .. CALLPET),
+        "no Unbreakable Bond -> Call Pet not shown (Lone Wolf)")
+
+    -- With Unbreakable Bond: Call Pet shows.
+    H.S.talents[UNBREAKABLE] = true
+    H.rebind(); H.Engine.openerActive = false
+    r = H.Engine:Evaluate()
+    eq(r and r.primary and r.primary.name, "Spell" .. CALLPET, "Unbreakable Bond -> Call Pet shown")
+
+    H.API.PetExists = origE
+end)
+
 test("Trueshot duration + cooldown-reduction tracking", function()
     local TS, CANTMISS, CALLING = 288613, 1253830, 260404
 
