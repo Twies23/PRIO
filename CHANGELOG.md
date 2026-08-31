@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.5.5
+- **Beast Mastery — fixed Barbed Shot / Kill Command charge-timer drift.** The "next charge in Xs" (and the "about to cap" Barbed Shot check) now reads the game's own recharge — which is correctly hasted — instead of a fixed-duration prediction that drifted with haste and unmodeled cooldown reductions. The cast-based prediction stays only as a fallback.
+- Rotation Debug tags each charge row **(live)** or **(predicted)** so you can see whether that readable recharge value stays available in combat or goes secret.
+
 ## 0.5.4
 - **Beast Mastery — cooldown-reduction modeling.** The predicted Kill Command / Barbed Shot recharge — and so the "Next charge ≤ X sec" gates and the Rotation Debug seconds — now account for the cast-triggered cooldown reductions: Cobra Shot −1s Kill Command, War Orders −3s Kill Command (on Barbed Shot), Barbed Scales −2s Barbed Shot (on Cobra Shot), and Killer Cobra's Kill Command reset during Bestial Wrath. "Next charge in Xs" now reflects how fast they actually come back. (Pack Mentality's beast-summon and Master Handler's per-tick reductions are periodic, so they stay handled by the live charge read.)
 

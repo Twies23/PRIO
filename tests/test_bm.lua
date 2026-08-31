@@ -74,6 +74,17 @@ test("charge-time condition reads predicted time to next charge", function()
     truthy(not H.Cond.Eval({ type = "chargeTimeMax", spell = BARBED, v = 1.5 }, H.S, BARBED), "next charge <= 1.5s fails")
 end)
 
+test("charge-time anchors to the clean readable recharge (no drift)", function()
+    H.reset(); H.S.specID = 253; H.rebind()
+    local BARBED = 217200
+    -- Prediction drifted to 8s left, but the clean duration-object read says 3s -> clean wins.
+    H.Engine.P.charges.BarbedShot = { cur = 1, rechargeEnd = H.S.now + 8, dur = 12 }
+    local orig = H.API.ChargeRechargeRemaining
+    H.API.ChargeRechargeRemaining = function(id) if id == BARBED then return 3 end end
+    eq(H.Engine:ChargeTimeRemaining(BARBED), 3, "clean recharge read overrides the drifted prediction")
+    H.API.ChargeRechargeRemaining = orig
+end)
+
 test("cast-triggered charge CDR speeds Kill Command / Barbed Shot timers", function()
     H.reset(); H.S.specID = 253; H.rebind()
     local KC, COBRA, BARBED = 34026, 193455, 217200

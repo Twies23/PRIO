@@ -267,16 +267,20 @@ function Debug:Update()
                     set(id, ("|cffe0685a%.0fs|r"):format(r))
                 end
             elseif d.kind == "chargeTime" then
-                -- Predicted charges + seconds to the NEXT charge (what a "Next charge <="
-                -- condition uses). The real recharge is secret in combat, so this is the
-                -- cast-seeded prediction; "full" when at max charges.
+                -- Charges + seconds to the NEXT charge (what a "Next charge <=" gate uses),
+                -- WITH the source tag: "live" = the game's own recharge read is available in
+                -- combat (correctly hasted, no drift); "predicted" = it went secret so we're
+                -- on the cast-seeded fallback. Watch this in combat to TEST whether the
+                -- readable charge-recharge is secret (predicted) or not (live).
+                local rawClean = API.ChargeRechargeRemaining and API.ChargeRechargeRemaining(d.spell)
                 local eff = PRIO.Engine and PRIO.Engine.EffectiveCharges
                     and PRIO.Engine:EffectiveCharges(d.spell)
                 local rem = PRIO.Engine and PRIO.Engine.ChargeTimeRemaining
                     and PRIO.Engine:ChargeTimeRemaining(d.spell)
                 local maxC = spec.chargeTrack and d.key and spec.chargeTrack[d.key]
                     and spec.chargeTrack[d.key].max
-                local tail = (rem and rem > 0) and ("  |cffe0685anext %.1fs|r"):format(rem)
+                local src = (rawClean ~= nil) and "|cff0cd29flive|r" or "|cffe0a03apredicted|r"
+                local tail = (rem and rem > 0) and ("  |cffe0685anext %.1fs|r  (%s)"):format(rem, src)
                     or "  |cff5a6a76full|r"
                 set(id, ("|cff0cd29f%s|r / %s%s"):format(tostring(eff or "?"), tostring(maxC or "?"), tail))
             elseif d.kind == "auraRemain" then

@@ -1013,17 +1013,30 @@ end
 
 -- Predicted seconds until the NEXT charge lands for a charge-tracked spell. Distinct
 -- from CooldownRemaining, which returns 0 while any charge is banked. nil when the spell
--- isn't charge-tracked or is already at max (no recharge running). Uses the predicted
--- rechargeEnd timer (seeded on cast, synced to the real recharge out of combat).
+-- isn't charge-tracked or is already at max (no recharge running). Reads the game's own
+-- recharge remaining (readable even in combat, and correctly HASTED) as ground truth, and
+-- only falls back to the cast-seeded prediction when that clean read isn't available. This
+-- is what the "Barbed Shot about to cap" gate uses, so it must not drift.
 function Engine:ChargeTimeRemaining(sid)
     if not (spec and spec.chargeTrack) then return nil end
     local key = idToKey[sid]
     local cfg = key and spec.chargeTrack[key]
     if not cfg then return nil end
     local c = self.P.charges[key]
-    if not c then return nil end
-    if (c.cur or 0) >= (cfg.max or 1) then return nil end     -- full -> no pending charge
-    if c.rechargeEnd and c.rechargeEnd > 0 then
+    -- At max -> no pending recharge. Prefer the clean below-max fact; fall back to the
+    -- predicted count when that's unreadable.
+    local _, _, belowMax = API.ChargeState and API.ChargeState(sid)
+    local predFull = c and (c.cur or 0) >= (cfg.max or 1)
+    if belowMax == false or (belowMax == nil and predFull) then return nil end
+    -- ANCHOR: the charge duration object answers a readable remaining even in combat
+    -- (EllesmereUI's recharge-bar handle), so this has NO drift when available. This is
+    -- ground truth -- it already reflects every real cooldown reduction (haste, Barbed
+    -- Scales, Pack Mentality, ...), so it supersedes the cast-seeded prediction below.
+    local clean = API.ChargeRechargeRemaining and API.ChargeRechargeRemaining(sid)
+    if clean ~= nil then return clean > 0 and clean or 0 end
+    -- Fallback: the cast-seeded, chargeCdr-adjusted prediction (used only when the clean
+    -- read isn't available on this client).
+    if c and c.rechargeEnd and c.rechargeEnd > 0 then
         local rem = c.rechargeEnd - GetTime()
         return rem > 0 and rem or 0
     end
