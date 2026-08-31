@@ -17,9 +17,10 @@
 --     the target's mark (Spotter's Mark at base -> Sentinel's Mark with the hero talent),
 --     Bullseye (Trueshot stacks), Unstable Trigger (Explosive Shot recast), Trueshot.
 --     Add them via /prio setup.
---   * LEVELLING NOTE: no hero talents below max, so you have Spotter's Mark (not Sentinel's
---     Mark), and Kill Shot / Black Arrow / Wailing Arrow aren't learned yet -- those lines
---     stay inert (IsKnown) until you have them, so the same list scales up.
+--   * MARK UPGRADE: Spotter's Mark becomes Sentinel's Mark via a specific Sentinel node --
+--     without that node (or on a partial hero tree) you have Spotter's Mark, so markUp/
+--     markDown read either. Likewise Kill Shot / Black Arrow / apex-talent lines stay inert
+--     (IsKnown) until learned, so the one list scales from a partial build up to max.
 --   * Predicted cooldowns (Trueshot / Rapid Fire / Volley) are cast-seeded and anchored to
 --     the live ready flag, for "Trueshot soon" style gates.
 --------------------------------------------------------------------------------
