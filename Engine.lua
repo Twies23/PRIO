@@ -997,7 +997,24 @@ function Engine:UpdateCharges(now)
             if curC ~= nil then                              -- exact when readable (OOC)
                 c.cur = curC
                 c.rechargeEnd = (curC < cap) and (now + EffRecharge(cfg, c)) or 0
+                c.readPrev = curC
             else
+                -- RE-ANCHOR on the readable charge-count RISING EDGE. ChargeState resolves the
+                -- EXACT count for a 2-charge spell (not-usable=0, usable-below-max=1, at-max=2)
+                -- and returns nil rather than guessing when it can't be exact -- so cleanCur,
+                -- when present, is ground truth. A tick where it goes UP means a charge just
+                -- landed, so restart the next charge's recharge from now (hasted). The recharge
+                -- DURATION read is secret in combat, but this edge is not -- it caps drift at a
+                -- single recharge cycle.
+                local cleanCur
+                if API.ChargeState then local _, cc = API.ChargeState(sid); cleanCur = cc end
+                if cleanCur ~= nil then
+                    if c.readPrev ~= nil and cleanCur > c.readPrev then
+                        c.cur = cleanCur
+                        c.rechargeEnd = (cleanCur < cap) and (now + EffRecharge(cfg, c)) or 0
+                    end
+                    c.readPrev = cleanCur
+                end
                 -- Recharge over time.
                 while c.cur < cap and c.rechargeEnd > 0 and now >= c.rechargeEnd do
                     c.cur = c.cur + 1

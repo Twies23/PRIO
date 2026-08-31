@@ -92,6 +92,24 @@ test("hasted charge recharge: Barbed Shot prediction scales with haste", functio
     eq(H.Engine:ChargeTimeRemaining(BARBED), 12, "no haste -> base 12s")
 end)
 
+test("charge-count rising edge re-anchors the recharge timer (erases drift)", function()
+    H.reset(); H.S.specID = 253; H.rebind()
+    local BARBED = 217200
+    H.S.haste = 0
+    -- Combat: ChargeFull's raw count is secret (cur=nil) so UpdateCharges takes the
+    -- predicted path; ChargeState still resolves the exact count via cleanCur.
+    H.S.chargeState[BARBED] = { max = 2, cur = nil, cleanCur = 0, belowMax = true, recharge = 12 }
+    H.S.ready[BARBED] = false                                   -- 0 charges, not usable
+    -- Badly drifted prediction (recharge "ends" way in the future).
+    H.Engine.P.charges.BarbedShot = { cur = 0, rechargeEnd = H.S.now + 999, dur = 12 }
+    H.Engine:UpdateCharges(H.S.now)                            -- readPrev := 0 (no edge yet)
+    -- A charge lands: exact count goes 0 -> 1, spell becomes usable.
+    H.S.chargeState[BARBED].cleanCur = 1
+    H.S.ready[BARBED] = true
+    H.Engine:UpdateCharges(H.S.now)                            -- rising edge -> restart recharge from now
+    eq(H.Engine:ChargeTimeRemaining(BARBED), 12, "0->1 edge restarts the recharge (drift erased)")
+end)
+
 test("charge-time anchors to the clean readable recharge (no drift)", function()
     H.reset(); H.S.specID = 253; H.rebind()
     local BARBED = 217200

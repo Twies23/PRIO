@@ -135,7 +135,10 @@ function API.RefreshTracked() end
 function API.ChargeState(id)
     local c = S.chargeState[id]
     if not c then return nil end
-    return c.max, c.cur, c.belowMax
+    -- cleanCur lets a test model combat: ChargeFull's raw count is secret (cur=nil) while
+    -- ChargeState still resolves the exact count. Falls back to cur when unset.
+    local cc = c.cleanCur; if cc == nil then cc = c.cur end
+    return c.max, cc, c.belowMax
 end
 function API.Charges(id)
     local c = S.chargeState[id]
