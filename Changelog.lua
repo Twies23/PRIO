@@ -11,6 +11,11 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.5.1", {
+        "Beast Mastery Hunter -- full rotation rebuild for 12.1 (Midnight). Replaces the placeholder lists with a complete, tuned build for both hero trees: Pack Leader (default) and Dark Ranger, each with its own single-target / cleave / AoE lists you can customize.",
+        "Reads your real proc signals: Howl of the Pack Leader from the Kill Command glow (empowered KC suggested the instant it lights up), Cobra Shot at 4 stacks of Cobra Fang, and Nature's Ally empowered Kill Command.",
+        "Bestial Wrath cooldown is tracked (30s with The Beast Within) so Barbed Shot refreshes right before it -- keeping Frenzy up through the burst without needing to see the pet buff. AoE builds/holds Beast Cleave via Wild Thrash (replaces Multi-Shot); Dark Ranger opens it with Black Arrow and uses the Withering Fire / Wailing Arrow window.",
+    } },
     { "0.5.0", {
         "Fifth stable release -- headlined by a redesigned Setup and the finalized Outlaw Trickster lists. Everything since 0.4.11.",
         "Setup rebuilt: general checks up top (Cooldown Manager active, nameplates), then two columns -- Ability cooldowns (left, validation for your own display; PRIO reads cooldowns directly) and Auras to add (right, REQUIRED -- PRIO reads buffs only from the Cooldown Manager).",

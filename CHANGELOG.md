@@ -1,5 +1,11 @@
 # PRIO Changelog
 
+## 0.5.1
+**Beast Mastery Hunter — full rotation rebuild (12.1 Midnight).** The placeholder Beast Mastery lists are replaced with a complete, tuned build for both hero trees — **Pack Leader** (default) and **Dark Ranger** — each with its own single-target, cleave, and AoE lists you can customize.
+- **Reads your real proc signals:** Howl of the Pack Leader is detected from the **Kill Command glow** (so the empowered Kill Command is suggested the instant it lights up), Cobra Shot is prioritized at **4 stacks of Cobra Fang**, and Nature's Ally empowers Kill Command.
+- **Bestial Wrath cooldown is tracked** (30s with The Beast Within), so Barbed Shot is refreshed right before it — keeping Frenzy up across the burst window without needing to see the pet buff.
+- **AoE** builds and holds Beast Cleave with Wild Thrash (which replaced Multi-Shot); Dark Ranger opens Beast Cleave with Black Arrow and uses the Withering Fire / Wailing Arrow window.
+
 ## 0.5.0
 Fifth stable release — headlined by a **redesigned Setup** and the finalized **Outlaw Trickster** lists. Everything since 0.4.11.
 
