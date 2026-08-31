@@ -140,6 +140,7 @@ local spec = {
         LockAndLoad   = ID_LOCKLOAD,
         UnstableTrigger = ID_UNSTABLE,
         Bulletstorm   = ID_BULLETSTORM,
+        HuntersMark   = ID_HUNTERSMARK,
     },
 
     setup = {
@@ -267,6 +268,7 @@ local spec = {
             { label = "Trick Shots",         spell = ID_TRICK },
             { label = "Bullseye",            spell = ID_BULLSEYE },
             { label = "Unstable Trigger",    spell = ID_UNSTABLE },
+            { label = "Hunter's Mark (tgt)", spell = ID_HUNTERSMARK },
             { label = "Trueshot (active)",   spell = ID_TRUESHOT },
         },
         rangeProbes = {

@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.6.5
+- **Marksmanship — Hunter's Mark is now a first-class tracked buff**, so the setup and condition editor recognise it, with a "Hunter's Mark" row in Rotation Debug to watch the read. PRIO reads it from your Cooldown Manager's Tracked Buffs.
+
 ## 0.6.4
 - **Marksmanship — Explosive Shot cooldown tracking (Unstable Trigger aware).** Added a predicted 30s cooldown for Explosive Shot. Unstable Trigger lets you fire it a second time within 3 seconds, and the 30s runs from the *first* press — so the second cast no longer restarts the timer. Rotation Debug shows the Explosive Shot cooldown alongside Trueshot.
 
