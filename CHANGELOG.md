@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.6.3
+- **Marksmanship — tracking leans on booleans + charges.** Dropped predicted-cooldown tracking for everything except **Trueshot** (2 min, for the hold/delay logic). Short cooldowns just read the live ready flag, and the rotation gates on buffs (Precise Shots, the mark, Trick Shots, Unstable Trigger, Bullseye) and Aimed Shot charges.
+
 ## 0.6.2
 - **Marksmanship — tracked IDs corrected from the live Cooldown Viewer.** Lock and Load (194595), Bullseye (204089), and the target mark is now **Spotter's Mark** (1219616), which becomes Sentinel's Mark once you take the Sentinel hero talent. Added **Unstable Trigger** (the Explosive Shot double-cast) and **Bulletstorm** tracking; dropped the Streamline / Lunar Storm guesses (not present without the talent/hero). While levelling, lines for abilities you haven't learned yet (Kill Shot, Black Arrow, Wailing Arrow) stay inert and light up as you get them.
 

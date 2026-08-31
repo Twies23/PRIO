@@ -21,8 +21,9 @@
 --     without that node (or on a partial hero tree) you have Spotter's Mark, so markUp/
 --     markDown read either. Likewise Kill Shot / Black Arrow / apex-talent lines stay inert
 --     (IsKnown) until learned, so the one list scales from a partial build up to max.
---   * Predicted cooldowns (Trueshot / Rapid Fire / Volley) are cast-seeded and anchored to
---     the live ready flag, for "Trueshot soon" style gates.
+--   * Only TRUESHOT gets a predicted cooldown (2 min), for the "Trueshot soon" hold/delay
+--     logic. Everything else rides on booleans (buffs) + charges + the live ready flag --
+--     no cooldown modelling, since it's not worth the effort for short cooldowns.
 --------------------------------------------------------------------------------
 
 local ADDON, PRIO = ...
@@ -203,12 +204,11 @@ local spec = {
         AimedShot = { max = 2, recharge = 12, hasted = true },
     },
 
-    -- Predicted cooldowns for the "X soon / not soon" gates (base seconds; anchored to the
-    -- live ready flag, so a wrong base self-corrects). VERIFY the bases in-game.
+    -- Only Trueshot is worth a predicted cooldown (2 min, for "Trueshot soon" hold/delay
+    -- logic). Everything else leans on booleans (buffs) and charges, which read clean --
+    -- no cooldown modelling. Anchored to the live ready flag, so a wrong base self-corrects.
     cooldownTrack = {
-        Trueshot  = { base = 120 },   -- ~2 min (talents may reduce)
-        RapidFire = { base = 20 },
-        Volley    = { base = 45 },
+        Trueshot = { base = 120 },
     },
 
     fillers = { [ID_STEADYSHOT] = true },   -- Steady Shot is the no-cooldown Focus filler
