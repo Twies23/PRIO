@@ -75,6 +75,9 @@ local function petDead()       return { type = "petDead" } end
 local function talentYes(id)   return { type = "talentYes", spell = id } end
 local function auraRemainMax(id,n) return { type = "auraRemainMax", spell = id, v = n } end
 local function predFalse(key)  return { type = "predFalse", key = key } end
+local function cdReady(id)     return { type = "cdReady",     spell = id } end
+local function cdRemainMin(id,n) return { type = "cdRemainMin", spell = id, v = n } end
+local function lastCast(id)    return { type = "lastCast",    spell = id } end
 -- MM only has a pet WITH Unbreakable Bond (petless Lone Wolf otherwise), so the pet-check
 -- lines gate on that talent -- inert on a Lone Wolf build, active once you take the pet.
 local function petGuarded(inner) return AND(talentYes(ID_UNBREAKABLE), inner) end
@@ -84,39 +87,30 @@ local function markUp()   return OR(debuffUp(ID_SPOTTERMARK), debuffUp(ID_SENTMA
 local function markDown() return AND(debuffDown(ID_SPOTTERMARK), debuffDown(ID_SENTMARK)) end
 
 --------------------------------------------------------------------------------
--- Sentinel first-pass priority (Icy Veins 12.1 ST list). Spend Precise Shots (Kill /
--- Arcane) to seed Sentinel's Mark, then Aimed Shot the Mark. AoE folds in Multi-Shot /
--- Trick Shots. TO TUNE after the IDs are verified in-game.
+-- Sentinel priority -- user-tuned in-game (0.6.8). Explosive Shot / Volley on CD; hold
+-- Trueshot until Explosive is >=15s out (send Explos right before Trueshot) then pop it
+-- right after Explosive; Moonlight Chakram inside Trueshot; spend Precise Shots on Kill /
+-- Arcane; Aimed Shot on cooldown; Steady Shot filler. Without Trick Shots the ST and AoE
+-- lists are identical, so AoE is a clone (the Trick Shots variant is a separate list).
 --------------------------------------------------------------------------------
 local st = {
-    { spell = "CallPet",       cond = petGuarded(petMissing()) },     -- (Unbreakable Bond) no pet up -> summon
-    { spell = "RevivePet",     cond = petGuarded(petDead()) },        -- (Unbreakable Bond) pet dead -> revive
-    { spell = "HuntersMark",   cond = debuffDown(ID_HUNTERSMARK) },   -- keep the 3% debuff up
-    { spell = "ExplosiveShot" },                                      -- on CD (2 casts, Unstable Trigger)
-    { spell = "Volley" },                                             -- on CD
-    { spell = "Trueshot" },                                           -- major CD (hold last for 30 Bullseye)
+    { spell = "CallPet",     cond = petGuarded(petMissing()) },       -- (Unbreakable Bond) no pet -> summon
+    { spell = "RevivePet",   cond = petGuarded(petDead()) },          -- (Unbreakable Bond) pet dead -> revive
+    { spell = "HuntersMark", cond = buffDown(ID_HUNTERSMARK) },       -- keep the 3% mark up (CDM buff read)
+    { spell = "ExplosiveShot", cond = cdReady(ID_EXPLOSIVE) },        -- on CD (2 casts, Unstable Trigger)
+    { spell = "Volley",      cond = cdReady(ID_VOLLEY) },             -- on CD
+    { spell = "Trueshot",    cond = AND(cdRemainMin(ID_EXPLOSIVE, 15), buffDown(ID_TRUESHOT), cdReady(ID_TRUESHOT)) }, -- hold until Explosive is >=15s out
+    { spell = "Trueshot",    cond = lastCast(ID_EXPLOSIVE) },         -- pop right after Explosive Shot
+    { spell = "MoonlightChakram", cond = AND(cdReady(ID_TRUESHOT), buffUp(ID_TRUESHOT)) },  -- (in Trueshot)
     { spell = "RapidFire" },                                          -- on CD, builds Precise
-    { spell = "KillShot",   cond = AND(buffUp(ID_PRECISE), usable(ID_KILLSHOT)) },   -- spend Precise (execute)
-    { spell = "ArcaneShot", cond = AND(buffUp(ID_PRECISE), usable(ID_ARCANESHOT)) }, -- spend Precise -> apply Sentinel's Mark
-    { spell = "AimedShot",  cond = usable(ID_AIMEDSHOT) },            -- on CD (charges), consumes Sentinel's Mark
-    { spell = "MoonlightChakram", cond = AND(buffUp(ID_TRUESHOT), auraRemainMax(ID_TRUESHOT, 5), predFalse("chakramUsed")) }, -- Sentinel: once, ~5s left in Trueshot
-    { spell = "SteadyShot" },                                         -- Focus filler (resource-starved)
+    { spell = "KillShot",   cond = buffUp(ID_PRECISE) },              -- spend Precise (execute)
+    { spell = "ArcaneShot", cond = buffUp(ID_PRECISE) },              -- spend Precise -> apply the mark
+    { spell = "AimedShot" },                                          -- on CD (charges), consumes the mark
+    { spell = "MoonlightChakram", cond = AND(cdReady(ID_MOONCHAKRAM), buffUp(ID_TRUESHOT)) }, -- Sentinel filler in Trueshot
+    { spell = "SteadyShot" },                                         -- Focus filler
 }
 
-local aoe = {
-    { spell = "CallPet",       cond = petMissing() },
-    { spell = "RevivePet",     cond = petDead() },
-    { spell = "HuntersMark",   cond = debuffDown(ID_HUNTERSMARK) },
-    { spell = "ExplosiveShot" },
-    { spell = "Volley" },
-    { spell = "Trueshot" },
-    { spell = "MultiShot",  cond = buffDown(ID_TRICK) },              -- put Trick Shots up
-    { spell = "RapidFire",  cond = buffUp(ID_TRICK) },               -- cleaves with Trick Shots
-    { spell = "AimedShot",  cond = AND(buffUp(ID_TRICK), usable(ID_AIMEDSHOT)) }, -- cleaves with Trick Shots
-    { spell = "MultiShot",  cond = buffUp(ID_PRECISE) },             -- spend Precise Shots
-    { spell = "MoonlightChakram", cond = usable(ID_MOONCHAKRAM) },
-    { spell = "SteadyShot" },
-}
+local aoe = st   -- no Trick Shots -> AoE == ST (the Trick Shots variant will be separate)
 
 local spec = {
     key      = "HUNTER_MARKSMANSHIP",

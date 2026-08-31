@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.6.9", {
+        "Marksmanship -- tuned Sentinel ST/AoE as the default. Shipped the hand-tuned single-target priority: Explosive Shot / Volley on cooldown, Trueshot held until Explosive is 15s+ out (then popped right after Explosive), Moonlight Chakram inside Trueshot, Precise Shots spent on Kill / Arcane Shot, Aimed Shot on cooldown, Steady Shot filler. Without Trick Shots the AoE list is identical (a Trick Shots AoE variant is coming).",
+    } },
     { "0.6.8", {
         "Marksmanship -- Moonlight Chakram no longer over-recommended. During Trueshot the button becomes Moonlight Chakram, usable once. PRIO now suggests it a single time near the end of the Trueshot window (~5s left) -- tracked so it won't re-appear every global cooldown until you press it.",
     } },
