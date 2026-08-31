@@ -266,6 +266,19 @@ function Debug:Update()
                 else
                     set(id, ("|cffe0685a%.0fs|r"):format(r))
                 end
+            elseif d.kind == "chargeTime" then
+                -- Predicted charges + seconds to the NEXT charge (what a "Next charge <="
+                -- condition uses). The real recharge is secret in combat, so this is the
+                -- cast-seeded prediction; "full" when at max charges.
+                local eff = PRIO.Engine and PRIO.Engine.EffectiveCharges
+                    and PRIO.Engine:EffectiveCharges(d.spell)
+                local rem = PRIO.Engine and PRIO.Engine.ChargeTimeRemaining
+                    and PRIO.Engine:ChargeTimeRemaining(d.spell)
+                local maxC = spec.chargeTrack and d.key and spec.chargeTrack[d.key]
+                    and spec.chargeTrack[d.key].max
+                local tail = (rem and rem > 0) and ("  |cffe0685anext %.1fs|r"):format(rem)
+                    or "  |cff5a6a76full|r"
+                set(id, ("|cff0cd29f%s|r / %s%s"):format(tostring(eff or "?"), tostring(maxC or "?"), tail))
             elseif d.kind == "auraRemain" then
                 -- Predicted buff time-left (Zenith): clean expirationTime out of combat,
                 -- cast-seeded timer in combat. What a "Buff time left <=" condition uses.

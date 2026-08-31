@@ -11,6 +11,11 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.5.3", {
+        "Beast Mastery -- quantified, tunable timing. New condition 'Next charge <= / >= X sec' for charge spells (Barbed Shot, Kill Command): the seconds until the next charge lands, which the plain Cooldown condition can't show (it reads 0 while a charge is banked).",
+        "Bestial Wrath's cooldown now reads in combat, so 'Cooldown <= X sec' on Bestial Wrath is your editable 'Bestial Wrath in less than X seconds' gate. Barbed Shot now fires at 2 charges OR when the next charge is within ~1.5s (about to cap).",
+        "Rotation Debug shows Kill Command / Barbed Shot as charges + seconds-to-next, and Bestial Wrath as cooldown seconds left. Cobra Fang is the 4-set tier bonus -- its tracking is now optional, so Setup won't flag it red without the set.",
+    } },
     { "0.5.2", {
         "Beast Mastery: simplified to ST and AoE only. Dropped the separate Cleave tier -- the AoE list now covers 2+ targets, so there are just two mode tabs to tune.",
     } },

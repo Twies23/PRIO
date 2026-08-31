@@ -66,6 +66,10 @@ Cond.types = {
     { value = "auraRemainMax", text = "Buff time left \226\137\164", needsSpell = true, needsValue = true, min = 0, max = 30, def = 3, target = "duration" },
     { value = "cdRemainMin", text = "Cooldown \226\137\165", needsSpell = true, needsValue = true, min = 0, max = 180, def = 10, target = "ability" },
     { value = "cdRemainMax", text = "Cooldown \226\137\164", needsSpell = true, needsValue = true, min = 0, max = 180, def = 10, target = "ability" },
+    -- Time until the NEXT charge lands, for charge spells (Barbed Shot / Kill Command).
+    -- Distinct from cdRemain, which reads 0 while any charge is banked.
+    { value = "chargeTimeMin", text = "Next charge \226\137\165 (s)", needsSpell = true, needsValue = true, min = 0, max = 30, def = 2, target = "ability" },
+    { value = "chargeTimeMax", text = "Next charge \226\137\164 (s)", needsSpell = true, needsValue = true, min = 0, max = 30, def = 2, target = "ability" },
     { value = "resourceMin", text = "Resource \226\137\165", needsValue = true, min = 0, max = 12, def = 2 },
     { value = "resourceMax", text = "Resource \226\137\164", needsValue = true, min = 0, max = 12, def = 2 },
     { value = "resourceEq",  text = "Resource =", needsValue = true, min = 0, max = 12, def = 2 },
@@ -171,6 +175,8 @@ function Cond.ClauseLabel(cl, selfSid)
     elseif t == "auraRemainMax" then return name .. " \226\137\164 " .. (cl.v or 0) .. "s left"
     elseif t == "cdRemainMin" then return name .. " CD \226\137\165 " .. (cl.v or 0) .. "s"
     elseif t == "cdRemainMax" then return name .. " CD \226\137\164 " .. (cl.v or 0) .. "s"
+    elseif t == "chargeTimeMin" then return name .. " next chg \226\137\165 " .. (cl.v or 0) .. "s"
+    elseif t == "chargeTimeMax" then return name .. " next chg \226\137\164 " .. (cl.v or 0) .. "s"
     elseif t == "resourceMin" then return (spec and spec.resourceLabel or "resource") .. " \226\137\165 " .. (cl.v or 0)
     elseif t == "resourceMax" then return (spec and spec.resourceLabel or "resource") .. " \226\137\164 " .. (cl.v or 0)
     elseif t == "resourceEq" then return (spec and spec.resourceLabel or "resource") .. " = " .. (cl.v or 0)
@@ -484,6 +490,9 @@ local function EvalClause(cl, S, selfSid)
     -- Predicted cooldown remaining (Xuen). nil -> unknown -> threshold not met.
     elseif t == "cdRemainMin" then local r = Engine:CooldownRemaining(sid); return r ~= nil and r >= (cl.v or 0)
     elseif t == "cdRemainMax" then local r = Engine:CooldownRemaining(sid); return r ~= nil and r <= (cl.v or 0)
+    -- Predicted time to the next charge (charge spells). nil (at max / untracked) -> not met.
+    elseif t == "chargeTimeMin" then local r = Engine:ChargeTimeRemaining(sid); return r ~= nil and r >= (cl.v or 0)
+    elseif t == "chargeTimeMax" then local r = Engine:ChargeTimeRemaining(sid); return r ~= nil and r <= (cl.v or 0)
     -- Resource threshold on the spec's own power (Chi/Holy Power/... read clean;
     -- secret bars use the predicted value). S.maelstrom is the spec resource amount.
     elseif t == "resourceMin" then return (S.maelstrom or 0) >= (cl.v or 0)
@@ -574,6 +583,10 @@ function Cond.ClauseStatus(cl, S, selfSid)
     elseif t == "cdRemainMin" or t == "cdRemainMax" then
         local r = Engine:CooldownRemaining(sid); if r == nil then return "open" end
         local ok; if t == "cdRemainMin" then ok = r >= (cl.v or 0) else ok = r <= (cl.v or 0) end
+        return ok and "pass" or "fail"
+    elseif t == "chargeTimeMin" or t == "chargeTimeMax" then
+        local r = Engine:ChargeTimeRemaining(sid); if r == nil then return "fail" end
+        local ok; if t == "chargeTimeMin" then ok = r >= (cl.v or 0) else ok = r <= (cl.v or 0) end
         return ok and "pass" or "fail"
     elseif t == "resourceMin" or t == "resourceMax" then
         local v = S and S.maelstrom; if v == nil then return "open" end
@@ -968,6 +981,25 @@ function Engine:UpdateCharges(now)
             c.cur = math.max(0, math.min(cap, c.cur))
         end
     end
+end
+
+-- Predicted seconds until the NEXT charge lands for a charge-tracked spell. Distinct
+-- from CooldownRemaining, which returns 0 while any charge is banked. nil when the spell
+-- isn't charge-tracked or is already at max (no recharge running). Uses the predicted
+-- rechargeEnd timer (seeded on cast, synced to the real recharge out of combat).
+function Engine:ChargeTimeRemaining(sid)
+    if not (spec and spec.chargeTrack) then return nil end
+    local key = idToKey[sid]
+    local cfg = key and spec.chargeTrack[key]
+    if not cfg then return nil end
+    local c = self.P.charges[key]
+    if not c then return nil end
+    if (c.cur or 0) >= (cfg.max or 1) then return nil end     -- full -> no pending charge
+    if c.rechargeEnd and c.rechargeEnd > 0 then
+        local rem = c.rechargeEnd - GetTime()
+        return rem > 0 and rem or 0
+    end
+    return nil
 end
 
 -- Predicted current charges for a charge-tracked spell (else nil).

@@ -56,7 +56,7 @@ local ID_HUNTERSMARK  = 257284
 -- Buff / proc IDs (verify with /prio tracked).
 local ID_FRENZY      = 272790     -- PET buff -> UNTRACKABLE (see header). Documented only.
 local ID_BEASTCLEAVE = 268877     -- from Wild Thrash; pet-side, track-and-verify
-local ID_COBRAFANG   = 1299389    -- PLAYER buff, stacks to 4 -> spend with Cobra Shot
+local ID_COBRAFANG   = 1299389    -- PLAYER buff, stacks to 4 -> spend with Cobra Shot (4-SET tier bonus)
 local ID_NATURESALLY = 1273145    -- PLAYER buff -> empowers Kill Command
 local ID_HOWL        = 471876     -- Howl of the Pack Leader (ready = next KC summons a Beast)
 local ID_WITHERING   = 471877     -- Withering Fire (Dark Ranger) -- UNVERIFIED, set via /prio spells
@@ -82,6 +82,7 @@ local function chargesMin(n)   return { type = "chargesMin",  v = n } end   -- s
 local function chargesMax(id,n) return { type = "chargesMax", spell = id, v = n } end
 local function cdRemainMin(id,n) return { type = "cdRemainMin", spell = id, v = n } end
 local function cdRemainMax(id,n) return { type = "cdRemainMax", spell = id, v = n } end
+local function chargeTimeMax(id,n) return { type = "chargeTimeMax", spell = id, v = n } end   -- next charge within n s
 local function glow(id)        return { type = "glowing",     spell = id } end
 local function talent(id)      return { type = "talentYes",   spell = id } end
 
@@ -92,7 +93,7 @@ local function talent(id)      return { type = "talentYes",   spell = id } end
 --------------------------------------------------------------------------------
 local pl_st = {
     -- Refresh Frenzy right before Bestial Wrath, or before Barbed Shot caps its 2 charges.
-    { spell = "BarbedShot", cond = OR(cdRemainMax(ID_BESTIALWRATH, 3), chargesMin(2)) },
+    { spell = "BarbedShot", cond = OR(cdRemainMax(ID_BESTIALWRATH, 3), chargesMin(2), chargeTimeMax(ID_BARBEDSHOT, 1.5)) },
     { spell = "BestialWrath" },                                   -- bread & butter, on CD (triggers Howl)
     { spell = "CallOfTheWild" },                                  -- major CD (talent; inert if not taken)
     { spell = "Bloodshed" },                                      -- talent, on CD
@@ -112,7 +113,7 @@ local pl_aoe = {
     -- Wild Thrash (replaces Multi-Shot) puts / keeps Beast Cleave up. The condensed Icy
     -- list omits it; every other source keeps it at the top of AoE, so we do too.
     { spell = "WildThrash", cond = buffDown(ID_BEASTCLEAVE) },    -- put Beast Cleave up
-    { spell = "BarbedShot", cond = chargesMin(2) },               -- avoid capping charges (Frenzy)
+    { spell = "BarbedShot", cond = OR(chargesMin(2), chargeTimeMax(ID_BARBEDSHOT, 1.5)) }, -- at / about to reach 2 charges (Frenzy)
     { spell = "BestialWrath" },                                   -- on CD
     { spell = "CallOfTheWild" },                                  -- major CD (talent)
     { spell = "WildThrash" },                                     -- on CD (keep Beast Cleave up)
@@ -133,7 +134,7 @@ local pl_aoe = {
 -- and lets it hit at any health -> read via the Black Arrow button glow.
 --------------------------------------------------------------------------------
 local dr_st = {
-    { spell = "BarbedShot", cond = OR(cdRemainMax(ID_BESTIALWRATH, 3), chargesMin(2)) },
+    { spell = "BarbedShot", cond = OR(cdRemainMax(ID_BESTIALWRATH, 3), chargesMin(2), chargeTimeMax(ID_BARBEDSHOT, 1.5)) },
     { spell = "BestialWrath" },                                   -- on CD -> opens Withering Fire
     { spell = "CallOfTheWild" },                                  -- major CD (talent)
     -- Triple-damage Black Arrow inside Withering Fire, without overcapping Kill Command.
@@ -152,7 +153,7 @@ local dr_st = {
 local dr_aoe = {
     { spell = "BlackArrow", cond = buffDown(ID_BEASTCLEAVE) },    -- DR: Black Arrow puts Beast Cleave up
     { spell = "WildThrash", cond = buffDown(ID_BEASTCLEAVE) },    -- fallback Beast Cleave source
-    { spell = "BarbedShot", cond = chargesMin(2) },               -- avoid capping (Frenzy)
+    { spell = "BarbedShot", cond = OR(chargesMin(2), chargeTimeMax(ID_BARBEDSHOT, 1.5)) }, -- at / about to reach 2 charges (Frenzy)
     { spell = "BestialWrath", cond = buffUp(ID_BEASTCLEAVE) },    -- BW with Beast Cleave active
     { spell = "BestialWrath" },                                   -- else on CD
     { spell = "CallOfTheWild" },                                  -- major CD (talent)
@@ -247,8 +248,8 @@ local spec = {
     },
 
     setup = {
-        { kind = "trackedAura", label = "Cobra Fang tracked", spell = ID_COBRAFANG,
-          hint = "Track Cobra Fang so PRIO sees its stacks -- Cobra Shot is prioritised at 4 stacks. This one reads clean (player buff)." },
+        { kind = "trackedAura", label = "Cobra Fang tracked (4-set)", spell = ID_COBRAFANG, optional = true,
+          hint = "Only with the 4-piece tier set: Cobra Fang is that bonus, so track it to prioritise Cobra Shot at 4 stacks. Without the set the buff never appears and those lines stay inert -- harmless to skip." },
         { kind = "trackedAura", label = "Nature's Ally tracked", spell = ID_NATURESALLY,
           hint = "Track Nature's Ally so the empowered Kill Command lines read (player buff, reads clean)." },
         { kind = "trackedAura", label = "Beast Cleave tracked", spell = ID_BEASTCLEAVE,
@@ -329,12 +330,12 @@ local spec = {
     -- Debug metadata (see Debug.lua). Rows shown live; economy is informational.
     --------------------------------------------------------------------------------
     debug = {
-        { label = "Kill Command charges", kind = "charges", key = "KillCommand" },
-        { label = "Barbed Shot charges",  kind = "charges", key = "BarbedShot" },
-        { label = "Cobra Fang",           kind = "buff", spell = ID_COBRAFANG },
-        { label = "Nature's Ally",        kind = "buff", spell = ID_NATURESALLY },
-        { label = "Beast Cleave",         kind = "buff", spell = ID_BEASTCLEAVE },
-        { label = "Bestial Wrath",        kind = "cd",   spell = ID_BESTIALWRATH },
+        { label = "Kill Command (chg/next)", kind = "chargeTime", key = "KillCommand", spell = ID_KILLCOMMAND },
+        { label = "Barbed Shot (chg/next)",  kind = "chargeTime", key = "BarbedShot",  spell = ID_BARBEDSHOT },
+        { label = "Cobra Fang",              kind = "buff",     spell = ID_COBRAFANG },
+        { label = "Nature's Ally",           kind = "buff",     spell = ID_NATURESALLY },
+        { label = "Beast Cleave",            kind = "buff",     spell = ID_BEASTCLEAVE },
+        { label = "Bestial Wrath (CD left)", kind = "cdRemain", spell = ID_BESTIALWRATH },
     },
     economy = {
         gen   = { "Auto-shot", "Barbed Shot" },

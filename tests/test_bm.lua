@@ -60,6 +60,20 @@ test("spec.priority proxy resolves to the active hero's list", function()
     truthy(H.bmSpec.priority.aoe and H.bmSpec.priority.aoe[1], "dark_ranger aoe resolves")
 end)
 
+test("charge-time condition reads predicted time to next charge", function()
+    H.reset(); H.S.specID = 253; H.rebind()
+    local BARBED = 217200
+    local P = H.Engine.P
+    -- At max charges -> no pending recharge -> nil.
+    P.charges.BarbedShot = { cur = 2, rechargeEnd = 0, dur = 12 }
+    eq(H.Engine:ChargeTimeRemaining(BARBED), nil)
+    -- One charge banked, the next lands in 5s.
+    P.charges.BarbedShot = { cur = 1, rechargeEnd = H.S.now + 5, dur = 12 }
+    eq(H.Engine:ChargeTimeRemaining(BARBED), 5)
+    truthy(H.Cond.Eval({ type = "chargeTimeMax", spell = BARBED, v = 6 }, H.S, BARBED), "next charge <= 6s passes")
+    truthy(not H.Cond.Eval({ type = "chargeTimeMax", spell = BARBED, v = 1.5 }, H.S, BARBED), "next charge <= 1.5s fails")
+end)
+
 test("every priority row names a spell that exists in spec.spells", function()
     for variant, lists in pairs(H.bmSpec.priorityByVariant) do
         for mode, list in pairs(lists) do
