@@ -306,18 +306,21 @@ function API.ChargeState(spellID)
     local active = ch.isActive
     if active == nil or IsSecret(active) then return maxC, nil, nil end
     if not active then return maxC, maxC, false end      -- at max: exact, secret-free
-    -- Recharging (below max). Combine with a CLEAN usable read to pin the low end:
-    -- castable => at least 1 charge in hand; not castable => 0. For a 2-charge spell
-    -- that resolves the exact count (0 or 1) with no secret. For 3+ charges it only
-    -- bounds the low end, so we leave the middle to prediction.
-    local usable = API.UsableClean and API.UsableClean(spellID)
-    if usable == true then
+    -- Recharging (below max). Pin the low end with CASTABILITY, read from the charge-aware
+    -- cooldown (IsReady) -- NOT the plain usable flag (IsSpellUsable), which ignores
+    -- cooldown/charges and reads TRUE even at 0 charges (that bug made a 2-charge spell
+    -- report 1 when it had 0). IsReady is the same signal that makes Lava Burst castable at
+    -- 1/3 but not 0/3: castable => >=1 charge in hand; not castable => 0. For a 2-charge
+    -- spell that resolves the exact 0/1; for 3+ it only bounds the low end (leave the
+    -- middle to prediction).
+    local castable = API.IsReady and API.IsReady(spellID)
+    if castable == true then
         if maxC == 2 then return maxC, 1, true end       -- below max & castable => exactly 1
         return maxC, nil, true                           -- 3+ charges: >=1 but ambiguous
-    elseif usable == false then
+    elseif castable == false then
         return maxC, 0, true                             -- can't cast => 0 charges
     end
-    return maxC, nil, true                               -- usable secret/unknown -> prediction fills
+    return maxC, nil, true                               -- readiness unknown -> prediction fills
 end
 
 -- Clean seconds until the next charge returns, via the duration OBJECT's method

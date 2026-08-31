@@ -515,13 +515,13 @@ local function abilityText(sid)
     if API.ChargeState then maxC, cleanCur = API.ChargeState(sid) end
     if maxC and maxC > 1 then
         local eff = E and E.EffectiveCharges and E:EffectiveCharges(sid)
-        local cSrc = (cleanCur ~= nil) and "|cff0cd29fclean|r" or "|cffe0685asecret|r"
-        local a = API.ChargeRechargeRemaining and API.ChargeRechargeRemaining(sid)
-        local b = API.ChargeCooldownRemaining and API.ChargeCooldownRemaining(sid)
-        local aStr = a and ("%.1f"):format(a) or "--"
-        local bStr = b and ("%.1f"):format(b) or "--"
-        out = out .. ("   |cff9fb0be%s/%d|r(%s)  |cff5a6a76dur:|r%s |cff5a6a76cd:|r%s"):format(
-            tostring(eff or "?"), maxC, cSrc, aStr, bStr)
+        local cSrc = (cleanCur ~= nil) and "|cff0cd29fclean|r" or "|cffe0a03apredicted|r"
+        -- Recharge remaining is SECRET in combat (both reads); show it when readable (OOC),
+        -- else say so -- the count above is what the maintenance gate actually uses.
+        local rr = (API.ChargeRechargeRemaining and API.ChargeRechargeRemaining(sid))
+            or (API.ChargeCooldownRemaining and API.ChargeCooldownRemaining(sid))
+        local rstr = rr and ("  |cffe0685anext %.1fs|r"):format(rr) or "  |cff5a6a76recharge secret|r"
+        out = out .. ("   |cff9fb0be%s/%d|r(%s)%s"):format(tostring(eff or "?"), maxC, cSrc, rstr)
     else
         -- COOLDOWN-tracked spells (Bestial Wrath): show predicted seconds remaining.
         local r = E and E.CooldownRemaining and E:CooldownRemaining(sid)

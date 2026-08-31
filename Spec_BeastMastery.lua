@@ -27,11 +27,14 @@
 -- COOLDOWNS WE MODEL (spec.cooldownTrack, for the "Bestial Wrath soon" gates):
 --   * Bestial Wrath is STATIC: 90s base, -60s from The Beast Within (231548) -> 30s.
 --     Anchored to the live off-cooldown flag (ready => 0), so a wrong base self-corrects.
---   * Kill Command / Barbed Shot are CHARGE-tracked (2 charges). Their cast-triggered CD
---     reducers (Cobra Shot -1s KC, War Orders -3s KC on Barbed, Barbed Scales -2s Barbed on
---     Cobra, Killer Cobra KC-reset in BW) ARE modeled in spec.chargeCdr, so the predicted
---     next-charge timers stay honest. Tick/periodic reducers (Master Handler, Pack
---     Mentality) are left to the live ready flag -- see spec.chargeCdr for the split.
+--   * Kill Command / Barbed Shot are CHARGE spells (2 charges). The exact COUNT reads clean
+--     in combat (ChargeState via isActive + the usable flag -> 0/1/2), but the recharge
+--     TIME is fully SECRET -- verified in-game 2026-08-31: BOTH the charge-duration object
+--     AND GetSpellCooldown read secret in combat (dur:-- cd:-- in /prio rotdebug). So there
+--     is no reliable sub-second "next charge" to read, and charge-maintenance gates on the
+--     readable COUNT (press at 2 charges) rather than a predicted timer. The haste-scaled /
+--     chargeCdr prediction (spec.chargeCdr, chargeTrack.hasted) is kept only for the queue
+--     look-ahead and the out-of-combat editor condition, NOT the live suggestion.
 --------------------------------------------------------------------------------
 
 local ADDON, PRIO = ...
@@ -83,7 +86,6 @@ local function chargesMin(n)   return { type = "chargesMin",  v = n } end   -- s
 local function chargesMax(id,n) return { type = "chargesMax", spell = id, v = n } end
 local function cdRemainMin(id,n) return { type = "cdRemainMin", spell = id, v = n } end
 local function cdRemainMax(id,n) return { type = "cdRemainMax", spell = id, v = n } end
-local function chargeTimeMax(id,n) return { type = "chargeTimeMax", spell = id, v = n } end   -- next charge within n s
 local function glow(id)        return { type = "glowing",     spell = id } end
 local function talent(id)      return { type = "talentYes",   spell = id } end
 
@@ -94,7 +96,7 @@ local function talent(id)      return { type = "talentYes",   spell = id } end
 --------------------------------------------------------------------------------
 local pl_st = {
     -- Refresh Frenzy right before Bestial Wrath, or before Barbed Shot caps its 2 charges.
-    { spell = "BarbedShot", cond = OR(cdRemainMax(ID_BESTIALWRATH, 3), chargesMin(2), chargeTimeMax(ID_BARBEDSHOT, 1.5)) },
+    { spell = "BarbedShot", cond = OR(cdRemainMax(ID_BESTIALWRATH, 3), chargesMin(2)) }, -- refresh before BW / at 2 charges (the recharge time is secret in combat, so gate on the readable count)
     { spell = "BestialWrath" },                                   -- bread & butter, on CD (triggers Howl)
     { spell = "CallOfTheWild" },                                  -- major CD (talent; inert if not taken)
     { spell = "Bloodshed" },                                      -- talent, on CD
@@ -114,7 +116,7 @@ local pl_aoe = {
     -- Wild Thrash (replaces Multi-Shot) puts / keeps Beast Cleave up. The condensed Icy
     -- list omits it; every other source keeps it at the top of AoE, so we do too.
     { spell = "WildThrash", cond = buffDown(ID_BEASTCLEAVE) },    -- put Beast Cleave up
-    { spell = "BarbedShot", cond = OR(chargesMin(2), chargeTimeMax(ID_BARBEDSHOT, 1.5)) }, -- at / about to reach 2 charges (Frenzy)
+    { spell = "BarbedShot", cond = chargesMin(2) },              -- at 2 charges (readable count; recharge time is secret)
     { spell = "BestialWrath" },                                   -- on CD
     { spell = "CallOfTheWild" },                                  -- major CD (talent)
     { spell = "WildThrash" },                                     -- on CD (keep Beast Cleave up)
@@ -135,7 +137,7 @@ local pl_aoe = {
 -- and lets it hit at any health -> read via the Black Arrow button glow.
 --------------------------------------------------------------------------------
 local dr_st = {
-    { spell = "BarbedShot", cond = OR(cdRemainMax(ID_BESTIALWRATH, 3), chargesMin(2), chargeTimeMax(ID_BARBEDSHOT, 1.5)) },
+    { spell = "BarbedShot", cond = OR(cdRemainMax(ID_BESTIALWRATH, 3), chargesMin(2)) }, -- refresh before BW / at 2 charges (the recharge time is secret in combat, so gate on the readable count)
     { spell = "BestialWrath" },                                   -- on CD -> opens Withering Fire
     { spell = "CallOfTheWild" },                                  -- major CD (talent)
     -- Triple-damage Black Arrow inside Withering Fire, without overcapping Kill Command.
@@ -154,7 +156,7 @@ local dr_st = {
 local dr_aoe = {
     { spell = "BlackArrow", cond = buffDown(ID_BEASTCLEAVE) },    -- DR: Black Arrow puts Beast Cleave up
     { spell = "WildThrash", cond = buffDown(ID_BEASTCLEAVE) },    -- fallback Beast Cleave source
-    { spell = "BarbedShot", cond = OR(chargesMin(2), chargeTimeMax(ID_BARBEDSHOT, 1.5)) }, -- at / about to reach 2 charges (Frenzy)
+    { spell = "BarbedShot", cond = chargesMin(2) },              -- at 2 charges (readable count; recharge time is secret)
     { spell = "BestialWrath", cond = buffUp(ID_BEASTCLEAVE) },    -- BW with Beast Cleave active
     { spell = "BestialWrath" },                                   -- else on CD
     { spell = "CallOfTheWild" },                                  -- major CD (talent)

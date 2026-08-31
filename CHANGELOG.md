@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.5.10
+- **Fixed the charge count reading 1 when it was actually 0.** The count was derived from WoW's "usable" flag, which ignores cooldown/charges and reads *true even at 0 charges*. It now uses the charge-aware cooldown — the same signal that makes Lava Burst castable at 1/3 but not 0/3 — so Barbed Shot / Kill Command show the true 0/1/2. (Applies to every 2-charge spell, not just Hunter.)
+- **Beast Mastery charge maintenance now gates on the readable count, not a predicted timer.** We confirmed in-game that the recharge *time* is fully secret in combat (both game reads come back blank), so "about to cap" is simply "at 2 charges" — exact and drift-free. Rotation Debug shows the true count and, out of combat, the recharge; in combat it honestly says "recharge secret".
+
 ## 0.5.9
 - **Diagnostic build for charge-timer drift.** The charge-spell rows in `/prio rotdebug` now show the count + its source (**clean**/**secret**) and both readable recharge candidates — `dur:` (charge-duration object) and `cd:` (spell cooldown) — so we can see exactly which reads survive combat and fix the drift at the source. `--` means that read is currently secret/unavailable.
 
