@@ -917,12 +917,23 @@ PRIO:On("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
     -- Seed a predicted cooldown timer (Invoke Xuen) so "cooldown > N" reads in combat.
     local ct = spec.cooldownTrack and spec.cooldownTrack[key]
     if ct then
-        local cd = ct.base or 0
-        if ct.reduce then
-            for tid, sec in pairs(ct.reduce) do if API.IsKnown(tid) then cd = cd - sec end end
-        end
         Engine.P.cdExpire = Engine.P.cdExpire or {}
-        Engine.P.cdExpire[spellID] = GetTime() + cd
+        Engine.P.cdSeed = Engine.P.cdSeed or {}
+        local now = GetTime()
+        -- `window`: the cooldown starts on the FIRST press and a re-press within `window`
+        -- seconds doesn't restart it (Explosive Shot + Unstable Trigger -- fire it twice, the
+        -- 30s runs from the first). So skip re-seeding while inside that window.
+        local last = Engine.P.cdSeed[spellID]
+        if ct.window and last and (now - last) <= ct.window then
+            -- second cast inside the window: leave the existing cdExpire alone
+        else
+            local cd = ct.base or 0
+            if ct.reduce then
+                for tid, sec in pairs(ct.reduce) do if API.IsKnown(tid) then cd = cd - sec end end
+            end
+            Engine.P.cdExpire[spellID] = now + cd
+            Engine.P.cdSeed[spellID] = now
+        end
     end
     -- Cast-triggered cooldown resets (spec.cdResets): casting `key` refreshes these targets
     -- (gated on the enabling talent). The live off-cooldown bool already reflects the reset,

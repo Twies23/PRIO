@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.6.4", {
+        "Marksmanship -- Explosive Shot cooldown tracking (Unstable Trigger aware). Added a predicted 30s cooldown for Explosive Shot. Unstable Trigger lets you fire it a second time within 3 seconds, and the 30s runs from the first press -- so the second cast no longer restarts the timer. Rotation Debug shows the Explosive Shot cooldown alongside Trueshot.",
+    } },
     { "0.6.3", {
         "Marksmanship -- tracking leans on booleans + charges. Dropped predicted-cooldown tracking for everything except Trueshot (2 min, for the hold/delay logic). Short cooldowns just read the live ready flag, and the rotation gates on buffs (Precise Shots, the mark, Trick Shots, Unstable Trigger, Bullseye) and Aimed Shot charges.",
     } },

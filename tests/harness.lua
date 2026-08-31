@@ -166,6 +166,7 @@ load("Spec_Outlaw.lua")
 load("Spec_Elemental.lua")
 load("Spec_Devourer.lua")
 load("Spec_BeastMastery.lua")
+load("Spec_Marksmanship.lua")
 
 PRIO.Engine:OnSpecChanged()
 H.spec = PRIO.specs[269]
@@ -174,6 +175,7 @@ H.outlawSpec = PRIO.specs[260]
 H.eleSpec = PRIO.specs[262]
 H.devourerSpec = PRIO.specs[1480]
 H.bmSpec = PRIO.specs[253]
+H.mmSpec = PRIO.specs[254]
 H.Engine = PRIO.Engine
 H.Cond = PRIO.Cond
 H.API = API

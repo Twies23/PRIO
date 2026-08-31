@@ -204,11 +204,14 @@ local spec = {
         AimedShot = { max = 2, recharge = 12, hasted = true },
     },
 
-    -- Only Trueshot is worth a predicted cooldown (2 min, for "Trueshot soon" hold/delay
-    -- logic). Everything else leans on booleans (buffs) and charges, which read clean --
-    -- no cooldown modelling. Anchored to the live ready flag, so a wrong base self-corrects.
+    -- Predicted cooldowns. Trueshot (2 min) for its hold/delay logic, and Explosive Shot
+    -- (30s) for lining Explosives up with Trueshot. Explosive Shot uses `window = 3`:
+    -- Unstable Trigger lets you fire it a SECOND time within 3s, but the 30s runs from the
+    -- FIRST press -- so a re-press inside the window doesn't restart the timer. Everything
+    -- else leans on booleans (buffs) + charges, anchored to the live ready flag.
     cooldownTrack = {
-        Trueshot = { base = 120 },
+        Trueshot      = { base = 120 },
+        ExplosiveShot = { base = 30, window = 3 },
     },
 
     fillers = { [ID_STEADYSHOT] = true },   -- Steady Shot is the no-cooldown Focus filler
@@ -240,6 +243,7 @@ local spec = {
         { label = "Spotter's Mark",        kind = "buff", spell = ID_SPOTTERMARK },
         { label = "Bullseye",              kind = "buff", spell = ID_BULLSEYE },
         { label = "Unstable Trigger",      kind = "buff", spell = ID_UNSTABLE },
+        { label = "Explosive Shot (CD)",   kind = "cdRemain", spell = ID_EXPLOSIVE },
         { label = "Trueshot (CD left)",    kind = "cdRemain", spell = ID_TRUESHOT },
     },
     economy = {

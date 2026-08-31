@@ -39,6 +39,7 @@ dofile(TESTS_DIR .. "\\test_devourer_cdreset.lua")
 dofile(TESTS_DIR .. "\\test_devourer_souls.lua")
 dofile(TESTS_DIR .. "\\test_devourer_meta.lua")
 dofile(TESTS_DIR .. "\\test_bm.lua")
+dofile(TESTS_DIR .. "\\test_mm.lua")
 
 print(string.format("\n=== PRIO tests: %d passed, %d failed ===", pass, fail))
 for _, f in ipairs(fails) do print("  FAIL  " .. f) end
