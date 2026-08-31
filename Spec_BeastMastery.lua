@@ -6,11 +6,10 @@
 -- never appears, so one file serves every build.
 --
 -- SIGNAL REALITY (what actually reads in combat -- the whole game of this addon):
---   * FOCUS is a filling bar -> its VALUE is SECRET in combat. But the game's own
---     insufficient-power flag reads CLEAN even so, so spenders are gated on affordability
---     (spec.affordGate -> API.InsufficientPower): each shows the moment you can afford it
---     and stays down when you can't -- no Focus-number prediction. The queue otherwise
---     leans on cooldowns/charges/stacks. Focus pooling/value gates are a later refinement.
+--   * FOCUS is a filling bar -> its VALUE is SECRET in combat. Spenders stay VISIBLE
+--     (softPowerUsable; Focus regens fast), but the display DESATURATES one while the
+--     game's clean insufficient-power flag says you can't yet afford it -- so you still
+--     see it queued, just dimmed. No Focus-number prediction; pooling is a later refinement.
 --   * FRENZY (272790) lives on the PET -> the Cooldown Viewer (player auras only) can
 --     NEVER see it. We do NOT gate on it. Instead Barbed Shot is kept on cooldown /
 --     off its 2-charge cap, which maintains Frenzy on its own. This is the honest,
@@ -202,17 +201,12 @@ local spec = {
     resourceLabel = "Focus",
     maelstromMax = 100,           -- Focus cap (secret in combat; used for the resource readout only)
 
-    -- Focus is secret in combat, so predicting it drifts. Instead, gate the Focus spenders on
-    -- the game's own insufficient-power flag (spec.affordGate -> API.InsufficientPower), which
-    -- reads CLEAN in combat even with the bar secret: an EXACT "can I afford it right now?"
-    -- boolean, no prediction. Each spender shows the moment you actually have the Focus and
-    -- stays down when you don't -- so the strip won't tell you to Kill Command / Cobra Shot /
-    -- Wild Thrash while Focus-starved. (Free abilities read as affordable automatically, so
-    -- listing a no-cost one here is harmless.)
-    affordGate = {
-        KillCommand = true, CobraShot = true, WildThrash = true,
-        KillShot = true, ExplosiveShot = true, BlackArrow = true,
-    },
+    -- Focus is a fast-regen secret bar. Keep spenders VISIBLE even when you can't afford them
+    -- yet (softPowerUsable) -- you'll have the Focus in a moment -- but the display DESATURATES
+    -- a spender while the game's insufficient-power flag says you can't afford it (a clean read
+    -- even with the bar secret, driven per-pick via API.InsufficientPower -> entry.noResource).
+    -- So a Focus-starved spender still shows as "next", just dimmed until the Focus is there.
+    softPowerUsable = true,
 
     -- Only ST and AoE modes; AoE (Wild Thrash / Beast Cleave) starts at 2 targets.
     -- cleaveAt == aoeAt collapses the middle Cleave tier (Engine skips it).
@@ -279,7 +273,7 @@ local spec = {
         { kind = "info", label = "Frenzy (pet buff)",
           hint = "Frenzy lives on your pet, so the Cooldown Manager (player auras only) can't track it. PRIO keeps it up indirectly by pressing Barbed Shot before it caps 2 charges -- no tracking needed." },
         { kind = "info", label = "Focus",
-          hint = "Focus is secret in combat, so PRIO doesn't read the number -- but it uses the game's clean insufficient-power flag to gate spenders, so Kill Command / Cobra Shot / Wild Thrash only show when you can actually afford them. No tracking needed." },
+          hint = "Focus is secret in combat, so PRIO doesn't read the number -- spenders still show, but a spender is dimmed (desaturated) while the game's insufficient-power flag says you can't afford it yet. No tracking needed." },
     },
 
     spells = {

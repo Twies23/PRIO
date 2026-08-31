@@ -50,6 +50,15 @@ local function CreateIcon(name)
     f.icon:SetPoint("BOTTOMRIGHT", -1, 1)
     f.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)   -- trim default border
 
+    -- "No resource yet" dim: a desaturated copy of the same icon, drawn just above it at
+    -- partial alpha so an unaffordable spender reads as SLIGHTLY greyed (~half desaturated)
+    -- instead of hidden. Shown/hidden per entry in FillIcon.
+    f.desat = f:CreateTexture(nil, "ARTWORK", nil, 1)
+    f.desat:SetPoint("TOPLEFT", 1, -1)
+    f.desat:SetPoint("BOTTOMRIGHT", -1, 1)
+    f.desat:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+    f.desat:Hide()
+
     f.cd = CreateFrame("Cooldown", nil, f, "CooldownFrameTemplate")
     f.cd:SetAllPoints(f.icon)
     f.cd:SetDrawEdge(true)
@@ -272,6 +281,17 @@ local function FillIcon(f, data, isPrimary)
     f.icon:SetTexture(data.texture)
     f.kb:SetText(PRIO.db.showKeybinds and data.keybind or "")
     f.name:SetText(PRIO.db.showNames and data.name or "")
+
+    -- Slight desaturation when you can't yet afford this spell (Focus/Maelstrom): a
+    -- greyscale copy over the colored icon at half alpha reads as ~50% desaturated.
+    if data.noResource then
+        f.desat:SetTexture(data.texture)
+        f.desat:SetDesaturated(true)
+        f.desat:SetAlpha(0.5)
+        f.desat:Show()
+    else
+        f.desat:Hide()
+    end
 
     -- Cooldown swipe: the primary shows the global cooldown (so it sweeps each
     -- cast); queue icons show any real cooldown they carry.

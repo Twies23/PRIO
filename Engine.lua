@@ -1866,6 +1866,10 @@ function Engine:Evaluate()
         local fkey = idToKey[pick.sid]
         local fcond = spec.flash and fkey and spec.flash[fkey]
         picks[slot].flash = fcond and PRIO.Cond.Eval(fcond, S, pick.sid) or false
+        -- Can't afford it right now? The game's insufficient-power flag reads clean even
+        -- when the resource bar is secret (Focus/Maelstrom). Flag it so the display can
+        -- desaturate the icon -- shown but dimmed until you have the resource.
+        picks[slot].noResource = (API.InsufficientPower(pick.sid) == true)
         ApplyEffects(sim, fkey)                             -- advance the look-ahead
         ApplyResourceDelta(sim, fkey, pick.sid, S)
         ApplyEnergy(sim, fkey)                              -- spend the Energy floor

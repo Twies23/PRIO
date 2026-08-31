@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.5.12
+- **Beast Mastery — unaffordable spenders are shown dimmed, not hidden.** When you can't yet afford Kill Command / Cobra Shot / Wild Thrash, the icon stays in place slightly desaturated (a "press this once your Focus is up" cue) instead of vanishing. It uses the game's clean insufficient-power flag, so it's exact even though the Focus bar is secret in combat — the dim clears the instant you have the Focus.
+
 ## 0.5.11
 - **Beast Mastery — Focus spenders are now gated on affordability.** Kill Command, Cobra Shot, and Wild Thrash (plus the other Focus costs) only show when you can actually afford them. Focus is secret in combat, but the game exposes a clean "insufficient power" flag even so — so this is exact, with no guessing: the spender appears the instant you have the Focus and stays hidden when you don't.
 

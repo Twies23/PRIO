@@ -151,9 +151,9 @@ test("cast-triggered charge CDR speeds Kill Command / Barbed Shot timers", funct
     eq(H.Engine:ChargeTimeRemaining(BARBED), 6, "Barbed Scales shaves 2s off Barbed Shot")
 end)
 
--- Focus is secret in combat, so spenders are gated on the game's clean insufficient-power
--- flag (spec.affordGate). Set up BM with only Kill Command (a non-filler Focus spender)
--- castable, so it's the candidate under test.
+-- Focus is secret in combat. Spenders stay VISIBLE (softPowerUsable) but are flagged
+-- entry.noResource when the game's insufficient-power flag says you can't afford them, so
+-- the display desaturates them. Set up BM with only Kill Command castable.
 local KC = 34026
 local function setBMkc()
     H.reset(); H.S.specID = 253; H.S.enemies = 1
@@ -162,18 +162,17 @@ local function setBMkc()
     H.rebind()
     H.Engine.openerActive = false
 end
-local function bmShowsKC()
-    local r = H.Engine:Evaluate(); local hit = {}
-    if r and r.primary then hit[r.primary.name] = true end
-    for _, e in ipairs((r and r.queue) or {}) do hit[e.name] = true end
-    return hit["Spell" .. KC] == true
-end
 
-test("BM affordGate: Kill Command gated on the insufficient-Focus flag", function()
+test("BM: unaffordable Focus spender still shows, flagged noResource (for desaturation)", function()
     setBMkc(); H.S.insufficientPower[KC] = true
-    falsy(bmShowsKC(), "insufficientPower=true: Kill Command withheld (can't afford)")
+    local r = H.Engine:Evaluate()
+    truthy(r and r.primary and r.primary.name == "Spell" .. KC, "Kill Command still shown when unaffordable")
+    truthy(r.primary.noResource, "flagged noResource when insufficientPower=true (-> desaturated)")
+
     setBMkc(); H.S.insufficientPower[KC] = false
-    truthy(bmShowsKC(), "insufficientPower=false: Kill Command shows (affordable)")
+    local r2 = H.Engine:Evaluate()
+    truthy(r2 and r2.primary and r2.primary.name == "Spell" .. KC, "shown when affordable")
+    falsy(r2.primary.noResource, "not flagged when affordable")
 end)
 
 test("every priority row names a spell that exists in spec.spells", function()
