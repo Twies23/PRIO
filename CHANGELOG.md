@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.6.1
+- **Marksmanship Hunter — tracking rebuilt (Sentinel).** Corrected the abilities, buffs, and predicted cooldowns for 12.1 (Precise Shots, Trick Shots, Sentinel's Mark, Moonlight Chakram, the Aimed Shot charge/haste model, and Trueshot / Rapid Fire / Volley cooldown tracking), and added a first-pass Sentinel rotation, the pet check, Hunter's Mark upkeep, and Focus-affordability dimming. A few buff IDs (Bullseye, Streamline, Lunar Storm) are still being verified in-game — work in progress.
+
 ## 0.6.0
 Sixth stable release — headlined by **Beast Mastery Hunter**, built and tuned end-to-end for 12.1 (Midnight). Everything since 0.5.0.
 

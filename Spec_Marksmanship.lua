@@ -1,8 +1,23 @@
 -- Spec_Marksmanship.lua --------------------------------------------------------
--- Marksmanship Hunter (spec 254), patch 12.1. All-inclusive lists covering both
--- Sentinel and Dark Ranger -- untalented abilities (Black Arrow / Wailing Arrow /
--- Moonlight Chakram) are filtered by IsKnown, and buff-gated lines go inert when
--- the buff never appears. Spell IDs are best-guess; verify with /prio spells.
+-- Marksmanship Hunter (spec 254), patch 12.1 (Midnight). TRACKING PASS: getting the
+-- abilities, buffs, and predicted cooldowns right first (verify with /prio spells and
+-- /prio tracked); the rotation below is a Sentinel first pass to tune afterwards.
+--
+-- MM plays SENTINEL in ~all content (default here); Dark Ranger is the secondary tree.
+-- The Sentinel core loop: spend Precise Shots ASAP -> that applies Sentinel's Mark to the
+-- target (~40% ST, ~90% in Trueshot) -> Aimed Shot into a marked target consumes it and
+-- procs Lunar Storm. So "spend Precise Shots" and "Aimed Shot the Mark" are the priorities.
+--
+-- SIGNAL REALITY (what reads in combat -- same rules as Beast Mastery):
+--   * FOCUS value is SECRET -> spenders gate on affordability (the game's clean
+--     insufficient-power flag) and show dimmed when you can't afford them (softPowerUsable).
+--   * Aimed Shot CHARGES: the exact count reads via the charge-aware cooldown; the recharge
+--     TIME is secret, so charge gates use the count. Aimed Shot recharge is HASTED.
+--   * PROC / DEBUFF buffs read from the Cooldown Manager: Precise Shots, Trick Shots,
+--     Sentinel's Mark (target debuff), Bullseye (Trueshot stacks), Trueshot. Add them via
+--     /prio setup.
+--   * Predicted cooldowns (Trueshot / Rapid Fire / Volley) are cast-seeded and anchored to
+--     the live ready flag, for "Trueshot soon" style gates.
 --------------------------------------------------------------------------------
 
 local ADDON, PRIO = ...
@@ -10,14 +25,74 @@ PRIO.specs = PRIO.specs or {}
 
 local FOCUS = (Enum and Enum.PowerType and Enum.PowerType.Focus) or 2
 
--- Readable buff IDs (verify with /prio tracked).
-local ID_PRECISE = 260242   -- Precise Shots
-local ID_TRICK   = 257622   -- Trick Shots
+-- Castable IDs (core ones are stable/well-known; verify with /prio spells).
+local ID_AIMEDSHOT   = 19434
+local ID_RAPIDFIRE   = 257044
+local ID_ARCANESHOT  = 185358
+local ID_STEADYSHOT  = 56641
+local ID_MULTISHOT   = 257620
+local ID_EXPLOSIVE   = 212431    -- Explosive Shot (Unstable Trigger -> 2 casts)
+local ID_VOLLEY      = 260243
+local ID_TRUESHOT    = 288613    -- cast AND the Trueshot buff
+local ID_KILLSHOT    = 53351
+local ID_MOONCHAKRAM = 1264902   -- Moonlight Chakram (Sentinel) -- verified via guide 2026-08-31
+local ID_BLACKARROW  = 466930    -- Dark Ranger
+local ID_WAILINGARROW = 392060   -- Dark Ranger
+local ID_HUNTERSMARK = 257284
+
+-- Buff / debuff IDs (verify with /prio tracked -- the flagged ones especially).
+local ID_PRECISE     = 260240    -- Precise Shots (spend proc) -- verified via guide (stub's 260242 was Streamline)
+local ID_TRICK       = 257621    -- Trick Shots (AoE) -- verified 2026-08-31
+local ID_SENTMARK    = 1266960   -- Sentinel's Mark (target debuff -> Aimed Shot) -- verified via Wowhead 2026-08-31
+local ID_BULLSEYE    = 204090    -- Bullseye (Trueshot-hold stacks) -- UNVERIFIED, confirm via /prio tracked
+local ID_STREAMLINE  = 260242    -- Streamline (Rapid Fire buff) -- UNVERIFIED
+local ID_LOCKLOAD    = 194594    -- Lock and Load (instant Aimed Shot proc) -- UNVERIFIED
+local ID_LUNARSTORM  = 1216333   -- Lunar Storm (Sentinel proc) -- UNVERIFIED / may not need tracking
 
 local function AND(...) return { op = "and", clauses = { ... } } end
 local function OR(...)  return { op = "or",  clauses = { ... } } end
-local function buffUp(id)   return { type = "buffActive",  spell = id } end
-local function buffDown(id) return { type = "buffMissing", spell = id } end
+local function buffUp(id)      return { type = "buffActive",   spell = id } end
+local function buffDown(id)    return { type = "buffMissing",  spell = id } end
+local function debuffDown(id)  return { type = "debuffMissing", spell = id } end
+local function debuffUp(id)    return { type = "debuffActive", spell = id } end
+local function usable(id)      return { type = "usable",       spell = id } end
+local function petMissing()    return { type = "petMissing" } end
+local function petDead()       return { type = "petDead" } end
+
+--------------------------------------------------------------------------------
+-- Sentinel first-pass priority (Icy Veins 12.1 ST list). Spend Precise Shots (Kill /
+-- Arcane) to seed Sentinel's Mark, then Aimed Shot the Mark. AoE folds in Multi-Shot /
+-- Trick Shots. TO TUNE after the IDs are verified in-game.
+--------------------------------------------------------------------------------
+local st = {
+    { spell = "CallPet",       cond = petMissing() },                 -- no pet up -> summon
+    { spell = "RevivePet",     cond = petDead() },                    -- pet dead -> revive
+    { spell = "HuntersMark",   cond = debuffDown(ID_HUNTERSMARK) },   -- keep the 3% debuff up
+    { spell = "ExplosiveShot" },                                      -- on CD (2 casts, Unstable Trigger)
+    { spell = "Volley" },                                             -- on CD
+    { spell = "Trueshot" },                                           -- major CD (hold last for 30 Bullseye)
+    { spell = "RapidFire" },                                          -- on CD, builds Precise
+    { spell = "KillShot",   cond = AND(buffUp(ID_PRECISE), usable(ID_KILLSHOT)) },   -- spend Precise (execute)
+    { spell = "ArcaneShot", cond = AND(buffUp(ID_PRECISE), usable(ID_ARCANESHOT)) }, -- spend Precise -> apply Sentinel's Mark
+    { spell = "AimedShot",  cond = usable(ID_AIMEDSHOT) },            -- on CD (charges), consumes Sentinel's Mark
+    { spell = "MoonlightChakram", cond = usable(ID_MOONCHAKRAM) },    -- Sentinel filler
+    { spell = "SteadyShot" },                                         -- Focus filler (resource-starved)
+}
+
+local aoe = {
+    { spell = "CallPet",       cond = petMissing() },
+    { spell = "RevivePet",     cond = petDead() },
+    { spell = "HuntersMark",   cond = debuffDown(ID_HUNTERSMARK) },
+    { spell = "ExplosiveShot" },
+    { spell = "Volley" },
+    { spell = "Trueshot" },
+    { spell = "MultiShot",  cond = buffDown(ID_TRICK) },              -- put Trick Shots up
+    { spell = "RapidFire",  cond = buffUp(ID_TRICK) },               -- cleaves with Trick Shots
+    { spell = "AimedShot",  cond = AND(buffUp(ID_TRICK), usable(ID_AIMEDSHOT)) }, -- cleaves with Trick Shots
+    { spell = "MultiShot",  cond = buffUp(ID_PRECISE) },             -- spend Precise Shots
+    { spell = "MoonlightChakram", cond = usable(ID_MOONCHAKRAM) },
+    { spell = "SteadyShot" },
+}
 
 local spec = {
     key      = "HUNTER_MARKSMANSHIP",
@@ -26,129 +101,160 @@ local spec = {
     specID   = 254,
     resource = FOCUS,
     resourceLabel = "Focus",
-    cleaveAt = 2,   -- AoE (Multi-Shot / Trick Shots) starts at 2 targets
-    aoeAt    = 3,
+    maelstromMax = 100,           -- Focus cap (secret in combat; resource readout only)
+    softPowerUsable = true,       -- Focus secret -> keep spenders visible; unaffordable ones show dimmed
 
-    -- Relevant buffs (selectable in the condition editor regardless of build).
+    -- Only ST and AoE (AoE == ST without Trick Shots; the Multi-Shot / Trick Shots lines
+    -- self-gate). cleaveAt == aoeAt collapses the middle Cleave tier.
+    cleaveAt = 2,
+    aoeAt    = 2,
+    modes = {
+        { value = "st",  text = "ST" },
+        { value = "aoe", text = "AoE" },
+    },
+
+    condTags = { pet = true },
+
+    -- Relevant buffs (selectable in the condition editor). Flagged IDs need /prio tracked
+    -- verification. Sentinel's Mark is a target DEBUFF; the rest are self buffs.
     auras = {
         PreciseShots = ID_PRECISE,
         TrickShots   = ID_TRICK,
+        SentinelsMark = ID_SENTMARK,
+        Bullseye     = ID_BULLSEYE,
+        Trueshot     = ID_TRUESHOT,
+        Streamline   = ID_STREAMLINE,
+        LockAndLoad  = ID_LOCKLOAD,
+        LunarStorm   = ID_LUNARSTORM,
     },
+
     setup = {
         { kind = "trackedAura", label = "Precise Shots tracked", spell = ID_PRECISE,
-          hint = "Track Precise Shots so PRIO knows when to spend it (Arcane/Kill Shot)." },
+          hint = "Track Precise Shots -- the core Sentinel proc. PRIO spends it (Kill / Arcane Shot) to seed Sentinel's Mark." },
+        { kind = "trackedAura", label = "Sentinel's Mark tracked", spell = ID_SENTMARK,
+          hint = "Track Sentinel's Mark (the target debuff) so PRIO knows when to Aimed Shot the marked target for Lunar Storm. Verify the ID with /prio tracked." },
         { kind = "trackedAura", label = "Trick Shots tracked", spell = ID_TRICK,
-          hint = "Track Trick Shots so AoE Aimed/Rapid Fire lines read correctly." },
+          hint = "Track Trick Shots so the AoE Aimed / Rapid Fire cleave lines read." },
+        { kind = "trackedAura", label = "Trueshot tracked", spell = ID_TRUESHOT, optional = true,
+          hint = "Track Trueshot so 'during Trueshot' lines (Moonlight Chakram, Precise-heavy) read." },
+        { kind = "trackedAura", label = "Bullseye tracked", spell = ID_BULLSEYE, optional = true,
+          hint = "Track Bullseye so the 'hold Trueshot for 30 stacks' logic reads. Verify the ID with /prio tracked." },
+        { kind = "trackedAura", label = "Hunter's Mark tracked", spell = ID_HUNTERSMARK,
+          hint = "Track Hunter's Mark so PRIO reapplies the 3% damage-taken debuff on a target that's missing it." },
+        { kind = "info", label = "Focus",
+          hint = "Focus is secret in combat -- PRIO doesn't read the number. Spenders show, dimmed while the game's insufficient-power flag says you can't afford them yet." },
+        { kind = "info", label = "Pet",
+          hint = "The top of each list checks your pet: Call Pet if it's missing, Revive Pet if it's dead." },
     },
 
     spells = {
-        AimedShot       = 19434,
-        RapidFire       = 257044,
-        ArcaneShot      = 185358,
-        SteadyShot      = 56641,
-        MultiShot       = 257620,
-        ExplosiveShot   = 212431,
-        Volley          = 260243,
-        Trueshot        = 288613,
-        KillShot        = 53351,
-        BlackArrow      = 466930,   -- Dark Ranger
-        WailingArrow    = 392060,   -- Dark Ranger
-        MoonlightChakram = 471847,  -- Sentinel
-        HuntersMark     = 257284,
+        AimedShot     = ID_AIMEDSHOT,
+        RapidFire     = ID_RAPIDFIRE,
+        ArcaneShot    = ID_ARCANESHOT,
+        SteadyShot    = ID_STEADYSHOT,
+        MultiShot     = ID_MULTISHOT,
+        ExplosiveShot = ID_EXPLOSIVE,
+        Volley        = ID_VOLLEY,
+        Trueshot      = ID_TRUESHOT,
+        KillShot      = ID_KILLSHOT,
+        MoonlightChakram = ID_MOONCHAKRAM,
+        BlackArrow    = ID_BLACKARROW,
+        WailingArrow  = ID_WAILINGARROW,
+        HuntersMark   = ID_HUNTERSMARK,
+        CallPet       = 883,
+        RevivePet     = 982,
+        MendPet       = 136,
     },
 
+    -- Opener (Icy Veins 12.1): Hunter's Mark pre-pull, Aimed Shot ~2.5s pre-pull, then
+    -- Explosive x2, Volley, Trueshot, Rapid Fire, Aimed, Arcane, Aimed.
     openerReady = { "Trueshot" },
-    opener = { "HuntersMark", "AimedShot", "ExplosiveShot", "ExplosiveShot",
-               "Volley", "Trueshot", "RapidFire", "AimedShot", "ArcaneShot", "AimedShot" },
+    opener = { "AimedShot", "ExplosiveShot", "ExplosiveShot", "Volley", "Trueshot",
+               "RapidFire", "AimedShot", "ArcaneShot", "AimedShot" },
 
     precombat = {
-        { spell = "HuntersMark", aura = 257284 },
+        { spell = "HuntersMark", aura = ID_HUNTERSMARK },
     },
 
     pickable = {
-        "AimedShot", "RapidFire", "ArcaneShot", "MultiShot", "ExplosiveShot",
-        "Volley", "Trueshot", "KillShot", "BlackArrow", "WailingArrow",
-        "MoonlightChakram", "SteadyShot", "HuntersMark",
+        "AimedShot", "RapidFire", "ArcaneShot", "MultiShot", "ExplosiveShot", "Volley",
+        "Trueshot", "KillShot", "MoonlightChakram", "BlackArrow", "WailingArrow",
+        "SteadyShot", "HuntersMark", "CallPet", "RevivePet", "MendPet",
     },
 
-    -- Aimed Shot runs on charges.
+    -- Aimed Shot runs on charges and recharges with haste (the recharge TIME is secret in
+    -- combat, so charge gates use the readable count -- same as BM's Barbed Shot / KC).
     chargeTrack = {
-        AimedShot = { max = 2, recharge = 12 },
+        AimedShot = { max = 2, recharge = 12, hasted = true },
     },
 
-    fillers = { [56641] = true },   -- Steady Shot
+    -- Predicted cooldowns for the "X soon / not soon" gates (base seconds; anchored to the
+    -- live ready flag, so a wrong base self-corrects). VERIFY the bases in-game.
+    cooldownTrack = {
+        Trueshot  = { base = 120 },   -- ~2 min (talents may reduce)
+        RapidFire = { base = 20 },
+        Volley    = { base = 45 },
+    },
+
+    fillers = { [ID_STEADYSHOT] = true },   -- Steady Shot is the no-cooldown Focus filler
 
     flash = {
-        ArcaneShot = { type = "buffActive", spell = ID_PRECISE },
-        KillShot   = { type = "buffActive", spell = ID_PRECISE },
-        BlackArrow = { type = "buffActive", spell = ID_PRECISE },
+        KillShot   = { type = "buffActive", spell = ID_PRECISE },   -- spend Precise (execute)
+        ArcaneShot = { type = "buffActive", spell = ID_PRECISE },   -- spend Precise
+        AimedShot  = { type = "buffActive", spell = ID_LOCKLOAD },  -- Lock and Load instant (if tracked)
     },
 
-    -- Precise Shots: generated by Aimed Shot / Rapid Fire, spent by Arcane / Kill /
-    -- Black Arrow / Multi-Shot. Trick Shots: from Multi-Shot, spent by Aimed / Rapid.
+    -- Precise Shots: generated by Aimed Shot / Rapid Fire, spent by Arcane / Kill Shot /
+    -- Multi-Shot. Trick Shots: from Multi-Shot, consumed by Aimed / Rapid Fire.
     spellEffects = {
-        AimedShot   = { grant = { ID_PRECISE }, consume = { ID_TRICK } },
-        RapidFire   = { grant = { ID_PRECISE }, consume = { ID_TRICK } },
-        MultiShot   = { grant = { ID_TRICK }, consume = { ID_PRECISE } },
-        ArcaneShot  = { consume = { ID_PRECISE } },
-        KillShot    = { consume = { ID_PRECISE } },
-        BlackArrow  = { consume = { ID_PRECISE } },
-    },
-
-    maelstromMax = 100,   -- Focus cap (generic "resource" fields)
-    maelstromGen = {
-        SteadyShot = 10,
-        RapidFire  = 0,
+        AimedShot  = { grant = { ID_PRECISE }, consume = { ID_TRICK } },
+        RapidFire  = { grant = { ID_PRECISE }, consume = { ID_TRICK } },
+        MultiShot  = { grant = { ID_TRICK },   consume = { ID_PRECISE } },
+        ArcaneShot = { consume = { ID_PRECISE } },
+        KillShot   = { consume = { ID_PRECISE } },
     },
 
     OnCast = function(P, key, now) end,
 
     --------------------------------------------------------------------------------
-    -- Debug metadata (see Debug.lua). Rows shown live; economy is informational.
+    -- Debug metadata (/prio debug): the live tracking signals.
     --------------------------------------------------------------------------------
     debug = {
-        { label = "Aimed Shot charges", kind = "charges", key = "AimedShot" },
-        { label = "Precise Shots",      kind = "buff", spell = ID_PRECISE },
-        { label = "Trick Shots",        kind = "buff", spell = ID_TRICK },
-        { label = "Trueshot",           kind = "cd",   spell = 288613 },
+        { label = "Aimed Shot (chg/next)", kind = "chargeTime", key = "AimedShot", spell = ID_AIMEDSHOT },
+        { label = "Precise Shots",         kind = "buff", spell = ID_PRECISE },
+        { label = "Sentinel's Mark",       kind = "buff", spell = ID_SENTMARK },
+        { label = "Trick Shots",           kind = "buff", spell = ID_TRICK },
+        { label = "Bullseye",              kind = "buff", spell = ID_BULLSEYE },
+        { label = "Trueshot (CD left)",    kind = "cdRemain", spell = ID_TRUESHOT },
     },
     economy = {
         gen   = { "Steady Shot", "Auto-shot" },
-        spend = { "Aimed Shot", "Arcane Shot", "Multi-Shot", "Kill Shot" },
+        spend = { "Aimed Shot", "Arcane Shot", "Kill Shot", "Multi-Shot" },
     },
 
-    priority = {
-        -- Single target (Sentinel + Dark Ranger merged). Steady Shot is strictly the
-        -- resource-starved filler and sits last.
-        st = {
-            { spell = "ExplosiveShot" },                            -- on CD (2 casts via Unstable Trigger)
-            { spell = "Volley" },                                   -- on CD
-            { spell = "Trueshot" },                                 -- on CD
-            { spell = "KillShot",   cond = buffUp(ID_PRECISE) },    -- spend Precise Shots (execute)
-            { spell = "ArcaneShot", cond = buffUp(ID_PRECISE) },    -- spend Precise Shots
-            { spell = "RapidFire" },                                -- on CD, builds Precise
-            { spell = "AimedShot" },                                -- on CD (2 charges), builds Precise
-            { spell = "MoonlightChakram" },                         -- Sentinel: on CD
-            { spell = "BlackArrow", cond = buffUp(ID_PRECISE) },    -- DR: spend Precise Shots (low priority)
-            { spell = "SteadyShot" },                               -- filler (resource-starved only)
+    --------------------------------------------------------------------------------
+    -- Rotation Ability & Buff Debug (/prio rotdebug): cooldown/usable + charges/seconds
+    -- per ability, and the buff/debuff reads. Use this to verify the IDs in combat.
+    --------------------------------------------------------------------------------
+    rotationDebug = {
+        title = "Rotation Ability & Buff Debug",
+        abilities = {
+            "Trueshot", "ExplosiveShot", "Volley", "RapidFire", "AimedShot",
+            "ArcaneShot", "KillShot", "MoonlightChakram", "SteadyShot",
         },
-
-        -- Cleave / AoE (Trick Shots). Multi-Shot puts Trick Shots up and is the
-        -- Precise Shots spender; Aimed / Rapid Fire cleave while Trick Shots is up.
-        cleave = {
-            { spell = "ExplosiveShot" },
-            { spell = "Volley" },
-            { spell = "Trueshot" },
-            { spell = "MultiShot",  cond = buffDown(ID_TRICK) },    -- put Trick Shots up
-            { spell = "MultiShot",  cond = buffUp(ID_PRECISE) },    -- spend Precise Shots
-            { spell = "RapidFire",  cond = buffUp(ID_TRICK) },
-            { spell = "AimedShot",  cond = buffUp(ID_TRICK) },
-            { spell = "BlackArrow" },                               -- DR: on CD
-            { spell = "MoonlightChakram" },                         -- Sentinel: on CD
-            { spell = "SteadyShot" },                               -- filler
+        buffs = {
+            { label = "Precise Shots",       spell = ID_PRECISE },
+            { label = "Sentinel's Mark (t)", spell = ID_SENTMARK },
+            { label = "Trick Shots",         spell = ID_TRICK },
+            { label = "Bullseye",            spell = ID_BULLSEYE },
+            { label = "Trueshot (active)",   spell = ID_TRUESHOT },
+        },
+        rangeProbes = {
+            { label = "Focus", kind = "resource" },
         },
     },
+
+    priority = { st = st, aoe = aoe },
 }
-spec.priority.aoe = spec.priority.cleave   -- same list for 3+
 
 PRIO.specs[spec.specID] = spec
