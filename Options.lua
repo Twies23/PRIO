@@ -281,7 +281,7 @@ local function IconButton(parent, glyph, enabled, onClick)
     return b
 end
 
-local function ShowSpellPicker(anchor, spec, onPick)
+local function ShowSpellPicker(anchor, spec, onPick, includeActions)
     if not picker then
         picker = UI.Card(win, C.sidebar, 0.18)
         picker:SetFrameStrata("DIALOG")
@@ -303,6 +303,22 @@ local function ShowSpellPicker(anchor, spec, onPick)
             local nm = UI.Font(b, 12, C.text); nm:SetPoint("LEFT", ic, "RIGHT", 8, 0)
             nm:SetText(API.SpellName(sid))
             b:SetScript("OnClick", function() picker:Hide(); onPick(sid) end)
+            picker.buttons[#picker.buttons + 1] = b
+        end
+    end
+    -- Action nodes (spell-less instructions, e.g. "Target Switch"): pass the action key.
+    if includeActions then
+        for key, a in pairs(spec.actions or {}) do
+            local b = CreateFrame("Button", nil, picker)
+            b:SetSize(W - 8, RH); b:SetPoint("TOPLEFT", 4, -y); y = y + RH
+            local hl = UI.Solid(b, "BACKGROUND", C.accent, 0.14); hl:SetAllPoints(); hl:Hide()
+            b:SetScript("OnEnter", function() hl:Show() end)
+            b:SetScript("OnLeave", function() hl:Hide() end)
+            local ic = b:CreateTexture(nil, "ARTWORK"); ic:SetSize(18, 18); ic:SetPoint("LEFT", 4, 0)
+            ic:SetTexture(a.texture); ic:SetTexCoord(0.1, 0.9, 0.1, 0.9); ic:SetDesaturated(a.desaturate and true or false)
+            local nm = UI.Font(b, 12, C.text); nm:SetPoint("LEFT", ic, "RIGHT", 8, 0)
+            nm:SetText(a.label or key)
+            b:SetScript("OnClick", function() picker:Hide(); onPick(nil, key) end)
             picker.buttons[#picker.buttons + 1] = b
         end
     end
@@ -461,15 +477,16 @@ function Pages.rotation()
             chip:SetScript("OnClick", function() Options:OpenSequenceEditor(spec, e.sequence) end)
         else
             local sid = PRIO.Engine:EntrySpellID(e)
+            local act = e.action and spec.actions and spec.actions[e.action]
             local ic = row:CreateTexture(nil, "ARTWORK")
             ic:SetSize(28, 28); ic:SetPoint("LEFT", 44, 0)
-            ic:SetTexture(sid and API.SpellTexture(sid)); ic:SetTexCoord(0.1, 0.9, 0.1, 0.9)
-            ic:SetDesaturated(e.off and true or false)
+            ic:SetTexture(act and act.texture or (sid and API.SpellTexture(sid))); ic:SetTexCoord(0.1, 0.9, 0.1, 0.9)
+            ic:SetDesaturated((e.off or (act and act.desaturate)) and true or false)
             local nm = UI.Font(row, 13, e.off and C.faint or C.head)
             nm:SetPoint("LEFT", ic, "RIGHT", 10, 6); nm:SetWidth(120); nm:SetJustifyH("LEFT")
-            nm:SetWordWrap(false); nm:SetText(sid and API.SpellName(sid) or tostring(e.spell))
+            nm:SetWordWrap(false); nm:SetText(act and act.label or (sid and API.SpellName(sid)) or tostring(e.spell))
             local pid = UI.Font(row, 10, C.faint); pid:SetPoint("LEFT", ic, "RIGHT", 10, -8)
-            pid:SetText(sid and ("#" .. sid) or "")
+            pid:SetText(act and "action" or (sid and ("#" .. sid) or ""))
 
             -- live pass/fail dot for this row's condition
             local dot = UI.Solid(row, "OVERLAY", C.muted); dot:SetSize(9, 9)
@@ -500,11 +517,12 @@ function Pages.rotation()
     addRow:SetBackdropBorderColor(C.accent[1], C.accent[2], C.accent[3], 0.3)
     local al = UI.Font(addRow, 13, C.accent); al:SetPoint("CENTER"); al:SetText("+  Add ability")
     addRow:SetScript("OnClick", function()
-        ShowSpellPicker(addRow, spec, function(sid)
+        ShowSpellPicker(addRow, spec, function(sid, action)
             local L = EnsureCustom(spec, mode, variant)
-            L[#L + 1] = { spell = sid, cond = nil }
+            if action then L[#L + 1] = { action = action, cond = nil }
+            else L[#L + 1] = { spell = sid, cond = nil } end
             refresh()
-        end)
+        end, true)   -- includeActions
     end)
     cursorY = cursorY + 36
 
@@ -575,7 +593,8 @@ function Options:OpenCondEditorCore(spec, holder, field, selfSid, onChange)
             for _, fn in ipairs(editor.statusFns) do fn(S) end
         end)
     end
-    editor.sub:SetText(sid and API.SpellName(sid) or "")
+    local act = holder and holder.action and spec and spec.actions and spec.actions[holder.action]
+    editor.sub:SetText(act and act.label or (sid and API.SpellName(sid)) or "")
     -- Colour the hint legend dots (pass / fail / open).
     editor.hint:SetText(
         ("|cff0cd29f\226\151\143|r pass   |cffe0685a\226\151\143|r fail   |cffe0a03a\226\151\143|r not readable (ignored)"))

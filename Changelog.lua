@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.6.13", {
+        "Action nodes are now addable in the priority editor. The '+ Add ability' picker lists action nodes (like Marksmanship's Target Switch) alongside spells, so you can drop one anywhere in a list and set its condition like any other row. Action rows show their label + icon and open the condition editor on click.",
+    } },
     { "0.6.12", {
         "New: action nodes -- 'Target Switch' for Marksmanship. A priority row can now be a spell-less instruction that shows a labeled icon whenever its condition passes (always 'off cooldown'). Marksmanship uses it for Target Switch -- the desaturated arrows icon with a 'Target Switch' label -- placed before Trueshot to prompt swapping off an already-marked target. It's a general building block any spec can use.",
     } },
