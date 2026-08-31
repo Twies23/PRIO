@@ -94,6 +94,10 @@ Cond.types = {
     -- Player is stealthed (Stealth / Vanish / Shadow Dance) -- reads IsStealthed() clean.
     { value = "stealthed",    text = "Stealthed",     tag = "outlaw" },
     { value = "notStealthed", text = "Not stealthed", tag = "outlaw" },
+    -- Hunter pet state (readable in combat): no pet / pet dead / pet up.
+    { value = "petMissing", text = "No pet",     tag = "pet" },
+    { value = "petDead",    text = "Pet dead",   tag = "pet" },
+    { value = "petActive",  text = "Pet active", tag = "pet" },
     -- Devourer: souls on the GROUND (uncollected). The count is SECRET in combat, so this
     -- is PRIO's dead-reckoned ESTIMATE (spawns from casts, swept by Reap/Cull) -- see
     -- Spec_Devourer OnCast. Drives the Reap-at-4 / Eradicate-at-10 breakpoints.
@@ -204,6 +208,9 @@ function Cond.ClauseLabel(cl, selfSid)
     elseif t == "soulsHeldMax" then return "Collected souls \226\137\164 " .. (cl.v or 0)
     elseif t == "stealthed" then return "Stealthed"
     elseif t == "notStealthed" then return "Not stealthed"
+    elseif t == "petMissing" then return "no pet"
+    elseif t == "petDead" then return "pet dead"
+    elseif t == "petActive" then return "pet active"
     end
     return "?"
 end
@@ -487,6 +494,10 @@ local function EvalClause(cl, S, selfSid)
     -- Stealthed: clean boolean (Stealth / Vanish / Shadow Dance), readable in combat.
     elseif t == "stealthed"    then return API.Stealthed() == true
     elseif t == "notStealthed" then return API.Stealthed() == false
+    -- Hunter pet state (clean, readable in combat).
+    elseif t == "petMissing" then return API.PetExists and (not API.PetExists())
+    elseif t == "petDead"    then return API.PetExists and API.PetExists() and (API.PetAlive and not API.PetAlive())
+    elseif t == "petActive"  then return (API.PetAlive and API.PetAlive()) == true
     -- Latched execute-range flag (secret-safe: usable-without-proc, debounced).
     elseif t == "inExecuteRange" then
         if S and S.execRange ~= nil then return S.execRange end
@@ -1707,6 +1718,24 @@ function Engine:Evaluate()
     local want     = 1 + (db.numQueue or 3)
     self:UpdateCharges(S.now)
     self:UpdateEnergy(S.now)
+
+    -- Guardian: a critical precondition (e.g. a Hunter's pet missing/dead -- the whole
+    -- rotation depends on it) overrides everything. Runs in AND out of combat and can't be
+    -- edited away by a custom list, so the fix always surfaces first. First match wins.
+    if spec.guardians then
+        for _, g in ipairs(spec.guardians) do
+            local sid = spec.spells[g.spell]
+            if sid and API.IsKnown(sid) and PRIO.Cond.Eval(g.cond, S, sid) then
+                local e = Entry(sid)
+                return {
+                    specLabel = spec.label or "", modeLabel = MODE_LABEL[mode] or mode,
+                    title = (spec.label or "") .. "  \194\183  " .. (MODE_LABEL[mode] or mode),
+                    primary = e, queue = {},
+                    debug = { mode = mode, enemies = enemies, primary = e.name, guardian = g.spell },
+                }
+            end
+        end
+    end
 
     -- Sequence follower: if a listed sequence is active or its start trigger fires, it
     -- drives the rotation (strict fixed order) until its stop trigger / completion.

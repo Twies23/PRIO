@@ -100,6 +100,8 @@ local function usable(id)      return { type = "usable",      spell = id } end  
 local function chargesEq(n)    return { type = "chargesEq",   v = n } end         -- self (the row's spell)
 local function enemiesMin(n)   return { type = "enemiesMin",  v = n } end
 local function preset(key)     return { type = "preset:" .. key } end
+local function petMissing()    return { type = "petMissing" } end
+local function petDead()       return { type = "petDead" } end
 
 --------------------------------------------------------------------------------
 -- PACK LEADER (default). Priority from the Icy Veins 12.1 single-target / AoE lists,
@@ -116,8 +118,9 @@ local pl_st = {
     { spell = "BestialWrath", cond = cdReady(ID_BESTIALWRATH) },                      -- on cooldown (triggers Howl)
     { spell = "KillCommand", cond = AND(preset("howlReady"), usable(ID_KILLCOMMAND)) }, -- Howl ready -> summon a Beast
     { spell = "KillCommand", cond = AND(buffUp(ID_NATURESALLY), cdRemainMin(ID_BESTIALWRATH, 3), usable(ID_KILLCOMMAND)) }, -- Nature's Ally (BW not imminent)
-    { spell = "KillCommand", cond = AND(talentNo(ID_NATURESALLY_TALENT), usable(ID_KILLCOMMAND)) }, -- plain KC (no Nature's Ally talent)
+    { spell = "KillCommand", cond = AND(buffUp(ID_NATURESALLY), usable(ID_KILLCOMMAND)) }, -- empowered KC (Nature's Ally buff up)
     { spell = "KillCommand", cond = AND(buffUp(ID_NATURESALLY), cdRemainMax(ID_BESTIALWRATH, 3), chargesEq(2), usable(ID_KILLCOMMAND)) }, -- bank the last charge for BW
+    { spell = "KillCommand", cond = usable(ID_KILLCOMMAND) },                         -- plain KC on cooldown (fires without a proc)
     { spell = "CobraShot",   cond = AND(stacksMin(ID_COBRAFANG, 4), usable(ID_COBRASHOT)) }, -- spend a capped Cobra Fang
     { spell = "BarbedShot" },                                                         -- on cooldown (Frenzy upkeep)
     { spell = "CobraShot",   cond = cdRemainMin(ID_BESTIALWRATH, 2) },                -- filler, unless BW is within a GCD
@@ -134,7 +137,7 @@ local pl_aoe = {
     { spell = "BestialWrath", cond = OR(cdReady(ID_WILDTHRASH), buffUp(ID_BEASTCLEAVE)) }, -- with Wild Thrash ready / Beast Cleave up
     { spell = "WildThrash" },                                                         -- on cooldown (keep Beast Cleave up)
     { spell = "KillCommand", cond = OR(enemiesMin(4), preset("howlReady"), usable(ID_KILLCOMMAND)) }, -- 4+ targets / Howl / affordable
-    { spell = "KillCommand", cond = AND(talentNo(ID_NATURESALLY_TALENT), usable(ID_KILLCOMMAND)) }, -- plain KC (no Nature's Ally talent)
+    { spell = "KillCommand", cond = AND(buffUp(ID_NATURESALLY), usable(ID_KILLCOMMAND)) }, -- empowered KC (Nature's Ally buff up)
     { spell = "CobraShot",   cond = AND(buffUp(ID_COBRAFANG), buffUp(ID_BEASTCLEAVE), usable(ID_COBRASHOT)) }, -- Cobra Fang cleaves (30%)
     { spell = "BarbedShot" },                                                         -- on cooldown
     { spell = "CobraShot" },                                                          -- filler
@@ -290,6 +293,8 @@ local spec = {
           hint = "Frenzy lives on your pet, so the Cooldown Manager (player auras only) can't track it. PRIO keeps it up indirectly by pressing Barbed Shot before it caps 2 charges -- no tracking needed." },
         { kind = "info", label = "Focus",
           hint = "Focus is secret in combat, so PRIO doesn't read the number -- spenders still show, but a spender is dimmed (desaturated) while the game's insufficient-power flag says you can't afford it yet. No tracking needed." },
+        { kind = "info", label = "Pet",
+          hint = "No tracking needed: PRIO checks whether your pet is up and, if it's dead or missing, shows Revive Pet / Call Pet before anything else (your whole rotation needs a pet)." },
     },
 
     spells = {
@@ -305,6 +310,18 @@ local spec = {
         BlackArrow    = ID_BLACKARROW,
         WailingArrow  = ID_WAILINGARROW,
         HuntersMark   = ID_HUNTERSMARK,
+        CallPet       = 883,    -- summon pet (no pet up)
+        RevivePet     = 982,    -- revive a dead pet
+        MendPet       = 136,    -- heal the pet
+    },
+
+    -- Pet guardian: BM does nothing without a pet, so if the pet is dead or missing that
+    -- overrides the whole rotation (checked before the priority list, in and out of combat,
+    -- regardless of custom lists). Revive a dead pet; summon one if you have none.
+    condTags = { pet = true },
+    guardians = {
+        { spell = "RevivePet", cond = petDead() },
+        { spell = "CallPet",   cond = petMissing() },
     },
 
     -- Opener (Icy Veins 12.1): Hunter's Mark pre-pull, then Barbed Shot x2 around Bestial
@@ -321,6 +338,7 @@ local spec = {
     pickable = {
         "BarbedShot", "KillCommand", "BestialWrath", "CobraShot", "WildThrash", "KillShot",
         "CallOfTheWild", "Bloodshed", "ExplosiveShot", "BlackArrow", "WailingArrow", "HuntersMark",
+        "CallPet", "RevivePet", "MendPet",
     },
 
     -- Barbed Shot and Kill Command both run on 2 charges (KC needs Alpha Predator; the

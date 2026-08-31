@@ -208,6 +208,17 @@ function API.Stealthed()
     return (ok and s) and true or false
 end
 
+-- Pet state -- readable in combat (not a secret value). Exists = a pet is summoned;
+-- Alive = that pet is up and not dead. Used by the Hunter pet guardian.
+function API.PetExists()
+    return SafeCall(UnitExists, "pet") and true or false
+end
+function API.PetAlive()
+    if not API.PetExists() then return false end
+    if SafeCall(UnitIsDead, "pet") then return false end
+    return true
+end
+
 --------------------------------------------------------------------------------
 -- Cooldown: the reliable clean-boolean readiness test.
 --   ready = not (isActive and not isOnGCD)

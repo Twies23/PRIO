@@ -11,6 +11,10 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.5.16", {
+        "Beast Mastery -- pet check. If your pet is dead or missing, PRIO now shows Revive Pet / Call Pet before anything else -- a guardian that runs in and out of combat and can't be edited away, since your whole rotation depends on having a pet.",
+        "Empowered Kill Command now keys on the Nature's Ally buff (not the talent), with a plain Kill Command fallback beneath it so Kill Command still fires on cooldown when the buff isn't up.",
+    } },
     { "0.5.15", {
         "Beast Mastery -- fixed the 'no Nature's Ally talent' Kill Command condition. It was pointing at the Nature's Ally buff ID instead of the talent node, so it showed '--' in the condition editor and didn't resolve. It now uses the correct talent (1273126) and reads as 'Nature's Ally', so the plain Kill Command line correctly applies only on builds that don't take Nature's Ally.",
     } },

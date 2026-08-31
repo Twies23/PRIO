@@ -187,6 +187,29 @@ test("BM: Hunter's Mark maintenance reads the target-debuff state", function()
     truthy(H.Cond.Eval({ type = "debuffMissing", spell = HM }, H.S, HM), "mark down -> missing (reapply)")
 end)
 
+test("BM pet guardian: a dead or missing pet overrides the rotation", function()
+    H.reset(); H.S.specID = 253; H.S.enemies = 1; H.rebind()
+    H.Engine.openerActive = false
+    local origE, origA = H.API.PetExists, H.API.PetAlive
+
+    H.API.PetExists = function() return true end       -- pet exists but dead -> Revive Pet
+    H.API.PetAlive  = function() return false end
+    local r = H.Engine:Evaluate()
+    eq(r and r.primary and r.primary.name, "Spell982", "pet dead -> Revive Pet")
+
+    H.API.PetExists = function() return false end       -- no pet -> Call Pet
+    r = H.Engine:Evaluate()
+    eq(r and r.primary and r.primary.name, "Spell883", "no pet -> Call Pet")
+
+    H.API.PetExists = function() return true end         -- pet up -> guardian inert
+    H.API.PetAlive  = function() return true end
+    r = H.Engine:Evaluate()
+    truthy(r and r.primary, "pet alive -> normal rotation")
+    truthy(r.primary.name ~= "Spell982" and r.primary.name ~= "Spell883", "no pet spell shown when the pet is up")
+
+    H.API.PetExists, H.API.PetAlive = origE, origA
+end)
+
 test("every priority row names a spell that exists in spec.spells", function()
     for variant, lists in pairs(H.bmSpec.priorityByVariant) do
         for mode, list in pairs(lists) do
