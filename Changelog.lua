@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.5.14", {
+        "Beast Mastery -- Pack Leader default lists updated to the tuned in-game version. Single-target and AoE now ship the hand-tuned Pack Leader priority: Focus-gated spenders (shown only when affordable), the Howl / Nature's Ally Kill Command split with last-charge banking before Bestial Wrath, Wild Thrash right after Bestial Wrath and on cooldown, Bestial Wrath held for Wild Thrash / Beast Cleave, and Hunter's Mark upkeep. Reset a mode to default to pick these up if you've customized.",
+    } },
     { "0.5.13", {
         "Beast Mastery -- Hunter's Mark is now maintained on your target. PRIO reapplies Hunter's Mark when the target is missing the 3% damage-taken debuff (e.g. after a target swap), reading it from your Cooldown Manager's Tracked Buffs.",
         "Fixed the Beast Cleave tracking ID (now 115939). The previous ID never matched what the game tracks, so the AoE 'keep Beast Cleave up' lines couldn't read it -- they work now. Make sure Beast Cleave is on your Cooldown Manager (it shows as a Tracked Bar) so Wild Thrash refreshes it.",

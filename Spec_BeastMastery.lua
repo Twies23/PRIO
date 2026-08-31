@@ -92,48 +92,51 @@ local function cdRemainMin(id,n) return { type = "cdRemainMin", spell = id, v = 
 local function cdRemainMax(id,n) return { type = "cdRemainMax", spell = id, v = n } end
 local function glow(id)        return { type = "glowing",     spell = id } end
 local function talent(id)      return { type = "talentYes",   spell = id } end
+local function talentNo(id)    return { type = "talentNo",    spell = id } end
+local function cdReady(id)     return { type = "cdReady",     spell = id } end
+local function lastCast(id)    return { type = "lastCast",    spell = id } end
+local function usable(id)      return { type = "usable",      spell = id } end   -- gates on Focus affordability (IsUsable)
+local function chargesEq(n)    return { type = "chargesEq",   v = n } end         -- self (the row's spell)
+local function enemiesMin(n)   return { type = "enemiesMin",  v = n } end
+local function preset(key)     return { type = "preset:" .. key } end
 
 --------------------------------------------------------------------------------
 -- PACK LEADER (default). Priority from the Icy Veins 12.1 single-target / AoE lists,
 -- with major cooldowns (Call of the Wild / Bloodshed) folded in (inert if not talented)
 -- and Kill Command kept pressable when no proc gates it.
 --------------------------------------------------------------------------------
+-- Pack Leader ST -- user-tuned in-game (0.5.13). Spenders gate on "usable" (= Focus
+-- affordable). Kill Command splits: Howl-glow, Nature's Ally (bank the last charge near
+-- Bestial Wrath), and a plain line that only applies when you DON'T have the Nature's Ally
+-- talent (with it, the two proc lines cover Kill Command).
 local pl_st = {
-    -- Refresh Frenzy right before Bestial Wrath, or before Barbed Shot caps its 2 charges.
-    { spell = "BarbedShot", cond = OR(cdRemainMax(ID_BESTIALWRATH, 3), chargesMin(2)) }, -- refresh before BW / at 2 charges (the recharge time is secret in combat, so gate on the readable count)
-    { spell = "BestialWrath" },                                   -- bread & butter, on CD (triggers Howl)
-    { spell = "CallOfTheWild" },                                  -- major CD (talent; inert if not taken)
-    { spell = "Bloodshed" },                                      -- talent, on CD
-    { spell = "HuntersMark", cond = debuffDown(ID_HUNTERSMARK) }, -- maintain the 3% damage-taken debuff (reapply on target swap)
-    { spell = "KillCommand", cond = glow(ID_KILLCOMMAND) },       -- Howl ready (KC glows) -> next KC summons a Beast
-    -- Nature's Ally empowered KC, but bank the last charge when Bestial Wrath is imminent.
-    { spell = "KillCommand", cond = AND(buffUp(ID_NATURESALLY), OR(chargesMin(2), cdRemainMin(ID_BESTIALWRATH, 3))) },
-    { spell = "CobraShot", cond = AND(talent(ID_KILLERCOBRA), buffUp(ID_BESTIALWRATH)) }, -- Killer Cobra: reset KC in BW
-    { spell = "CobraShot", cond = stacksMin(ID_COBRAFANG, 4) },   -- spend a capped Cobra Fang
-    { spell = "BarbedShot" },                                     -- on cooldown (Frenzy upkeep)
-    { spell = "KillCommand" },                                    -- primary spender (charges), no proc needed
-    { spell = "KillShot" },                                       -- execute
-    { spell = "CobraShot", cond = cdRemainMin(ID_BESTIALWRATH, 2) }, -- filler, unless BW is within a GCD
-    { spell = "CobraShot" },                                      -- final Focus dump
+    { spell = "HuntersMark", cond = debuffDown(ID_HUNTERSMARK) },                     -- keep the 3% debuff up
+    { spell = "BarbedShot",  cond = OR(cdRemainMax(ID_BESTIALWRATH, 3), chargesEq(2)) }, -- refresh before BW / at 2 charges
+    { spell = "BestialWrath", cond = cdReady(ID_BESTIALWRATH) },                      -- on cooldown (triggers Howl)
+    { spell = "KillCommand", cond = AND(preset("howlReady"), usable(ID_KILLCOMMAND)) }, -- Howl ready -> summon a Beast
+    { spell = "KillCommand", cond = AND(buffUp(ID_NATURESALLY), cdRemainMin(ID_BESTIALWRATH, 3), usable(ID_KILLCOMMAND)) }, -- Nature's Ally (BW not imminent)
+    { spell = "KillCommand", cond = AND(talentNo(ID_NATURESALLY), usable(ID_KILLCOMMAND)) }, -- plain KC (no Nature's Ally talent)
+    { spell = "KillCommand", cond = AND(buffUp(ID_NATURESALLY), cdRemainMax(ID_BESTIALWRATH, 3), chargesEq(2), usable(ID_KILLCOMMAND)) }, -- bank the last charge for BW
+    { spell = "CobraShot",   cond = AND(stacksMin(ID_COBRAFANG, 4), usable(ID_COBRASHOT)) }, -- spend a capped Cobra Fang
+    { spell = "BarbedShot" },                                                         -- on cooldown (Frenzy upkeep)
+    { spell = "CobraShot",   cond = cdRemainMin(ID_BESTIALWRATH, 2) },                -- filler, unless BW is within a GCD
 }
 
+-- Pack Leader AoE -- user-tuned in-game (0.5.13). Wild Thrash right after Bestial Wrath
+-- and on cooldown; Bestial Wrath held for Wild Thrash / Beast Cleave; Kill Command opened
+-- up on 4+ targets (or Howl / when affordable); Cobra Shot cleaves with Cobra Fang + Beast
+-- Cleave. Spenders gate on "usable" (Focus affordable).
 local pl_aoe = {
-    -- Wild Thrash (replaces Multi-Shot) puts / keeps Beast Cleave up. The condensed Icy
-    -- list omits it; every other source keeps it at the top of AoE, so we do too.
-    { spell = "WildThrash", cond = buffDown(ID_BEASTCLEAVE) },    -- put Beast Cleave up
-    { spell = "BarbedShot", cond = chargesMin(2) },              -- at 2 charges (readable count; recharge time is secret)
-    { spell = "BestialWrath" },                                   -- on CD
-    { spell = "CallOfTheWild" },                                  -- major CD (talent)
-    { spell = "WildThrash" },                                     -- on CD (keep Beast Cleave up)
-    { spell = "Bloodshed" },                                      -- talent, on CD
-    { spell = "HuntersMark", cond = debuffDown(ID_HUNTERSMARK) }, -- maintain the 3% damage-taken debuff (reapply on target swap)
-    { spell = "KillCommand", cond = buffUp(ID_NATURESALLY) },     -- empowered KC
-    { spell = "KillCommand" },                                    -- splashes via Beast Cleave
-    { spell = "CobraShot", cond = AND(stacksMin(ID_COBRAFANG, 4), buffUp(ID_BEASTCLEAVE)) }, -- Cobra Fang cleaves (30%)
-    { spell = "ExplosiveShot" },                                  -- AoE nuke (talent)
-    { spell = "BarbedShot" },                                     -- on cooldown
-    { spell = "KillShot" },                                       -- execute
-    { spell = "CobraShot" },                                      -- filler
+    { spell = "HuntersMark", cond = debuffDown(ID_HUNTERSMARK) },                     -- keep the 3% debuff up
+    { spell = "WildThrash",  cond = lastCast(ID_BESTIALWRATH) },                      -- right after Bestial Wrath
+    { spell = "BarbedShot",  cond = chargesMin(2) },                                  -- at 2 charges (Frenzy)
+    { spell = "BestialWrath", cond = OR(cdReady(ID_WILDTHRASH), buffUp(ID_BEASTCLEAVE)) }, -- with Wild Thrash ready / Beast Cleave up
+    { spell = "WildThrash" },                                                         -- on cooldown (keep Beast Cleave up)
+    { spell = "KillCommand", cond = OR(enemiesMin(4), preset("howlReady"), usable(ID_KILLCOMMAND)) }, -- 4+ targets / Howl / affordable
+    { spell = "KillCommand", cond = AND(talentNo(ID_NATURESALLY), usable(ID_KILLCOMMAND)) }, -- plain KC (no Nature's Ally talent)
+    { spell = "CobraShot",   cond = AND(buffUp(ID_COBRAFANG), buffUp(ID_BEASTCLEAVE), usable(ID_COBRASHOT)) }, -- Cobra Fang cleaves (30%)
+    { spell = "BarbedShot" },                                                         -- on cooldown
+    { spell = "CobraShot" },                                                          -- filler
 }
 
 --------------------------------------------------------------------------------
