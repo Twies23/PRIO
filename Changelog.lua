@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.6.11", {
+        "Marksmanship -- Sentinel AoE handles Trick Shots / Aspect of the Hydra. The two AoE-defining talents (the Trick Shots vs Aspect of the Hydra choice node) are now talent-gated lines in the Sentinel AoE list: Trick Shots activates the Aimed / Rapid Fire ricochet via Multi-Shot on 3+; Aspect of the Hydra spends Precise Shots on Multi-Shot at 2+. On a pure single-target build both stay inert (AoE plays like ST).",
+    } },
     { "0.6.10", {
         "Marksmanship -- Sentinel / Dark Ranger variant split. Added the hero-style variant system (auto-selected from Black Arrow): your tuned Sentinel lists plus a first-pass Dark Ranger single-target priority (Black Arrow as the Precise spender + core cooldown, Wailing Arrow, Aimed-in-Trueshot). Also fixed variant auto-detection, which was always falling back to Sentinel.",
     } },

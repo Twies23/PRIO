@@ -63,6 +63,8 @@ local ID_BULLETSTORM = 389019    -- Bulletstorm (bar) -- Aimed Shot stacking buf
 local ID_CANTMISS      = 1253830  -- Can't Miss, Won't Miss: Trueshot duration +2s (15 -> 17)
 local ID_CALLINGSHOTS  = 260404   -- Calling the Shots: Trueshot cooldown -30s (120 -> 90)
 local ID_UNBREAKABLE   = 1223323  -- Unbreakable Bond: regains Call Pet (MM is petless without it)
+local ID_TRICKSHOTS_T  = 257621   -- Trick Shots talent (choice node) -- same id as its buff
+local ID_ASPECTHYDRA   = 470945   -- Aspect of the Hydra talent (choice node opposite Trick Shots)
 
 local function AND(...) return { op = "and", clauses = { ... } } end
 local function OR(...)  return { op = "or",  clauses = { ... } } end
@@ -80,6 +82,7 @@ local function cdReady(id)     return { type = "cdReady",     spell = id } end
 local function cdRemainMin(id,n) return { type = "cdRemainMin", spell = id, v = n } end
 local function lastCast(id)    return { type = "lastCast",    spell = id } end
 local function chargesMin(n)   return { type = "chargesMin",  v = n } end   -- self (the row's spell)
+local function enemiesMin(n)   return { type = "enemiesMin",  v = n } end
 -- MM only has a pet WITH Unbreakable Bond (petless Lone Wolf otherwise), so the pet-check
 -- lines gate on that talent -- inert on a Lone Wolf build, active once you take the pet.
 local function petGuarded(inner) return AND(talentYes(ID_UNBREAKABLE), inner) end
@@ -136,11 +139,37 @@ local dr_st = {
     { spell = "SteadyShot" },                                         -- Focus filler
 }
 
+-- SENTINEL AoE. The two talents that change AoE are the choice node Trick Shots vs Aspect
+-- of the Hydra -- so the AoE lines self-gate on whichever you took (talentYes), and stay
+-- inert on a pure single-target build (where AoE == ST). Trick Shots: Multi-Shot on 3+
+-- activates the Aimed / Rapid Fire ricochet. Aspect of the Hydra: Multi-Shot spends Precise
+-- on 2+. Neither talented -> falls through to the ST spenders (Arcane / Aimed).
+local sentinel_aoe = {
+    { spell = "CallPet",     cond = petGuarded(petMissing()) },
+    { spell = "RevivePet",   cond = petGuarded(petDead()) },
+    { spell = "HuntersMark", cond = buffDown(ID_HUNTERSMARK) },
+    { spell = "ExplosiveShot", cond = cdReady(ID_EXPLOSIVE) },
+    { spell = "Volley",      cond = cdReady(ID_VOLLEY) },
+    { spell = "Trueshot",    cond = AND(cdRemainMin(ID_EXPLOSIVE, 15), buffDown(ID_TRUESHOT), cdReady(ID_TRUESHOT)) },
+    { spell = "Trueshot",    cond = lastCast(ID_EXPLOSIVE) },
+    { spell = "MoonlightChakram", cond = AND(cdReady(ID_MOONCHAKRAM), buffUp(ID_TRUESHOT)) },
+    { spell = "MultiShot",   cond = AND(talentYes(ID_TRICKSHOTS_T), buffDown(ID_TRICK), enemiesMin(3)) }, -- activate Trick Shots
+    { spell = "RapidFire",   cond = AND(talentYes(ID_TRICKSHOTS_T), buffUp(ID_TRICK)) },   -- cleave with Trick Shots up
+    { spell = "AimedShot",   cond = AND(talentYes(ID_TRICKSHOTS_T), buffUp(ID_TRICK)) },   -- cleave with Trick Shots up
+    { spell = "KillShot",    cond = buffUp(ID_PRECISE) },                                   -- spend Precise (execute)
+    { spell = "MultiShot",   cond = AND(talentYes(ID_ASPECTHYDRA), enemiesMin(2), buffUp(ID_PRECISE)) },  -- Hydra: spend Precise on 2+
+    { spell = "MultiShot",   cond = AND(talentYes(ID_TRICKSHOTS_T), enemiesMin(3), buffUp(ID_PRECISE)) },  -- Trick Shots: spend Precise on 3+
+    { spell = "ArcaneShot",  cond = buffUp(ID_PRECISE) },                                   -- spend Precise (default)
+    { spell = "RapidFire" },                                                                -- on CD, builds Precise
+    { spell = "AimedShot" },                                                                -- on CD
+    { spell = "MoonlightChakram", cond = AND(cdReady(ID_MOONCHAKRAM), buffUp(ID_TRUESHOT)) }, -- filler in Trueshot
+    { spell = "SteadyShot" },                                                               -- Focus filler
+}
+
 -- Variant split (like BM's Pack Leader / Dark Ranger): Dark Ranger when Black Arrow is
--- talented, else Sentinel (the default). Each variant's AoE clones its ST until the Trick
--- Shots AoE variant is tuned. Per-variant customization stores separately in db.
+-- talented, else Sentinel (the default). Per-variant customization stores separately in db.
 local heroLists = {
-    sentinel    = { st = st,    aoe = st },
+    sentinel    = { st = st,    aoe = sentinel_aoe },
     dark_ranger = { st = dr_st, aoe = dr_st },
 }
 local function activeHero()
