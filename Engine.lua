@@ -1399,11 +1399,17 @@ end
 -- Evaluate: returns { title=, primary=, queue={} }
 --------------------------------------------------------------------------------
 Entry = function(spellID)
+    local kb = PRIO.db.showKeybinds and API.Keybind(spellID) or ""
+    -- Override spells (e.g. Moonlight Chakram on the Trueshot key) have no bind of their
+    -- own -- fall back to the aliased spell's keybind so the queue still shows one.
+    if (kb == nil or kb == "") and PRIO.db.showKeybinds and spec and spec.keybindAlias and spec.keybindAlias[spellID] then
+        kb = API.Keybind(spec.keybindAlias[spellID]) or ""
+    end
     return {
         id      = spellID,
         texture = API.SpellTexture(spellID),
         name    = API.SpellName(spellID),
-        keybind = PRIO.db.showKeybinds and API.Keybind(spellID) or "",
+        keybind = kb,
     }
 end
 

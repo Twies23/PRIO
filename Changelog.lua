@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.6.16", {
+        "Marksmanship -- Moonlight Chakram now tracked by its glow, and shows the Trueshot keybind. Chakram replaces the Trueshot button, so its own cooldown read is unreliable. PRIO now reads its 'castable' state from the icon glow (which clears once you use it), so it's suggested only while actually available and only once per Trueshot. Its keybind now mirrors Trueshot's, and Rotation Debug shows the Chakram/Trueshot glow.",
+    } },
     { "0.6.15", {
         "Marksmanship -- Moonlight Chakram no longer double-recommended. After you use it in Trueshot the button keeps reading 'ready', so it was suggested a second time. Both Chakram lines now also gate on a 'used this window' flag (reset when you press Trueshot), so it shows once per Trueshot. Rotation Debug shows the flag.",
     } },

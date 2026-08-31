@@ -81,6 +81,11 @@ local function predFalse(key)  return { type = "predFalse", key = key } end
 local function cdReady(id)     return { type = "cdReady",     spell = id } end
 local function cdRemainMin(id,n) return { type = "cdRemainMin", spell = id, v = n } end
 local function lastCast(id)    return { type = "lastCast",    spell = id } end
+local function glow(id)        return { type = "glowing",     spell = id } end
+-- Moonlight Chakram replaces the Trueshot button during Trueshot and its CDM icon GLOWS
+-- when it's castable -- the clean "cast it now" signal (cdReady is unreliable for an
+-- override spell). Read the glow off either the Chakram or the Trueshot frame.
+local function chakramGlow() return OR(glow(1264902), glow(288613)) end
 local function chargesMin(n)   return { type = "chargesMin",  v = n } end   -- self (the row's spell)
 local function enemiesMin(n)   return { type = "enemiesMin",  v = n } end
 -- MM only has a pet WITH Unbreakable Bond (petless Lone Wolf otherwise), so the pet-check
@@ -108,13 +113,13 @@ local st = {
     { spell = "Volley",      cond = cdReady(ID_VOLLEY) },             -- on CD
     { spell = "Trueshot",    cond = AND(cdRemainMin(ID_EXPLOSIVE, 15), buffDown(ID_TRUESHOT), cdReady(ID_TRUESHOT)) }, -- hold until Explosive is >=15s out
     { spell = "Trueshot",    cond = lastCast(ID_EXPLOSIVE) },         -- pop right after Explosive Shot
-    { spell = "MoonlightChakram", cond = AND(auraRemainMax(ID_TRUESHOT, 7), cdReady(ID_MOONCHAKRAM), predFalse("chakramUsed")) }, -- ~end of Trueshot, once per window
+    { spell = "MoonlightChakram", cond = AND(auraRemainMax(ID_TRUESHOT, 7), chakramGlow()) }, -- ~end of Trueshot (glow = castable, clears after use)
     { spell = "RapidFire" },                                          -- on CD, builds Precise
     { spell = "KillShot",    cond = buffUp(ID_PRECISE) },             -- spend Precise (execute)
     { spell = "MultiShot",   cond = AND(buffUp(ID_PRECISE), enemiesMin(2), talentYes(ID_ASPECTHYDRA)) }, -- Hydra: spend Precise on 2+
     { spell = "ArcaneShot",  cond = buffUp(ID_PRECISE) },             -- spend Precise -> apply the mark
     { spell = "AimedShot" },                                          -- on CD (charges), consumes the mark
-    { spell = "MoonlightChakram", cond = AND(cdReady(ID_MOONCHAKRAM), buffUp(ID_TRUESHOT), predFalse("chakramUsed")) }, -- filler in Trueshot, once per window
+    { spell = "MoonlightChakram", cond = chakramGlow() },             -- filler while it's castable (glow)
     { spell = "SteadyShot" },                                         -- Focus filler
 }
 
@@ -181,6 +186,10 @@ local spec = {
     actions = {
         switchTargets = { texture = 450908, label = "Target Switch", desaturate = true },
     },
+
+    -- Keybind aliases: an override spell has no bind of its own -- Moonlight Chakram is cast
+    -- on the Trueshot key, so show Trueshot's keybind for it.
+    keybindAlias = { [ID_MOONCHAKRAM] = ID_TRUESHOT },
 
     -- Variant split: Sentinel (default) / Dark Ranger, auto-selected from Black Arrow.
     activeHero = activeHero,
@@ -352,10 +361,12 @@ local spec = {
             { label = "Hunter's Mark (tgt)", spell = ID_HUNTERSMARK },
             { label = "Trueshot (active)",   spell = ID_TRUESHOT },
         },
+        glows = {
+            { label = "Chakram (castable)", spell = ID_MOONCHAKRAM },
+            { label = "Trueshot glow",      spell = ID_TRUESHOT },
+        },
         rangeProbes = {
             { label = "Focus", kind = "resource" },
-            -- Moonlight Chakram once-per-Trueshot: false = available this window, true = used.
-            { label = "Chakram used (window)", kind = "predFlag", key = "chakramUsed" },
         },
     },
 
