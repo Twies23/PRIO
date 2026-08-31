@@ -219,6 +219,23 @@ function API.PetAlive()
     return true
 end
 
+-- Does the CURRENT TARGET have this aura (e.g. your Hunter's Mark debuff)? Reads the unit
+-- aura directly (UnitAuraID), so it's per-target and handles target swaps -- unlike the
+-- Cooldown Manager buff read, which only says "a mark exists somewhere". true = present,
+-- false = absent (target exists, no aura), nil = no target / secret / unavailable.
+function API.TargetHasAura(spellID)
+    if not (spellID and SafeCall(UnitExists, "target")) then return nil end
+    if C_UnitAuras and C_UnitAuras.GetAuraDataBySpellID then
+        local ok, d = pcall(C_UnitAuras.GetAuraDataBySpellID, "target", spellID)
+        if ok then
+            if d == nil then return false end
+            if IsSecret(d) then return nil end
+            return true
+        end
+    end
+    return nil
+end
+
 --------------------------------------------------------------------------------
 -- Cooldown: the reliable clean-boolean readiness test.
 --   ready = not (isActive and not isOnGCD)

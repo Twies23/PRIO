@@ -613,6 +613,14 @@ function RotationDebug:Update()
                 local a = d.applications
                 local st = (type(a) == "number" and not API.IsSecret(a) and a > 0) and (" \195\151" .. a) or ""
                 return "|cff0cd29freadable|r|cff9fb0be" .. st .. "|r"
+            elseif r.kind == "targetAura" then
+                -- Unit-aura read on the CURRENT TARGET (e.g. your Hunter's Mark debuff):
+                -- present / absent / no-target-or-secret. This is the per-target signal the
+                -- Hunter's Mark line uses (the CDM buff read only says "a mark exists").
+                local v = API.TargetHasAura and API.TargetHasAura(r.spell)
+                if v == true then return "|cff0cd29fon target|r" end
+                if v == false then return "|cff5a6a76absent|r" end
+                return "|cffe0a03ano target / secret|r"
             elseif r.kind == "resource" then
                 -- Discrete class power (e.g. Combo Points) -- readable clean in combat.
                 local pt = r.power or (spec and spec.resource)

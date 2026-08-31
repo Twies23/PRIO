@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.6.19", {
+        "Marksmanship -- Hunter's Mark now tracked per-target. It's read as the debuff on your CURRENT TARGET (UnitAuraID 257284), not the Cooldown Manager buff -- so it correctly re-prompts when you swap to an unmarked target, and never nags when you have no target or the read is unavailable. The Hunter's Mark upkeep line is back in the Sentinel and Dark Ranger defaults, and Rotation Debug shows the live 'Hunter's Mark (target)' read. Two new conditions -- 'Hunter's Mark missing (target)' and 'Hunter's Mark on target' -- are available in the editor.",
+    } },
     { "0.6.18", {
         "Marksmanship -- Moonlight Chakram tracking fixed properly. Its button glow doesn't read (not a proc overlay) and its cooldown always reads ready, so PRIO now gates it on Trueshot being active plus a once-per-window flag that correctly handles the override -- a Trueshot-key press while Trueshot is active is counted as the Chakram cast. So it's suggested once during Trueshot and doesn't come back after you use it. Added a 'Chakram available' condition you can drop on any line.",
     } },

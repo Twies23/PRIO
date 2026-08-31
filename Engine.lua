@@ -211,6 +211,8 @@ function Cond.ClauseLabel(cl, selfSid)
     elseif t == "petMissing" then return "no pet"
     elseif t == "petDead" then return "pet dead"
     elseif t == "petActive" then return "pet active"
+    elseif t == "tgtAura" then return name .. " on target"
+    elseif t == "tgtAuraMissing" then return "target no " .. name
     end
     return "?"
 end
@@ -498,6 +500,12 @@ local function EvalClause(cl, S, selfSid)
     elseif t == "petMissing" then return API.PetExists and (not API.PetExists())
     elseif t == "petDead"    then return API.PetExists and API.PetExists() and (API.PetAlive and not API.PetAlive())
     elseif t == "petActive"  then return (API.PetAlive and API.PetAlive()) == true
+    -- Target unit-aura (e.g. your Hunter's Mark debuff): per-target, handles swaps.
+    -- Fail-CLOSED on "missing": only true when the target is confirmed to LACK it
+    -- (target exists, aura absent). No target / secret read -> nil -> not missing, so
+    -- an untargeted or unreadable state never nags to re-apply.
+    elseif t == "tgtAura"        then return (API.TargetHasAura and API.TargetHasAura(sid)) == true
+    elseif t == "tgtAuraMissing" then return (API.TargetHasAura and API.TargetHasAura(sid)) == false
     -- Latched execute-range flag (secret-safe: usable-without-proc, debounced).
     elseif t == "inExecuteRange" then
         if S and S.execRange ~= nil then return S.execRange end

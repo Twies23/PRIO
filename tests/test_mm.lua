@@ -72,6 +72,33 @@ test("MM pet lines gate on Unbreakable Bond (Lone Wolf -> no Call Pet)", functio
     H.API.PetExists = origE
 end)
 
+test("Hunter's Mark reads the TARGET aura (per-target), fail-closed on no read", function()
+    local HMARK = 257284
+    H.reset(); H.S.specID = 254; H.S.enemies = 1
+    setmetatable(H.S.ready, { __index = function() return false end })
+    H.S.ready[HMARK] = true
+
+    -- Target confirmed to LACK the mark -> the line fires.
+    H.S.targetAuras[HMARK] = false
+    H.rebind(); H.Engine.openerActive = false
+    local r = H.Engine:Evaluate()
+    eq(r and r.primary and r.primary.name, "Spell" .. HMARK, "target missing the mark -> Hunter's Mark shown")
+
+    -- Mark present on the target -> the line does NOT fire.
+    H.S.targetAuras[HMARK] = true
+    H.rebind(); H.Engine.openerActive = false
+    r = H.Engine:Evaluate()
+    truthy(not (r and r.primary and r.primary.name == "Spell" .. HMARK),
+        "mark on target -> Hunter's Mark not shown")
+
+    -- No target / secret (nil) -> fail-closed: do NOT nag.
+    H.S.targetAuras[HMARK] = nil
+    H.rebind(); H.Engine.openerActive = false
+    r = H.Engine:Evaluate()
+    truthy(not (r and r.primary and r.primary.name == "Spell" .. HMARK),
+        "unreadable target aura -> Hunter's Mark not shown (fail-closed)")
+end)
+
 test("Moonlight Chakram once-per-Trueshot flag", function()
     H.reset(); H.S.specID = 254; H.rebind()
     local TS, CHAKRAM = 288613, 1264902

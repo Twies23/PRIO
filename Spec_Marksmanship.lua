@@ -95,6 +95,12 @@ local function petGuarded(inner) return AND(talentYes(ID_UNBREAKABLE), inner) en
 -- Reads whichever is present, so it works while levelling and at max.
 local function markUp()   return OR(debuffUp(ID_SPOTTERMARK), debuffUp(ID_SENTMARK)) end
 local function markDown() return AND(debuffDown(ID_SPOTTERMARK), debuffDown(ID_SENTMARK)) end
+-- Hunter's Mark reads as the TARGET's unit aura (UnitAuraID 257284) -- per-target, so it
+-- re-prompts on a target swap. Fail-closed: "missing" only fires when the target is
+-- confirmed to lack it (no nag with no target / an unreadable read). NOT the CDM buff read
+-- (that only says "a mark exists somewhere" and doesn't follow the swap).
+local function hmarkDown() return { type = "tgtAuraMissing", spell = ID_HUNTERSMARK } end
+local function hmarkUp()   return { type = "tgtAura",        spell = ID_HUNTERSMARK } end
 
 --------------------------------------------------------------------------------
 -- Sentinel priority -- user-tuned in-game (0.6.8). Explosive Shot / Volley on CD; hold
@@ -109,6 +115,7 @@ local function markDown() return AND(debuffDown(ID_SPOTTERMARK), debuffDown(ID_S
 local st = {
     { spell = "CallPet",     cond = petGuarded(petMissing()) },       -- (Unbreakable Bond) no pet -> summon
     { spell = "RevivePet",   cond = petGuarded(petDead()) },          -- (Unbreakable Bond) pet dead -> revive
+    { spell = "HuntersMark", cond = hmarkDown() },                    -- keep the target's Hunter's Mark up (per-target read)
     { spell = "ExplosiveShot", cond = cdReady(ID_EXPLOSIVE) },        -- on CD (2 casts, Unstable Trigger)
     { spell = "Volley",      cond = cdReady(ID_VOLLEY) },             -- on CD
     { spell = "Trueshot",    cond = AND(cdRemainMin(ID_EXPLOSIVE, 15), buffDown(ID_TRUESHOT), cdReady(ID_TRUESHOT)) }, -- hold until Explosive is >=15s out
@@ -132,7 +139,7 @@ local st = {
 local dr_st = {
     { spell = "CallPet",     cond = petGuarded(petMissing()) },
     { spell = "RevivePet",   cond = petGuarded(petDead()) },
-    { spell = "HuntersMark", cond = buffDown(ID_HUNTERSMARK) },
+    { spell = "HuntersMark", cond = hmarkDown() },                    -- per-target read (re-prompts on swap)
     { spell = "BlackArrow",  cond = buffUp(ID_PRECISE) },              -- spend Precise (prefer unmarked)
     { spell = "ExplosiveShot", cond = cdReady(ID_EXPLOSIVE) },        -- on CD (Unstable Trigger x2)
     { spell = "Volley",      cond = cdReady(ID_VOLLEY) },             -- on CD
@@ -188,6 +195,8 @@ local spec = {
     condPresets = {
         { key = "chakramReady", label = "Chakram available",  clause = AND(buffUp(ID_TRUESHOT), predFalse("chakramUsed")) },
         { key = "chakramGlow",  label = "Chakram glowing (raw)", clause = OR(glow(ID_MOONCHAKRAM), glow(ID_TRUESHOT)) },
+        { key = "hmarkDown",    label = "Hunter's Mark missing (target)", clause = hmarkDown() },
+        { key = "hmarkUp",      label = "Hunter's Mark on target",        clause = hmarkUp() },
     },
 
     -- Action nodes: spell-less priority instructions the strip shows on a condition (always
@@ -373,11 +382,13 @@ local spec = {
             { label = "Trick Shots",         spell = ID_TRICK },
             { label = "Bullseye",            spell = ID_BULLSEYE },
             { label = "Unstable Trigger",    spell = ID_UNSTABLE },
-            { label = "Hunter's Mark (tgt)", spell = ID_HUNTERSMARK },
             { label = "Trueshot (active)",   spell = ID_TRUESHOT },
         },
         rangeProbes = {
             { label = "Focus", kind = "resource" },
+            -- Hunter's Mark on the CURRENT TARGET (UnitAuraID 257284) -- the per-target read
+            -- the maintenance line uses, unlike the CDM buff ("a mark exists somewhere").
+            { label = "Hunter's Mark (target)", kind = "targetAura", spell = ID_HUNTERSMARK },
             -- Moonlight Chakram once-per-Trueshot: false = available this window, true = used.
             { label = "Chakram used (window)", kind = "predFlag", key = "chakramUsed" },
         },

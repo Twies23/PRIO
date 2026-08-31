@@ -36,6 +36,7 @@ function H.reset()
         talents = {},                          -- IsTalentSelected
         stacks = {},                           -- AuraStackCount
         glows = {},                            -- SpellGlowing (proc overlay)
+        targetAuras = {},                      -- TargetHasAura: true/false/nil (per-target debuff)
         stealthed = false,                     -- API.Stealthed
         lastCastKey = nil,
     }
@@ -110,6 +111,7 @@ end
 function API.IsTalentSelected(id) return truthy(S.talents, id, false) end
 function API.IsTalentSelectedByName() return false end
 function API.IsAuraActive(id) return S.auras[id] end   -- true/false/nil
+function API.TargetHasAura(id) return S.targetAuras[id] end   -- true/false/nil
 function API.AuraStackCount(id) return S.stacks[id] end
 function API.AuraStackSource(id)
     local n = S.stackSource and S.stackSource[id]
