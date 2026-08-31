@@ -914,6 +914,34 @@ PRIO:On("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
             end
         end
     end
+    -- Cast-triggered CHARGE-recharge reductions (spec.chargeCdr): casting `key` shaves
+    -- seconds off another charge spell's next-charge timer (e.g. BM's Cobra Shot -1s Kill
+    -- Command, War Orders -3s Kill Command on Barbed Shot). Keeps the predicted next-charge
+    -- time -- and the charge-time gates that read it -- honest. Each entry: { target, sec,
+    -- talent?, whenBuff?, reset? }. talent gates it; whenBuff limits it to when that buff is
+    -- up (Killer Cobra: only in Bestial Wrath); reset snaps the target to a full charge.
+    local ccdr = spec.chargeCdr and spec.chargeCdr[key]
+    if ccdr then
+        local nowT = GetTime()
+        for _, r in ipairs(ccdr) do
+            local ok = (not r.talent) or API.IsTalentSelected(r.talent)
+            if ok and r.whenBuff then ok = API.IsAuraActive(r.whenBuff) ~= false end
+            local cfg = ok and r.target and spec.chargeTrack and spec.chargeTrack[r.target]
+            local tc = cfg and Engine.P.charges[r.target]
+            if tc then
+                local cap = cfg.max or 1
+                if r.reset then
+                    tc.cur = cap; tc.rechargeEnd = 0
+                elseif tc.rechargeEnd and tc.rechargeEnd > 0 then
+                    tc.rechargeEnd = tc.rechargeEnd - (r.sec or 0)
+                    while tc.cur < cap and tc.rechargeEnd > 0 and nowT >= tc.rechargeEnd do
+                        tc.cur = tc.cur + 1
+                        tc.rechargeEnd = (tc.cur < cap) and (tc.rechargeEnd + (tc.dur or cfg.recharge)) or 0
+                    end
+                end
+            end
+        end
+    end
     -- Assume a just-applied aura is up briefly, since the Cooldown Viewer read can lag
     -- a tick or two after you apply it (e.g. Flame Shock via Voltaic Blaze). The short
     -- window means a genuine immune/miss corrects itself once it expires.

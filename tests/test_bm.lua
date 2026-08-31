@@ -74,6 +74,36 @@ test("charge-time condition reads predicted time to next charge", function()
     truthy(not H.Cond.Eval({ type = "chargeTimeMax", spell = BARBED, v = 1.5 }, H.S, BARBED), "next charge <= 1.5s fails")
 end)
 
+test("cast-triggered charge CDR speeds Kill Command / Barbed Shot timers", function()
+    H.reset(); H.S.specID = 253; H.rebind()
+    local KC, COBRA, BARBED = 34026, 193455, 217200
+    local WARORDERS, BARBEDSCALES = 393933, 469880
+    local P = H.Engine.P
+
+    -- Cobra Shot -> -1s Kill Command (baseline, no talent needed).
+    P.charges.KillCommand = { cur = 1, rechargeEnd = H.S.now + 7, dur = 7.5 }
+    H.fire("UNIT_SPELLCAST_SUCCEEDED", "player", nil, COBRA)
+    eq(H.Engine:ChargeTimeRemaining(KC), 6, "Cobra Shot shaves 1s off Kill Command")
+
+    -- War Orders (talented): Barbed Shot -> -3s Kill Command.
+    H.S.talents[WARORDERS] = true
+    P.charges.KillCommand = { cur = 1, rechargeEnd = H.S.now + 7, dur = 7.5 }
+    H.fire("UNIT_SPELLCAST_SUCCEEDED", "player", nil, BARBED)
+    eq(H.Engine:ChargeTimeRemaining(KC), 4, "War Orders shaves 3s off Kill Command")
+
+    -- Without the talent, no reduction.
+    H.S.talents[WARORDERS] = false
+    P.charges.KillCommand = { cur = 1, rechargeEnd = H.S.now + 7, dur = 7.5 }
+    H.fire("UNIT_SPELLCAST_SUCCEEDED", "player", nil, BARBED)
+    eq(H.Engine:ChargeTimeRemaining(KC), 7, "no War Orders -> Barbed Shot doesn't touch Kill Command")
+
+    -- Barbed Scales (talented): Cobra Shot -> -2s Barbed Shot.
+    H.S.talents[BARBEDSCALES] = true
+    P.charges.BarbedShot = { cur = 1, rechargeEnd = H.S.now + 8, dur = 12 }
+    H.fire("UNIT_SPELLCAST_SUCCEEDED", "player", nil, COBRA)
+    eq(H.Engine:ChargeTimeRemaining(BARBED), 6, "Barbed Scales shaves 2s off Barbed Shot")
+end)
+
 test("every priority row names a spell that exists in spec.spells", function()
     for variant, lists in pairs(H.bmSpec.priorityByVariant) do
         for mode, list in pairs(lists) do

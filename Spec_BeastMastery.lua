@@ -27,10 +27,11 @@
 -- COOLDOWNS WE MODEL (spec.cooldownTrack, for the "Bestial Wrath soon" gates):
 --   * Bestial Wrath is STATIC: 90s base, -60s from The Beast Within (231548) -> 30s.
 --     Anchored to the live off-cooldown flag (ready => 0), so a wrong base self-corrects.
---   * Kill Command is CHARGE-tracked (2 charges). Its many CD reducers (Cobra Shot -1s,
---     War Orders +Barbed -3s, Master Handler -0.5s/tick, Killer Cobra full reset in BW)
---     effectively speed its recharge -- the charge tracker + live ready flag capture the
---     net result without modelling each source. See spec.talents for the reducer IDs.
+--   * Kill Command / Barbed Shot are CHARGE-tracked (2 charges). Their cast-triggered CD
+--     reducers (Cobra Shot -1s KC, War Orders -3s KC on Barbed, Barbed Scales -2s Barbed on
+--     Cobra, Killer Cobra KC-reset in BW) ARE modeled in spec.chargeCdr, so the predicted
+--     next-charge timers stay honest. Tick/periodic reducers (Master Handler, Pack
+--     Mentality) are left to the live ready flag -- see spec.chargeCdr for the split.
 --------------------------------------------------------------------------------
 
 local ADDON, PRIO = ...
@@ -309,6 +310,27 @@ local spec = {
     -- self-corrects the moment Bestial Wrath comes up.
     cooldownTrack = {
         BestialWrath = { base = 90, reduce = { [ID_BEASTWITHIN] = 60 } },
+    },
+
+    -- Cast-triggered CHARGE-recharge reductions, so the predicted next-charge timers (and
+    -- the charge-time gates / debug seconds) reflect how fast Kill Command and Barbed Shot
+    -- really come back. Modeled from the in-game tooltips:
+    --   Cobra Shot -> -1s Kill Command (baseline), -2s Barbed Shot (Barbed Scales),
+    --                 and a full Kill Command reset in Bestial Wrath (Killer Cobra).
+    --   Barbed Shot -> -3s Kill Command (War Orders).
+    -- NOT modeled (periodic / tick-based; the readable ready flag still corrects the COUNT,
+    -- only the predicted seconds run slightly slow): Pack Mentality's -4s Barbed Shot on
+    -- each Beast summon, and Master Handler's -0.5s Kill Command per Barbed Shot tick. Dire
+    -- Summons only speeds Howl, which we read from the Kill Command glow, not by timing it.
+    chargeCdr = {
+        CobraShot = {
+            { target = "KillCommand", sec = 1 },                                          -- baseline
+            { target = "BarbedShot",  sec = 2, talent = ID_BARBEDSCALES },                -- Barbed Scales
+            { target = "KillCommand", reset = true, talent = ID_KILLERCOBRA, whenBuff = ID_BESTIALWRATH }, -- Killer Cobra
+        },
+        BarbedShot = {
+            { target = "KillCommand", sec = 3, talent = ID_WARORDERS },                   -- War Orders
+        },
     },
 
     fillers = { [ID_COBRASHOT] = true },   -- Cobra Shot is the no-cooldown Focus dump

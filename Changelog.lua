@@ -11,6 +11,10 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.5.4", {
+        "Beast Mastery -- cooldown-reduction modeling. The predicted Kill Command / Barbed Shot recharge (and so the 'Next charge <= X sec' gates and the Rotation Debug seconds) now account for the cast-triggered reductions: Cobra Shot -1s Kill Command, War Orders -3s Kill Command (on Barbed Shot), Barbed Scales -2s Barbed Shot (on Cobra Shot), and Killer Cobra's Kill Command reset during Bestial Wrath.",
+        "'Next charge in Xs' now reflects how fast they actually come back. Pack Mentality's beast-summon and Master Handler's per-tick reductions are periodic, so they stay handled by the live charge read.",
+    } },
     { "0.5.3", {
         "Beast Mastery -- quantified, tunable timing. New condition 'Next charge <= / >= X sec' for charge spells (Barbed Shot, Kill Command): the seconds until the next charge lands, which the plain Cooldown condition can't show (it reads 0 while a charge is banked).",
         "Bestial Wrath's cooldown now reads in combat, so 'Cooldown <= X sec' on Bestial Wrath is your editable 'Bestial Wrath in less than X seconds' gate. Barbed Shot now fires at 2 charges OR when the next charge is within ~1.5s (about to cap).",
