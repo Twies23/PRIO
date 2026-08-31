@@ -170,10 +170,10 @@ local dr_aoe = {
     { spell = "CobraShot" },                                      -- filler
 }
 
--- cleave (2 targets) shares the AoE list per hero; the aoe threshold (3+) just widens it.
+-- Only ST and AoE modes (no separate Cleave tier); AoE covers 2+ targets.
 local heroLists = {
-    pack_leader = { st = pl_st, cleave = pl_aoe, aoe = pl_aoe },
-    dark_ranger = { st = dr_st, cleave = dr_aoe, aoe = dr_aoe },
+    pack_leader = { st = pl_st, aoe = pl_aoe },
+    dark_ranger = { st = dr_st, aoe = dr_aoe },
 }
 
 -- Active hero from a STRICT known-check on the keystone (talent/spellbook state, not an
@@ -197,9 +197,14 @@ local spec = {
     maelstromMax = 100,           -- Focus cap (secret in combat; used for the resource readout only)
     softPowerUsable = true,       -- Focus is a fast-regen secret bar -> keep spenders visible
 
-    -- Wild Thrash / Beast Cleave start at 2 targets; a wider AoE tier at 3+.
+    -- Only ST and AoE modes; AoE (Wild Thrash / Beast Cleave) starts at 2 targets.
+    -- cleaveAt == aoeAt collapses the middle Cleave tier (Engine skips it).
     cleaveAt = 2,
-    aoeAt    = 3,
+    aoeAt    = 2,
+    modes = {
+        { value = "st",  text = "ST" },
+        { value = "aoe", text = "AoE" },
+    },
 
     -- Hero split (see heroLists). activeHero picks the live list; priorityVariants drives
     -- the Options hero picker and per-hero custom lists.

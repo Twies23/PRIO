@@ -33,11 +33,18 @@ test("activeHero: neither keystone -> pack_leader default", function()
     eq(H.bmSpec.activeHero(), "pack_leader")
 end)
 
+test("exposes only ST and AoE modes (no Cleave tier)", function()
+    eq(#H.bmSpec.modes, 2)
+    eq(H.bmSpec.modes[1].value, "st")
+    eq(H.bmSpec.modes[2].value, "aoe")
+    eq(H.bmSpec.cleaveAt, H.bmSpec.aoeAt, "cleaveAt == aoeAt collapses the Cleave tier")
+end)
+
 test("both hero variants resolve for every mode", function()
     for _, variant in ipairs({ "pack_leader", "dark_ranger" }) do
         local lists = H.bmSpec.priorityByVariant[variant]
         truthy(lists, variant .. " lists should exist")
-        for _, mode in ipairs({ "st", "cleave", "aoe" }) do
+        for _, mode in ipairs({ "st", "aoe" }) do
             truthy(lists[mode] and lists[mode][1], variant .. "." .. mode .. " should be a non-empty list")
         end
     end

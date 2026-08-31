@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.5.2", {
+        "Beast Mastery: simplified to ST and AoE only. Dropped the separate Cleave tier -- the AoE list now covers 2+ targets, so there are just two mode tabs to tune.",
+    } },
     { "0.5.1", {
         "Beast Mastery Hunter -- full rotation rebuild for 12.1 (Midnight). Replaces the placeholder lists with a complete, tuned build for both hero trees: Pack Leader (default) and Dark Ranger, each with its own single-target / cleave / AoE lists you can customize.",
         "Reads your real proc signals: Howl of the Pack Leader from the Kill Command glow (empowered KC suggested the instant it lights up), Cobra Shot at 4 stacks of Cobra Fang, and Nature's Ally empowered Kill Command.",
