@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.6.20
+- **Marksmanship — Hunter's Mark diagnostic.** Target auras are likely secret in combat, so Rotation Debug now shows the Hunter's Mark read **two ways** — the CDM buff frame and the target unit aura — side by side. With a marked target, note which reads "up"; then swap to an unmarked target and watch which one clears. Whichever follows the swap is the per-target signal, and the upkeep line will be wired to it. Until then the line stays inert (it won't misfire).
+
 ## 0.6.19
 - **Marksmanship — Hunter's Mark now tracked per-target.** It's read as the debuff on your *current target* (UnitAuraID 257284), not the Cooldown Manager buff — so it correctly re-prompts when you swap to an unmarked target, and never nags when you have no target or the read is unavailable. The Hunter's Mark upkeep line is back in the Sentinel and Dark Ranger defaults, and Rotation Debug shows the live "Hunter's Mark (target)" read. Two new conditions — **"Hunter's Mark missing (target)"** and **"Hunter's Mark on target"** — are available in the editor.
 

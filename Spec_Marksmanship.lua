@@ -383,11 +383,17 @@ local spec = {
             { label = "Bullseye",            spell = ID_BULLSEYE },
             { label = "Unstable Trigger",    spell = ID_UNSTABLE },
             { label = "Trueshot (active)",   spell = ID_TRUESHOT },
+            -- Hunter's Mark via the CDM buff frame (IsAuraActive -- clean, this is what the
+            -- tooltip came from). Compare with the target-aura probe below: with a MARKED
+            -- target both should read up; swap to an UNMARKED target and watch which clears.
+            -- Whichever clears on the swap is the per-target signal to gate the line on.
+            { label = "Hunter's Mark (CDM buff)", spell = ID_HUNTERSMARK },
         },
         rangeProbes = {
             { label = "Focus", kind = "resource" },
-            -- Hunter's Mark on the CURRENT TARGET (UnitAuraID 257284) -- the per-target read
-            -- the maintenance line uses, unlike the CDM buff ("a mark exists somewhere").
+            -- Hunter's Mark via the TARGET unit aura (likely SECRET in combat -> "no target /
+            -- secret"). If this never reads present with a marked target, target auras are
+            -- secret and the line must ride the CDM buff read (or a predicted per-GUID flag).
             { label = "Hunter's Mark (target)", kind = "targetAura", spell = ID_HUNTERSMARK },
             -- Moonlight Chakram once-per-Trueshot: false = available this window, true = used.
             { label = "Chakram used (window)", kind = "predFlag", key = "chakramUsed" },
