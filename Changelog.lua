@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.5.9", {
+        "Diagnostic build for charge-timer drift. The charge-spell rows in /prio rotdebug now show the count + its source (clean/secret) and both readable recharge candidates -- dur: (charge-duration object) and cd: (spell cooldown) -- so we can see which reads survive combat and fix the drift at the source. '--' means that read is currently secret/unavailable.",
+    } },
     { "0.5.8", {
         "Rotation Debug (/prio rotdebug) now shows charges and cooldown seconds inline. The Abilities section reads e.g. 'on CD / unusable  1/2  next 3.2s (pred)' for charge spells (Barbed Shot, Kill Command) and '28s left' for tracked cooldowns (Bestial Wrath) -- tagged live/pred so you can see the recharge source and watch the 'about to cap' and Bestial Wrath timers where you're already looking.",
     } },

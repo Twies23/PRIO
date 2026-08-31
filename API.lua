@@ -334,6 +334,21 @@ function API.ChargeRechargeRemaining(spellID)
     return nil
 end
 
+-- Second candidate for the recharge remaining: the spell's COOLDOWN start/duration
+-- (GetSpellCooldown). For a charge spell this reflects the recharge in progress. Some
+-- reads that are secret via the charge-duration object are readable here (or vice-versa),
+-- so we probe both. nil if not on cooldown / secret / unavailable.
+function API.ChargeCooldownRemaining(spellID)
+    if not (spellID and C_Spell and C_Spell.GetSpellCooldown) then return nil end
+    local ok, info = pcall(C_Spell.GetSpellCooldown, spellID)
+    if not ok or type(info) ~= "table" then return nil end
+    local start, dur = SafeNum(info.startTime), SafeNum(info.duration)
+    if not start or not dur or start == 0 or dur == 0 then return nil end
+    if dur <= 1.5 then return nil end                    -- GCD, not a recharge
+    local rem = (start + dur) - GetTime()
+    return rem > 0 and rem or 0
+end
+
 -- For a CHARGE spell, returns maxCharges (>=1, static/readable) and currentCharges
 -- (may be nil/secret). For a non-charge spell, GetSpellCharges returns nil, so we
 -- return nil -- callers use that to tell "charge-limited" from "spammable filler".

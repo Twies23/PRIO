@@ -507,17 +507,21 @@ local function abilityText(sid)
         or (u == false) and "|cffe0685aunusable|r" or "|cffe0a03asecret|r"
     local out = cd .. "  |cff5a6a76/|r  " .. us
     local E = PRIO.Engine
-    -- CHARGE spells (Barbed Shot / Kill Command): show count + seconds to the next charge,
-    -- tagged live/predicted (the recharge read is secret in combat -> predicted).
-    local maxC = API.ChargeState and (API.ChargeState(sid))
+    -- CHARGE spells (Barbed Shot / Kill Command). DIAGNOSTIC view: shows the count and its
+    -- source (clean vs secret), plus BOTH readable recharge candidates so we can see which
+    -- (if any) survives combat -- dur: the charge-duration object, cd: GetSpellCooldown.
+    -- "--" means that read is secret/unavailable right now.
+    local maxC, cleanCur
+    if API.ChargeState then maxC, cleanCur = API.ChargeState(sid) end
     if maxC and maxC > 1 then
         local eff = E and E.EffectiveCharges and E:EffectiveCharges(sid)
-        local rem = E and E.ChargeTimeRemaining and E:ChargeTimeRemaining(sid)
-        local rawClean = API.ChargeRechargeRemaining and API.ChargeRechargeRemaining(sid)
-        local src = (rawClean ~= nil) and "|cff0cd29flive|r" or "|cffe0a03apred|r"
-        local tail = (rem and rem > 0) and ("  |cffe0685anext %.1fs|r (%s)"):format(rem, src)
-            or "  |cff5a6a76full|r"
-        out = out .. ("   |cff9fb0be%s/%d|r%s"):format(tostring(eff or "?"), maxC, tail)
+        local cSrc = (cleanCur ~= nil) and "|cff0cd29fclean|r" or "|cffe0685asecret|r"
+        local a = API.ChargeRechargeRemaining and API.ChargeRechargeRemaining(sid)
+        local b = API.ChargeCooldownRemaining and API.ChargeCooldownRemaining(sid)
+        local aStr = a and ("%.1f"):format(a) or "--"
+        local bStr = b and ("%.1f"):format(b) or "--"
+        out = out .. ("   |cff9fb0be%s/%d|r(%s)  |cff5a6a76dur:|r%s |cff5a6a76cd:|r%s"):format(
+            tostring(eff or "?"), maxC, cSrc, aStr, bStr)
     else
         -- COOLDOWN-tracked spells (Bestial Wrath): show predicted seconds remaining.
         local r = E and E.CooldownRemaining and E:CooldownRemaining(sid)
