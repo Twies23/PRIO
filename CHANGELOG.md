@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.6.14
+- **Marksmanship — Sentinel default finalized (ST + AoE).** The tuned Sentinel priority now ships for both single-target and AoE — the Aspect of the Hydra Multi-Shot line self-gates on 2+ targets, so one list covers both — replacing the separate AoE list.
+
 ## 0.6.13
 - **Action nodes are now addable in the priority editor.** The "+ Add ability" picker lists action nodes (like Marksmanship's **Target Switch**) alongside spells, so you can drop one anywhere in a list and set its condition like any other row. Action rows show their label + icon and open the condition editor on click.
 

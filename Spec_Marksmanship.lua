@@ -98,21 +98,23 @@ local function markDown() return AND(debuffDown(ID_SPOTTERMARK), debuffDown(ID_S
 -- Arcane; Aimed Shot on cooldown; Steady Shot filler. Without Trick Shots the ST and AoE
 -- lists are identical, so AoE is a clone (the Trick Shots variant is a separate list).
 --------------------------------------------------------------------------------
+-- Sentinel -- user-tuned in-game (0.6.13), used for BOTH ST and AoE (the Aspect of the
+-- Hydra Multi-Shot line self-gates on 2+ targets, so AoE == ST). Moonlight Chakram near
+-- the end of Trueshot (<=7s) and as a filler in Trueshot; Kill Shot / Arcane spend Precise.
 local st = {
     { spell = "CallPet",     cond = petGuarded(petMissing()) },       -- (Unbreakable Bond) no pet -> summon
     { spell = "RevivePet",   cond = petGuarded(petDead()) },          -- (Unbreakable Bond) pet dead -> revive
-    { spell = "HuntersMark", cond = buffDown(ID_HUNTERSMARK) },       -- keep the 3% mark up (CDM buff read)
     { spell = "ExplosiveShot", cond = cdReady(ID_EXPLOSIVE) },        -- on CD (2 casts, Unstable Trigger)
     { spell = "Volley",      cond = cdReady(ID_VOLLEY) },             -- on CD
-    { action = "switchTargets", cond = AND(cdReady(ID_TRUESHOT), buffDown(ID_TRUESHOT), markUp()) }, -- swap off a marked target before Trueshot
     { spell = "Trueshot",    cond = AND(cdRemainMin(ID_EXPLOSIVE, 15), buffDown(ID_TRUESHOT), cdReady(ID_TRUESHOT)) }, -- hold until Explosive is >=15s out
     { spell = "Trueshot",    cond = lastCast(ID_EXPLOSIVE) },         -- pop right after Explosive Shot
-    { spell = "MoonlightChakram", cond = AND(cdReady(ID_TRUESHOT), buffUp(ID_TRUESHOT)) },  -- (in Trueshot)
+    { spell = "MoonlightChakram", cond = AND(auraRemainMax(ID_TRUESHOT, 7), cdReady(ID_MOONCHAKRAM)) }, -- ~end of Trueshot
     { spell = "RapidFire" },                                          -- on CD, builds Precise
-    { spell = "KillShot",   cond = buffUp(ID_PRECISE) },              -- spend Precise (execute)
-    { spell = "ArcaneShot", cond = buffUp(ID_PRECISE) },              -- spend Precise -> apply the mark
+    { spell = "KillShot",    cond = buffUp(ID_PRECISE) },             -- spend Precise (execute)
+    { spell = "MultiShot",   cond = AND(buffUp(ID_PRECISE), enemiesMin(2), talentYes(ID_ASPECTHYDRA)) }, -- Hydra: spend Precise on 2+
+    { spell = "ArcaneShot",  cond = buffUp(ID_PRECISE) },             -- spend Precise -> apply the mark
     { spell = "AimedShot" },                                          -- on CD (charges), consumes the mark
-    { spell = "MoonlightChakram", cond = AND(cdReady(ID_MOONCHAKRAM), buffUp(ID_TRUESHOT)) }, -- Sentinel filler in Trueshot
+    { spell = "MoonlightChakram", cond = AND(cdReady(ID_MOONCHAKRAM), buffUp(ID_TRUESHOT)) }, -- filler in Trueshot
     { spell = "SteadyShot" },                                         -- Focus filler
 }
 
@@ -140,37 +142,12 @@ local dr_st = {
     { spell = "SteadyShot" },                                         -- Focus filler
 }
 
--- SENTINEL AoE. The two talents that change AoE are the choice node Trick Shots vs Aspect
--- of the Hydra -- so the AoE lines self-gate on whichever you took (talentYes), and stay
--- inert on a pure single-target build (where AoE == ST). Trick Shots: Multi-Shot on 3+
--- activates the Aimed / Rapid Fire ricochet. Aspect of the Hydra: Multi-Shot spends Precise
--- on 2+. Neither talented -> falls through to the ST spenders (Arcane / Aimed).
-local sentinel_aoe = {
-    { spell = "CallPet",     cond = petGuarded(petMissing()) },
-    { spell = "RevivePet",   cond = petGuarded(petDead()) },
-    { spell = "HuntersMark", cond = buffDown(ID_HUNTERSMARK) },
-    { spell = "ExplosiveShot", cond = cdReady(ID_EXPLOSIVE) },
-    { spell = "Volley",      cond = cdReady(ID_VOLLEY) },
-    { spell = "Trueshot",    cond = AND(cdRemainMin(ID_EXPLOSIVE, 15), buffDown(ID_TRUESHOT), cdReady(ID_TRUESHOT)) },
-    { spell = "Trueshot",    cond = lastCast(ID_EXPLOSIVE) },
-    { spell = "MoonlightChakram", cond = AND(cdReady(ID_MOONCHAKRAM), buffUp(ID_TRUESHOT)) },
-    { spell = "MultiShot",   cond = AND(talentYes(ID_TRICKSHOTS_T), buffDown(ID_TRICK), enemiesMin(3)) }, -- activate Trick Shots
-    { spell = "RapidFire",   cond = AND(talentYes(ID_TRICKSHOTS_T), buffUp(ID_TRICK)) },   -- cleave with Trick Shots up
-    { spell = "AimedShot",   cond = AND(talentYes(ID_TRICKSHOTS_T), buffUp(ID_TRICK)) },   -- cleave with Trick Shots up
-    { spell = "KillShot",    cond = buffUp(ID_PRECISE) },                                   -- spend Precise (execute)
-    { spell = "MultiShot",   cond = AND(talentYes(ID_ASPECTHYDRA), enemiesMin(2), buffUp(ID_PRECISE)) },  -- Hydra: spend Precise on 2+
-    { spell = "MultiShot",   cond = AND(talentYes(ID_TRICKSHOTS_T), enemiesMin(3), buffUp(ID_PRECISE)) },  -- Trick Shots: spend Precise on 3+
-    { spell = "ArcaneShot",  cond = buffUp(ID_PRECISE) },                                   -- spend Precise (default)
-    { spell = "RapidFire" },                                                                -- on CD, builds Precise
-    { spell = "AimedShot" },                                                                -- on CD
-    { spell = "MoonlightChakram", cond = AND(cdReady(ID_MOONCHAKRAM), buffUp(ID_TRUESHOT)) }, -- filler in Trueshot
-    { spell = "SteadyShot" },                                                               -- Focus filler
-}
-
 -- Variant split (like BM's Pack Leader / Dark Ranger): Dark Ranger when Black Arrow is
--- talented, else Sentinel (the default). Per-variant customization stores separately in db.
+-- talented, else Sentinel (the default). Sentinel uses the same list for ST and AoE (the
+-- Aspect of the Hydra Multi-Shot line self-gates on 2+ targets). Per-variant customization
+-- stores separately in db.
 local heroLists = {
-    sentinel    = { st = st,    aoe = sentinel_aoe },
+    sentinel    = { st = st,    aoe = st },
     dark_ranger = { st = dr_st, aoe = dr_st },
 }
 local function activeHero()
