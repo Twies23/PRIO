@@ -450,7 +450,7 @@ function RotationDebug:Rebuild(spec)
         head("Rotation debug")
         row("none", "(no rotation debug for this spec)")
     else
-        head("Abilities  (cooldown / usable)")
+        head("Abilities  (cd / usable / charges / cooldown)")
         for i, key in ipairs(rd.abilities or {}) do
             row("a" .. i, spaceCamel(key))
         end
@@ -505,7 +505,25 @@ local function abilityText(sid)
     local u = API.UsableClean and API.UsableClean(sid)
     local us = (u == true) and "|cff0cd29fusable|r"
         or (u == false) and "|cffe0685aunusable|r" or "|cffe0a03asecret|r"
-    return cd .. "  |cff5a6a76/|r  " .. us
+    local out = cd .. "  |cff5a6a76/|r  " .. us
+    local E = PRIO.Engine
+    -- CHARGE spells (Barbed Shot / Kill Command): show count + seconds to the next charge,
+    -- tagged live/predicted (the recharge read is secret in combat -> predicted).
+    local maxC = API.ChargeState and (API.ChargeState(sid))
+    if maxC and maxC > 1 then
+        local eff = E and E.EffectiveCharges and E:EffectiveCharges(sid)
+        local rem = E and E.ChargeTimeRemaining and E:ChargeTimeRemaining(sid)
+        local rawClean = API.ChargeRechargeRemaining and API.ChargeRechargeRemaining(sid)
+        local src = (rawClean ~= nil) and "|cff0cd29flive|r" or "|cffe0a03apred|r"
+        local tail = (rem and rem > 0) and ("  |cffe0685anext %.1fs|r (%s)"):format(rem, src)
+            or "  |cff5a6a76full|r"
+        out = out .. ("   |cff9fb0be%s/%d|r%s"):format(tostring(eff or "?"), maxC, tail)
+    else
+        -- COOLDOWN-tracked spells (Bestial Wrath): show predicted seconds remaining.
+        local r = E and E.CooldownRemaining and E:CooldownRemaining(sid)
+        if r and r > 0 then out = out .. ("   |cffe0685a%.0fs left|r"):format(r) end
+    end
+    return out
 end
 
 -- Shows active + stack count + WHERE the count came from, so we can see live whether

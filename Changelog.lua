@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.5.8", {
+        "Rotation Debug (/prio rotdebug) now shows charges and cooldown seconds inline. The Abilities section reads e.g. 'on CD / unusable  1/2  next 3.2s (pred)' for charge spells (Barbed Shot, Kill Command) and '28s left' for tracked cooldowns (Bestial Wrath) -- tagged live/pred so you can see the recharge source and watch the 'about to cap' and Bestial Wrath timers where you're already looking.",
+    } },
     { "0.5.7", {
         "Beast Mastery -- charge timer re-anchors on every charge gained. On top of the haste-correct prediction, the moment Barbed Shot / Kill Command actually gains a charge (a readable event even in combat) PRIO restarts the next-charge timer from that instant -- so any accumulated drift, including from effects it doesn't model (e.g. Pack Mentality's beast-summon reduction), is wiped clean each recharge cycle. The 'about to cap' call should now stay accurate all fight.",
     } },
