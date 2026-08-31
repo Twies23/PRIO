@@ -58,6 +58,10 @@ local ID_BULLETSTORM = 389019    -- Bulletstorm (bar) -- Aimed Shot stacking buf
 -- Not present at low level / without the talent (kept for reference, not tracked):
 -- Streamline 260242, Lunar Storm (Sentinel proc), Master Marksman 260309.
 
+-- Talents that change Trueshot's timing (verified in-game 2026-08-31).
+local ID_CANTMISS      = 1253830  -- Can't Miss, Won't Miss: Trueshot duration +2s (15 -> 17)
+local ID_CALLINGSHOTS  = 260404   -- Calling the Shots: Trueshot cooldown -30s (120 -> 90)
+
 local function AND(...) return { op = "and", clauses = { ... } } end
 local function OR(...)  return { op = "or",  clauses = { ... } } end
 local function buffUp(id)      return { type = "buffActive",   spell = id } end
@@ -211,8 +215,15 @@ local spec = {
     -- FIRST press -- so a re-press inside the window doesn't restart the timer. Everything
     -- else leans on booleans (buffs) + charges, anchored to the live ready flag.
     cooldownTrack = {
-        Trueshot      = { base = 120 },
+        Trueshot      = { base = 120, reduce = { [ID_CALLINGSHOTS] = 30 } },  -- Calling the Shots -> 90s
         ExplosiveShot = { base = 30, window = 3 },
+    },
+
+    -- Trueshot's buff DURATION (15s base, +2s with Can't Miss, Won't Miss). Seeded on cast
+    -- and read via "Buff time left" conditions -- the window is fixed and secret in combat,
+    -- so we time it from the cast. Drives "Moonlight Chakram at ~5s left", "hold X", etc.
+    auraDurations = {
+        Trueshot = { spell = ID_TRUESHOT, base = 15, extend = { [ID_CANTMISS] = 2 } },
     },
 
     fillers = { [ID_STEADYSHOT] = true },   -- Steady Shot is the no-cooldown Focus filler
@@ -245,6 +256,7 @@ local spec = {
         { label = "Bullseye",              kind = "buff", spell = ID_BULLSEYE },
         { label = "Unstable Trigger",      kind = "buff", spell = ID_UNSTABLE },
         { label = "Explosive Shot (CD)",   kind = "cdRemain", spell = ID_EXPLOSIVE },
+        { label = "Trueshot (dur left)",   kind = "auraRemain", spell = ID_TRUESHOT },
         { label = "Trueshot (CD left)",    kind = "cdRemain", spell = ID_TRUESHOT },
     },
     economy = {

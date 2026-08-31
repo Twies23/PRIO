@@ -20,6 +20,26 @@ test("every MM priority row names a spell that exists in spec.spells", function(
     end
 end)
 
+test("Trueshot duration + cooldown-reduction tracking", function()
+    local TS, CANTMISS, CALLING = 288613, 1253830, 260404
+
+    -- Base (talents NOT known): 15s duration, 120s cooldown.
+    H.reset(); H.S.specID = 254
+    H.S.known[CANTMISS] = false; H.S.known[CALLING] = false
+    H.rebind(); H.S.now = 1000
+    H.fire("UNIT_SPELLCAST_SUCCEEDED", "player", nil, TS)
+    eq(H.Engine.P.auraExpire[TS], 1015, "base 15s Trueshot duration")
+    eq(H.Engine.P.cdExpire[TS], 1120, "base 120s Trueshot cooldown")
+
+    -- Talented: Can't Miss (+2s) and Calling the Shots (-30s).
+    H.reset(); H.S.specID = 254
+    H.S.known[CANTMISS] = true; H.S.known[CALLING] = true
+    H.rebind(); H.S.now = 1000
+    H.fire("UNIT_SPELLCAST_SUCCEEDED", "player", nil, TS)
+    eq(H.Engine.P.auraExpire[TS], 1017, "Can't Miss -> 17s duration")
+    eq(H.Engine.P.cdExpire[TS], 1090, "Calling the Shots -> 90s cooldown")
+end)
+
 test("cooldownTrack window: Explosive Shot re-press within 3s doesn't restart the 30s", function()
     H.reset(); H.S.specID = 254; H.rebind()
     local EXP = 212431

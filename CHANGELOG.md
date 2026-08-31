@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.6.6
+- **Marksmanship — Trueshot duration and cooldown-reduction tracking.** PRIO now times Trueshot's buff (15s, +2s with **Can't Miss, Won't Miss**) so "seconds left on Trueshot" gates read (e.g. Moonlight Chakram near the end), and its predicted cooldown accounts for **Calling the Shots** (120s → 90s). Rotation Debug shows both the duration and cooldown left.
+
 ## 0.6.5
 - **Marksmanship — Hunter's Mark is now a first-class tracked buff**, so the setup and condition editor recognise it, with a "Hunter's Mark" row in Rotation Debug to watch the read. PRIO reads it from your Cooldown Manager's Tracked Buffs.
 
