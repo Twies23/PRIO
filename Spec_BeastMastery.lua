@@ -14,10 +14,12 @@
 --     NEVER see it. We do NOT gate on it. Instead Barbed Shot is kept on cooldown /
 --     off its 2-charge cap, which maintains Frenzy on its own. This is the honest,
 --     readable proxy for "keep Frenzy up".
---   * BEAST CLEAVE (268877) is a pet-side cleave buff. It MAY surface as a player-
---     trackable aura in the Cooldown Manager -- track it and check /prio rotdebug. If
---     it never reads, the buffDown(BeastCleave) gate fails open and Wild Thrash simply
---     runs on cooldown (still correct, just not refresh-aware).
+--   * BEAST CLEAVE (115939) surfaces as a Tracked Bar in the Cooldown Manager (verified
+--     from a live dump 2026-08-31), so buffUp/buffDown(BeastCleave) read clean once it's
+--     tracked. (The old 268877 guess was wrong and never read.)
+--   * HUNTER'S MARK (257284) is a target debuff but shows in the Cooldown Manager's
+--     Tracked Buffs, so debuffMissing(HuntersMark) reads and PRIO reapplies it when it's
+--     down (e.g. after a target swap).
 --   * HOWL OF THE PACK LEADER (471876): "every 30s your next Kill Command summons a
 --     Beast." The ready state reads CLEAN off the Kill Command BUTTON GLOW in the
 --     Cooldown Manager (confirmed in-game 2026-08-30) -- so we gate the empowered Kill
@@ -60,7 +62,7 @@ local ID_HUNTERSMARK  = 257284
 
 -- Buff / proc IDs (verify with /prio tracked).
 local ID_FRENZY      = 272790     -- PET buff -> UNTRACKABLE (see header). Documented only.
-local ID_BEASTCLEAVE = 268877     -- from Wild Thrash; pet-side, track-and-verify
+local ID_BEASTCLEAVE = 115939     -- Beast Cleave (verified from the live Cooldown Viewer TrackedBar, 2026-08-31)
 local ID_COBRAFANG   = 1299389    -- PLAYER buff, stacks to 4 -> spend with Cobra Shot (4-SET tier bonus)
 local ID_NATURESALLY = 1273145    -- PLAYER buff -> empowers Kill Command
 local ID_HOWL        = 471876     -- Howl of the Pack Leader (ready = next KC summons a Beast)
@@ -82,6 +84,7 @@ local function AND(...) return { op = "and", clauses = { ... } } end
 local function OR(...)  return { op = "or",  clauses = { ... } } end
 local function buffUp(id)      return { type = "buffActive",  spell = id } end
 local function buffDown(id)    return { type = "buffMissing", spell = id } end
+local function debuffDown(id)  return { type = "debuffMissing", spell = id } end   -- enemy missing debuff
 local function stacksMin(id,n) return { type = "stacksMin",   spell = id, v = n } end
 local function chargesMin(n)   return { type = "chargesMin",  v = n } end   -- self (the row's spell)
 local function chargesMax(id,n) return { type = "chargesMax", spell = id, v = n } end
@@ -101,6 +104,7 @@ local pl_st = {
     { spell = "BestialWrath" },                                   -- bread & butter, on CD (triggers Howl)
     { spell = "CallOfTheWild" },                                  -- major CD (talent; inert if not taken)
     { spell = "Bloodshed" },                                      -- talent, on CD
+    { spell = "HuntersMark", cond = debuffDown(ID_HUNTERSMARK) }, -- maintain the 3% damage-taken debuff (reapply on target swap)
     { spell = "KillCommand", cond = glow(ID_KILLCOMMAND) },       -- Howl ready (KC glows) -> next KC summons a Beast
     -- Nature's Ally empowered KC, but bank the last charge when Bestial Wrath is imminent.
     { spell = "KillCommand", cond = AND(buffUp(ID_NATURESALLY), OR(chargesMin(2), cdRemainMin(ID_BESTIALWRATH, 3))) },
@@ -122,6 +126,7 @@ local pl_aoe = {
     { spell = "CallOfTheWild" },                                  -- major CD (talent)
     { spell = "WildThrash" },                                     -- on CD (keep Beast Cleave up)
     { spell = "Bloodshed" },                                      -- talent, on CD
+    { spell = "HuntersMark", cond = debuffDown(ID_HUNTERSMARK) }, -- maintain the 3% damage-taken debuff (reapply on target swap)
     { spell = "KillCommand", cond = buffUp(ID_NATURESALLY) },     -- empowered KC
     { spell = "KillCommand" },                                    -- splashes via Beast Cleave
     { spell = "CobraShot", cond = AND(stacksMin(ID_COBRAFANG, 4), buffUp(ID_BEASTCLEAVE)) }, -- Cobra Fang cleaves (30%)
@@ -141,6 +146,7 @@ local dr_st = {
     { spell = "BarbedShot", cond = OR(cdRemainMax(ID_BESTIALWRATH, 3), chargesMin(2)) }, -- refresh before BW / at 2 charges (the recharge time is secret in combat, so gate on the readable count)
     { spell = "BestialWrath" },                                   -- on CD -> opens Withering Fire
     { spell = "CallOfTheWild" },                                  -- major CD (talent)
+    { spell = "HuntersMark", cond = debuffDown(ID_HUNTERSMARK) }, -- maintain the 3% damage-taken debuff (reapply on target swap)
     -- Triple-damage Black Arrow inside Withering Fire, without overcapping Kill Command.
     { spell = "BlackArrow", cond = AND(buffUp(ID_WITHERING), chargesMax(ID_KILLCOMMAND, 1)) },
     { spell = "BlackArrow", cond = glow(ID_BLACKARROW) },         -- Deathblow proc (reset + execute-anytime)
@@ -161,6 +167,7 @@ local dr_aoe = {
     { spell = "BestialWrath", cond = buffUp(ID_BEASTCLEAVE) },    -- BW with Beast Cleave active
     { spell = "BestialWrath" },                                   -- else on CD
     { spell = "CallOfTheWild" },                                  -- major CD (talent)
+    { spell = "HuntersMark", cond = debuffDown(ID_HUNTERSMARK) }, -- maintain the 3% damage-taken debuff (reapply on target swap)
     { spell = "WildThrash" },                                     -- on cooldown
     { spell = "BlackArrow", cond = buffUp(ID_WITHERING) },        -- triple-damage in the window
     { spell = "BlackArrow", cond = glow(ID_BLACKARROW) },         -- Deathblow proc
@@ -235,6 +242,7 @@ local spec = {
         { key = "bwSoon",       label = "Bestial Wrath soon",    clause = cdRemainMax(ID_BESTIALWRATH, 3) },
         { key = "witheringFire", label = "Withering Fire up",    clause = buffUp(ID_WITHERING) },
         { key = "deathblow",    label = "Deathblow (Black Arrow)", clause = glow(ID_BLACKARROW) },
+        { key = "markMissing",  label = "Hunter's Mark missing",  clause = debuffDown(ID_HUNTERSMARK) },
     },
 
     -- Relevant buffs (selectable in the condition editor regardless of build). Frenzy is
@@ -247,6 +255,7 @@ local spec = {
         Howl         = ID_HOWL,
         BestialWrath = ID_BESTIALWRATH,
         WitheringFire = ID_WITHERING,
+        HuntersMark  = ID_HUNTERSMARK,
     },
 
     -- Talent/passive IDs (verified in-game). Registered so talent gates, cooldown math,
@@ -263,7 +272,9 @@ local spec = {
         { kind = "trackedAura", label = "Nature's Ally tracked", spell = ID_NATURESALLY,
           hint = "Track Nature's Ally so the empowered Kill Command lines read (player buff, reads clean)." },
         { kind = "trackedAura", label = "Beast Cleave tracked", spell = ID_BEASTCLEAVE,
-          hint = "Track Beast Cleave so the AoE lines know when to refresh it (Wild Thrash). It is pet-side -- check /prio rotdebug; if it never reads, Wild Thrash still runs on cooldown." },
+          hint = "Track Beast Cleave (it appears in your Cooldown Manager's Tracked Bars) so the AoE lines know when to refresh it with Wild Thrash." },
+        { kind = "trackedAura", label = "Hunter's Mark tracked", spell = ID_HUNTERSMARK,
+          hint = "Track Hunter's Mark so PRIO reapplies it when your target is missing the 3% damage-taken debuff (e.g. after a target swap)." },
         { kind = "info", label = "Howl of the Pack Leader (KC glow)",
           hint = "No tracking needed: when Howl is ready your Kill Command button GLOWS in the Cooldown Manager, and PRIO reads that glow to prioritise the empowered Kill Command. Just keep Kill Command on your tracked bars." },
         { kind = "trackedAura", label = "Bestial Wrath tracked", spell = ID_BESTIALWRATH, optional = true,
@@ -394,6 +405,7 @@ local spec = {
             { label = "Howl (ready?)",          spell = ID_HOWL },
             { label = "Bestial Wrath (active)", spell = ID_BESTIALWRATH },
             { label = "Withering Fire (DR)",    spell = ID_WITHERING },
+            { label = "Hunter's Mark (target)", spell = ID_HUNTERSMARK },
         },
         glows = {
             { label = "Kill Command (Howl ready)", spell = ID_KILLCOMMAND },

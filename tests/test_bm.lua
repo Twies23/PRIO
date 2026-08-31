@@ -175,6 +175,18 @@ test("BM: unaffordable Focus spender still shows, flagged noResource (for desatu
     falsy(r2.primary.noResource, "not flagged when affordable")
 end)
 
+test("BM: Hunter's Mark maintenance reads the target-debuff state", function()
+    H.reset(); H.S.specID = 253; H.rebind()
+    local HM = 257284
+    H.S.tracked[HM] = true
+    -- Mark up on the target -> not missing -> the maintenance line stays inert.
+    H.S.auras[HM] = true
+    falsy(H.Cond.Eval({ type = "debuffMissing", spell = HM }, H.S, HM), "mark up -> not missing")
+    -- Mark down -> missing -> reapply.
+    H.S.auras[HM] = false
+    truthy(H.Cond.Eval({ type = "debuffMissing", spell = HM }, H.S, HM), "mark down -> missing (reapply)")
+end)
+
 test("every priority row names a spell that exists in spec.spells", function()
     for variant, lists in pairs(H.bmSpec.priorityByVariant) do
         for mode, list in pairs(lists) do

@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.5.13
+- **Beast Mastery — Hunter's Mark is now maintained on your target.** PRIO reapplies Hunter's Mark when the target is missing the 3% damage-taken debuff (e.g. after a target swap), reading it from your Cooldown Manager's Tracked Buffs.
+- **Fixed the Beast Cleave tracking ID (now 115939).** The previous ID never matched what the game actually tracks, so the AoE "keep Beast Cleave up" lines couldn't read it — they work now. Make sure Beast Cleave is on your Cooldown Manager (it shows as a Tracked Bar) so Wild Thrash refreshes it correctly.
+
 ## 0.5.12
 - **Beast Mastery — unaffordable spenders are shown dimmed, not hidden.** When you can't yet afford Kill Command / Cobra Shot / Wild Thrash, the icon stays in place slightly desaturated (a "press this once your Focus is up" cue) instead of vanishing. It uses the game's clean insufficient-power flag, so it's exact even though the Focus bar is secret in combat — the dim clears the instant you have the Focus.
 
