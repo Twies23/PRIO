@@ -11,6 +11,12 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.5.0", {
+        "Fifth stable release -- headlined by a redesigned Setup and the finalized Outlaw Trickster lists. Everything since 0.4.11.",
+        "Setup rebuilt: general checks up top (Cooldown Manager active, nameplates), then two columns -- Ability cooldowns (left, validation for your own display; PRIO reads cooldowns directly) and Auras to add (right, REQUIRED -- PRIO reads buffs only from the Cooldown Manager).",
+        "Setup auto-derives the required auras from your real rotation (default AND custom conditions), so it can't miss one and doesn't list buffs the rotation never reads. Glow-driving abilities (e.g. Pistol Shot for Opportunity) are flagged required. Status updates live as you edit the CDM; re-opens after each update; rows no longer overlap; build-specific (4-set) auras show optional.",
+        "Outlaw: finalized Trickster default lists; corrected two tracked-aura IDs (Loaded Dice, Flawless Form).",
+    } },
     { "0.4.16", {
         "Setup: glow-driving abilities are now flagged as required. Some reads use an ability's proc glow (e.g. Outlaw reads Opportunity from Pistol Shot's glow), which only lights up when that spell is present -- so those show in the Abilities column tagged (glow) and turn red until added. Columns reframed: left 'ability cooldowns -- validation' (for your own cooldown display), right 'auras to add to your Cooldown Manager' (required).",
         "Setup dots update live as you edit the Cooldown Manager, and on an update the setup opens after you close the changelog instead of stacking on top of it.",
