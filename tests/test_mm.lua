@@ -15,11 +15,30 @@ test("every MM priority row names a spell that exists in spec.spells", function(
     for variant, lists in pairs(H.mmSpec.priorityByVariant) do
         for mode, list in pairs(lists) do
             for i, row in ipairs(list) do
-                truthy(H.mmSpec.spells[row.spell],
-                    ("%s.%s[%d]: '%s' must be a known spec spell"):format(variant, mode, i, tostring(row.spell)))
+                if row.action then
+                    truthy(H.mmSpec.actions[row.action],
+                        ("%s.%s[%d]: action '%s' must be defined"):format(variant, mode, i, tostring(row.action)))
+                else
+                    truthy(H.mmSpec.spells[row.spell],
+                        ("%s.%s[%d]: '%s' must be a known spec spell"):format(variant, mode, i, tostring(row.spell)))
+                end
             end
         end
     end
+end)
+
+test("action node: Switch Targets is picked (spell-less) when its condition passes", function()
+    H.reset(); H.S.specID = 254; H.S.enemies = 1
+    setmetatable(H.S.ready, { __index = function() return false end })
+    H.rebind(); H.Engine.openerActive = false
+    -- A tiny action-only custom list with an always-true condition.
+    local list = { { action = "switchTargets", cond = nil } }
+    PRIO.db.customPriorities = { HUNTER_MARKSMANSHIP = { st = list, aoe = list } }
+    H.rebind()
+    local res = H.Engine:Evaluate()
+    truthy(res and res.primary and res.primary.isAction, "action node is the primary")
+    eq(res.primary.name, "Target Switch")
+    PRIO.db.customPriorities = {}
 end)
 
 test("MM variant select: Black Arrow -> dark_ranger, else sentinel", function()

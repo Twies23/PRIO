@@ -1407,6 +1407,20 @@ Entry = function(spellID)
     }
 end
 
+-- An ACTION node (spec.actions[key]) is a spell-less instruction (e.g. "Switch Targets"):
+-- always available, gated only on its condition, rendered as a texture + label overlay.
+local function ActionEntry(actionKey)
+    local a = (spec and spec.actions and spec.actions[actionKey]) or {}
+    return {
+        isAction  = true,
+        actionKey = actionKey,
+        texture   = a.texture or 134400,          -- fallback: question mark
+        name      = a.label or actionKey,
+        desaturate = a.desaturate and true or false,
+        keybind   = "",
+    }
+end
+
 -- Resolve an entry's spell to a spellID (custom entries store a number, built-in
 -- entries store a spec.spells key).
 function Engine:EntrySpellID(e)
@@ -1793,6 +1807,13 @@ function Engine:Evaluate()
     -- Chi and cooldown are real, so they never relax.
     local function tryCandidate(i, relaxSoft)
         local e   = list[i]
+        -- Action node (e.g. "Switch Targets"): no spell, always available (off CD),
+        -- gated only on its condition. Shown once (marked used in the pick loop).
+        if e.action then
+            if e.off or usedRow[i] then return nil end
+            if not PRIO.Cond.Eval(e.cond, S, nil) then return nil end
+            return { action = e.action, i = i }
+        end
         local sid = self:EntrySpellID(e)
         if not (sid and not e.off and API.IsKnown(sid)) then return nil end
         local rep, maxC = Repeatable(sid)
@@ -1883,6 +1904,12 @@ function Engine:Evaluate()
             if pick then break end
         end
         if not pick then break end
+        if pick.action then
+            -- Action node (Switch Targets): render its icon/label, mark it shown once; it
+            -- doesn't advance the look-ahead (it's an instruction, not a cast).
+            picks[slot] = ActionEntry(pick.action)
+            usedRow[pick.i] = true
+        else
         picks[slot] = Entry(pick.sid)
         -- Proc flash: does this cast fire empowered/instant in the current state?
         local fkey = idToKey[pick.sid]
@@ -1920,6 +1947,7 @@ function Engine:Evaluate()
             usedRow[pick.i] = true
             usedSpell[pick.sid] = true                      -- and not again via another row
         end                                                 -- filler -> leave eligible
+        end
     end
     S._sim = nil
     S._simStacks = nil

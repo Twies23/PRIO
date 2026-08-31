@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.6.12
+- **New: action nodes — "Target Switch" for Marksmanship.** A priority row can now be a spell-less instruction that shows a labeled icon whenever its condition passes (always "off cooldown"). Marksmanship uses it for **Target Switch** — the desaturated arrows icon with a "Target Switch" label — placed before Trueshot to prompt swapping off an already-marked target. It's a general building block any spec can use.
+
 ## 0.6.11
 - **Marksmanship — Sentinel AoE handles Trick Shots / Aspect of the Hydra.** The two AoE-defining talents (the Trick Shots vs Aspect of the Hydra choice node) are now talent-gated lines in the Sentinel AoE list: Trick Shots activates the Aimed / Rapid Fire ricochet via Multi-Shot on 3+; Aspect of the Hydra spends Precise Shots on Multi-Shot at 2+. On a pure single-target build both stay inert (AoE plays like ST).
 

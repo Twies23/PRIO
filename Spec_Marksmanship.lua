@@ -104,6 +104,7 @@ local st = {
     { spell = "HuntersMark", cond = buffDown(ID_HUNTERSMARK) },       -- keep the 3% mark up (CDM buff read)
     { spell = "ExplosiveShot", cond = cdReady(ID_EXPLOSIVE) },        -- on CD (2 casts, Unstable Trigger)
     { spell = "Volley",      cond = cdReady(ID_VOLLEY) },             -- on CD
+    { action = "switchTargets", cond = AND(cdReady(ID_TRUESHOT), buffDown(ID_TRUESHOT), markUp()) }, -- swap off a marked target before Trueshot
     { spell = "Trueshot",    cond = AND(cdRemainMin(ID_EXPLOSIVE, 15), buffDown(ID_TRUESHOT), cdReady(ID_TRUESHOT)) }, -- hold until Explosive is >=15s out
     { spell = "Trueshot",    cond = lastCast(ID_EXPLOSIVE) },         -- pop right after Explosive Shot
     { spell = "MoonlightChakram", cond = AND(cdReady(ID_TRUESHOT), buffUp(ID_TRUESHOT)) },  -- (in Trueshot)
@@ -197,6 +198,12 @@ local spec = {
     },
 
     condTags = { pet = true },
+
+    -- Action nodes: spell-less priority instructions the strip shows on a condition (always
+    -- "off cooldown"). Placed in a list as { action = "<key>", cond = ... }.
+    actions = {
+        switchTargets = { texture = 450908, label = "Target Switch", desaturate = true },
+    },
 
     -- Variant split: Sentinel (default) / Dark Ranger, auto-selected from Black Arrow.
     activeHero = activeHero,

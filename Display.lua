@@ -84,6 +84,16 @@ local function CreateIcon(name)
     f.name:SetWidth(90)
     f.name:SetWordWrap(false)
 
+    -- Centered label for action nodes (e.g. "Target Switch"), overlaid on the icon.
+    f.actionText = f:CreateFontString(nil, "OVERLAY")
+    f.actionText:SetPoint("CENTER", f.icon, "CENTER", 0, 0)
+    f.actionText:SetPoint("LEFT", f, "LEFT", 1, 0)
+    f.actionText:SetPoint("RIGHT", f, "RIGHT", -1, 0)
+    f.actionText:SetJustifyH("CENTER")
+    f.actionText:SetWordWrap(true)
+    f.actionText:SetTextColor(1, 1, 1)
+    f.actionText:Hide()
+
     f:Hide()
     return f
 end
@@ -218,9 +228,11 @@ function Display:ApplyFonts()
     if container.alert then setf(container.alert.text, db.titleSize); setf(container.alert.kb, db.keybindSize) end
     setf(icons.primary.kb, db.keybindSize)
     setf(icons.primary.name, db.nameSize)
+    setf(icons.primary.actionText, (db.nameSize or 11) + 1)
     for i = 1, MAX_ICONS - 1 do
         setf(icons[i].kb, db.keybindSize)
         setf(icons[i].name, db.nameSize)
+        setf(icons[i].actionText, (db.nameSize or 11) + 1)
     end
 end
 
@@ -279,6 +291,24 @@ end
 local function FillIcon(f, data, isPrimary)
     if not data then f:Hide(); return end
     f.icon:SetTexture(data.texture)
+
+    -- Action node (e.g. "Switch Targets"): a spell-less instruction. Desaturate the icon
+    -- and overlay the label; no keybind / cooldown / glow / affordability treatment.
+    if data.isAction then
+        f.icon:SetDesaturated(data.desaturate and true or false)
+        f.kb:SetText("")
+        f.name:SetText("")
+        f.actionText:SetText(data.name or "")
+        f.actionText:Show()
+        f.desat:Hide()
+        f.cd:Clear()
+        f.glow:Hide()
+        f.flash:Hide()
+        f:Show()
+        return
+    end
+    f.icon:SetDesaturated(false)
+    f.actionText:Hide()
     f.kb:SetText(PRIO.db.showKeybinds and data.keybind or "")
     f.name:SetText(PRIO.db.showNames and data.name or "")
 
