@@ -14,8 +14,12 @@
 --   * Aimed Shot CHARGES: the exact count reads via the charge-aware cooldown; the recharge
 --     TIME is secret, so charge gates use the count. Aimed Shot recharge is HASTED.
 --   * PROC / DEBUFF buffs read from the Cooldown Manager: Precise Shots, Trick Shots,
---     Sentinel's Mark (target debuff), Bullseye (Trueshot stacks), Trueshot. Add them via
---     /prio setup.
+--     the target's mark (Spotter's Mark at base -> Sentinel's Mark with the hero talent),
+--     Bullseye (Trueshot stacks), Unstable Trigger (Explosive Shot recast), Trueshot.
+--     Add them via /prio setup.
+--   * LEVELLING NOTE: no hero talents below max, so you have Spotter's Mark (not Sentinel's
+--     Mark), and Kill Shot / Black Arrow / Wailing Arrow aren't learned yet -- those lines
+--     stay inert (IsKnown) until you have them, so the same list scales up.
 --   * Predicted cooldowns (Trueshot / Rapid Fire / Volley) are cast-seeded and anchored to
 --     the live ready flag, for "Trueshot soon" style gates.
 --------------------------------------------------------------------------------
@@ -40,14 +44,17 @@ local ID_BLACKARROW  = 466930    -- Dark Ranger
 local ID_WAILINGARROW = 392060   -- Dark Ranger
 local ID_HUNTERSMARK = 257284
 
--- Buff / debuff IDs (verify with /prio tracked -- the flagged ones especially).
-local ID_PRECISE     = 260240    -- Precise Shots (spend proc) -- verified via guide (stub's 260242 was Streamline)
-local ID_TRICK       = 257621    -- Trick Shots (AoE) -- verified 2026-08-31
-local ID_SENTMARK    = 1266960   -- Sentinel's Mark (target debuff -> Aimed Shot) -- verified via Wowhead 2026-08-31
-local ID_BULLSEYE    = 204090    -- Bullseye (Trueshot-hold stacks) -- UNVERIFIED, confirm via /prio tracked
-local ID_STREAMLINE  = 260242    -- Streamline (Rapid Fire buff) -- UNVERIFIED
-local ID_LOCKLOAD    = 194594    -- Lock and Load (instant Aimed Shot proc) -- UNVERIFIED
-local ID_LUNARSTORM  = 1216333   -- Lunar Storm (Sentinel proc) -- UNVERIFIED / may not need tracking
+-- Buff / debuff IDs -- verified from the live Cooldown Viewer dump 2026-08-31 unless noted.
+local ID_PRECISE     = 260240    -- Precise Shots (spend proc)
+local ID_TRICK       = 257621    -- Trick Shots (AoE)
+local ID_SPOTTERMARK = 1219616   -- Spotter's Mark (target debuff -> Aimed Shot) -- the BASE mark
+local ID_SENTMARK    = 1266960   -- Sentinel's Mark -- REPLACES Spotter's Mark with the Sentinel hero talent (not present pre-hero, e.g. while levelling)
+local ID_BULLSEYE    = 204089    -- Bullseye (Trueshot-hold stacks)
+local ID_LOCKLOAD    = 194595    -- Lock and Load (instant Aimed Shot proc)
+local ID_UNSTABLE    = 473520    -- Unstable Trigger (bar) -- enables the Explosive Shot recast
+local ID_BULLETSTORM = 389019    -- Bulletstorm (bar) -- Aimed Shot stacking buff
+-- Not present at low level / without the talent (kept for reference, not tracked):
+-- Streamline 260242, Lunar Storm (Sentinel proc), Master Marksman 260309.
 
 local function AND(...) return { op = "and", clauses = { ... } } end
 local function OR(...)  return { op = "or",  clauses = { ... } } end
@@ -58,6 +65,10 @@ local function debuffUp(id)    return { type = "debuffActive", spell = id } end
 local function usable(id)      return { type = "usable",       spell = id } end
 local function petMissing()    return { type = "petMissing" } end
 local function petDead()       return { type = "petDead" } end
+-- The target's "mark" -- Spotter's Mark at base, Sentinel's Mark with the hero talent.
+-- Reads whichever is present, so it works while levelling and at max.
+local function markUp()   return OR(debuffUp(ID_SPOTTERMARK), debuffUp(ID_SENTMARK)) end
+local function markDown() return AND(debuffDown(ID_SPOTTERMARK), debuffDown(ID_SENTMARK)) end
 
 --------------------------------------------------------------------------------
 -- Sentinel first-pass priority (Icy Veins 12.1 ST list). Spend Precise Shots (Kill /
@@ -118,21 +129,24 @@ local spec = {
     -- Relevant buffs (selectable in the condition editor). Flagged IDs need /prio tracked
     -- verification. Sentinel's Mark is a target DEBUFF; the rest are self buffs.
     auras = {
-        PreciseShots = ID_PRECISE,
-        TrickShots   = ID_TRICK,
+        PreciseShots  = ID_PRECISE,
+        TrickShots    = ID_TRICK,
+        SpottersMark  = ID_SPOTTERMARK,
         SentinelsMark = ID_SENTMARK,
-        Bullseye     = ID_BULLSEYE,
-        Trueshot     = ID_TRUESHOT,
-        Streamline   = ID_STREAMLINE,
-        LockAndLoad  = ID_LOCKLOAD,
-        LunarStorm   = ID_LUNARSTORM,
+        Bullseye      = ID_BULLSEYE,
+        Trueshot      = ID_TRUESHOT,
+        LockAndLoad   = ID_LOCKLOAD,
+        UnstableTrigger = ID_UNSTABLE,
+        Bulletstorm   = ID_BULLETSTORM,
     },
 
     setup = {
         { kind = "trackedAura", label = "Precise Shots tracked", spell = ID_PRECISE,
           hint = "Track Precise Shots -- the core Sentinel proc. PRIO spends it (Kill / Arcane Shot) to seed Sentinel's Mark." },
-        { kind = "trackedAura", label = "Sentinel's Mark tracked", spell = ID_SENTMARK,
-          hint = "Track Sentinel's Mark (the target debuff) so PRIO knows when to Aimed Shot the marked target for Lunar Storm. Verify the ID with /prio tracked." },
+        { kind = "trackedAura", label = "Spotter's Mark tracked", spell = ID_SPOTTERMARK,
+          hint = "Track Spotter's Mark (the target debuff) so PRIO knows when to Aimed Shot the marked target. With the Sentinel hero talent this becomes Sentinel's Mark -- track that instead once you have it." },
+        { kind = "trackedAura", label = "Unstable Trigger tracked", spell = ID_UNSTABLE, optional = true,
+          hint = "Track Unstable Trigger so PRIO knows when Explosive Shot can be recast (the double-cast)." },
         { kind = "trackedAura", label = "Trick Shots tracked", spell = ID_TRICK,
           hint = "Track Trick Shots so the AoE Aimed / Rapid Fire cleave lines read." },
         { kind = "trackedAura", label = "Trueshot tracked", spell = ID_TRUESHOT, optional = true,
@@ -222,9 +236,9 @@ local spec = {
     debug = {
         { label = "Aimed Shot (chg/next)", kind = "chargeTime", key = "AimedShot", spell = ID_AIMEDSHOT },
         { label = "Precise Shots",         kind = "buff", spell = ID_PRECISE },
-        { label = "Sentinel's Mark",       kind = "buff", spell = ID_SENTMARK },
-        { label = "Trick Shots",           kind = "buff", spell = ID_TRICK },
+        { label = "Spotter's Mark",        kind = "buff", spell = ID_SPOTTERMARK },
         { label = "Bullseye",              kind = "buff", spell = ID_BULLSEYE },
+        { label = "Unstable Trigger",      kind = "buff", spell = ID_UNSTABLE },
         { label = "Trueshot (CD left)",    kind = "cdRemain", spell = ID_TRUESHOT },
     },
     economy = {
@@ -244,9 +258,10 @@ local spec = {
         },
         buffs = {
             { label = "Precise Shots",       spell = ID_PRECISE },
-            { label = "Sentinel's Mark (t)", spell = ID_SENTMARK },
+            { label = "Spotter's Mark (t)",  spell = ID_SPOTTERMARK },
             { label = "Trick Shots",         spell = ID_TRICK },
             { label = "Bullseye",            spell = ID_BULLSEYE },
+            { label = "Unstable Trigger",    spell = ID_UNSTABLE },
             { label = "Trueshot (active)",   spell = ID_TRUESHOT },
         },
         rangeProbes = {
