@@ -29,6 +29,7 @@
 local ADDON, PRIO = ...
 PRIO.specs = PRIO.specs or {}
 
+local API = PRIO.API
 local FOCUS = (Enum and Enum.PowerType and Enum.PowerType.Focus) or 2
 
 -- Castable IDs (core ones are stable/well-known; verify with /prio spells).
@@ -78,6 +79,7 @@ local function predFalse(key)  return { type = "predFalse", key = key } end
 local function cdReady(id)     return { type = "cdReady",     spell = id } end
 local function cdRemainMin(id,n) return { type = "cdRemainMin", spell = id, v = n } end
 local function lastCast(id)    return { type = "lastCast",    spell = id } end
+local function chargesMin(n)   return { type = "chargesMin",  v = n } end   -- self (the row's spell)
 -- MM only has a pet WITH Unbreakable Bond (petless Lone Wolf otherwise), so the pet-check
 -- lines gate on that talent -- inert on a Lone Wolf build, active once you take the pet.
 local function petGuarded(inner) return AND(talentYes(ID_UNBREAKABLE), inner) end
@@ -110,7 +112,41 @@ local st = {
     { spell = "SteadyShot" },                                         -- Focus filler
 }
 
-local aoe = st   -- no Trick Shots -> AoE == ST (the Trick Shots variant will be separate)
+--------------------------------------------------------------------------------
+-- DARK RANGER priority (Icy Veins 12.1). Black Arrow is the high-priority Precise
+-- spender + core cooldown; Wailing Arrow on CD; Aimed Shot in Trueshot without Precise
+-- when Black Arrow is ready. Target-preference notes ("prefer unmarked") are left to you
+-- for now -- the Switch Targets node will surface those. TO TUNE in-game.
+--------------------------------------------------------------------------------
+local dr_st = {
+    { spell = "CallPet",     cond = petGuarded(petMissing()) },
+    { spell = "RevivePet",   cond = petGuarded(petDead()) },
+    { spell = "HuntersMark", cond = buffDown(ID_HUNTERSMARK) },
+    { spell = "BlackArrow",  cond = buffUp(ID_PRECISE) },              -- spend Precise (prefer unmarked)
+    { spell = "ExplosiveShot", cond = cdReady(ID_EXPLOSIVE) },        -- on CD (Unstable Trigger x2)
+    { spell = "Volley",      cond = cdReady(ID_VOLLEY) },             -- on CD
+    { spell = "AimedShot",   cond = OR(AND(buffUp(ID_TRUESHOT), buffDown(ID_PRECISE), cdReady(ID_BLACKARROW)), chargesMin(2)) }, -- in Trueshot w/o Precise if Black Arrow up, or at 2 charges
+    { spell = "Trueshot",    cond = AND(cdRemainMin(ID_EXPLOSIVE, 15), buffDown(ID_TRUESHOT), cdReady(ID_TRUESHOT)) }, -- hold until Explosive is >=15s out
+    { spell = "Trueshot",    cond = lastCast(ID_EXPLOSIVE) },         -- pop right after Explosive
+    { spell = "WailingArrow", cond = cdReady(ID_WAILINGARROW) },      -- on CD
+    { spell = "RapidFire" },                                          -- builder (stay on the priority target)
+    { spell = "ArcaneShot",  cond = buffUp(ID_PRECISE) },             -- spend Precise
+    { spell = "AimedShot" },                                          -- on CD
+    { spell = "BlackArrow" },                                         -- on CD
+    { spell = "SteadyShot" },                                         -- Focus filler
+}
+
+-- Variant split (like BM's Pack Leader / Dark Ranger): Dark Ranger when Black Arrow is
+-- talented, else Sentinel (the default). Each variant's AoE clones its ST until the Trick
+-- Shots AoE variant is tuned. Per-variant customization stores separately in db.
+local heroLists = {
+    sentinel    = { st = st,    aoe = st },
+    dark_ranger = { st = dr_st, aoe = dr_st },
+}
+local function activeHero()
+    if API and API.IsKnownStrict and API.IsKnownStrict(ID_BLACKARROW) then return "dark_ranger" end
+    return "sentinel"
+end
 
 local spec = {
     key      = "HUNTER_MARKSMANSHIP",
@@ -132,6 +168,14 @@ local spec = {
     },
 
     condTags = { pet = true },
+
+    -- Variant split: Sentinel (default) / Dark Ranger, auto-selected from Black Arrow.
+    activeHero = activeHero,
+    priorityByVariant = heroLists,
+    priorityVariants = {
+        { key = "sentinel",    label = "Sentinel" },
+        { key = "dark_ranger", label = "Dark Ranger" },
+    },
 
     -- Relevant buffs (selectable in the condition editor). Flagged IDs need /prio tracked
     -- verification. Sentinel's Mark is a target DEBUFF; the rest are self buffs.
@@ -300,7 +344,14 @@ local spec = {
         },
     },
 
-    priority = { st = st, aoe = aoe },
 }
+
+-- spec.priority is a live proxy resolving to the ACTIVE variant's list for a mode.
+spec.priority = setmetatable({}, {
+    __index = function(_, mode)
+        local h = heroLists[activeHero()] or heroLists.sentinel
+        return h[mode] or h.st
+    end,
+})
 
 PRIO.specs[spec.specID] = spec

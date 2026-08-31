@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.6.10
+- **Marksmanship — Sentinel / Dark Ranger variant split.** Added the hero-style variant system (auto-selected from Black Arrow): your tuned **Sentinel** lists plus a first-pass **Dark Ranger** single-target priority (Black Arrow as the Precise spender + core cooldown, Wailing Arrow, Aimed-in-Trueshot). Also fixed variant auto-detection, which was always falling back to Sentinel.
+
 ## 0.6.9
 - **Marksmanship — tuned Sentinel ST/AoE as the default.** Shipped the hand-tuned single-target priority: Explosive Shot / Volley on cooldown, Trueshot held until Explosive is 15s+ out (then popped right after Explosive), Moonlight Chakram inside Trueshot, Precise Shots spent on Kill / Arcane Shot, Aimed Shot on cooldown, Steady Shot filler. Without Trick Shots the AoE list is identical (a Trick Shots AoE variant is coming).
 

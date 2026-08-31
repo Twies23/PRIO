@@ -12,12 +12,21 @@ test("MM spec registered under 254", function()
 end)
 
 test("every MM priority row names a spell that exists in spec.spells", function()
-    for mode, list in pairs(H.mmSpec.priority) do
-        for i, row in ipairs(list) do
-            truthy(H.mmSpec.spells[row.spell],
-                ("%s[%d]: '%s' must be a known spec spell"):format(mode, i, tostring(row.spell)))
+    for variant, lists in pairs(H.mmSpec.priorityByVariant) do
+        for mode, list in pairs(lists) do
+            for i, row in ipairs(list) do
+                truthy(H.mmSpec.spells[row.spell],
+                    ("%s.%s[%d]: '%s' must be a known spec spell"):format(variant, mode, i, tostring(row.spell)))
+            end
         end
     end
+end)
+
+test("MM variant select: Black Arrow -> dark_ranger, else sentinel", function()
+    H.reset(); H.S.knownStrict[466930] = true
+    eq(H.mmSpec.activeHero(), "dark_ranger")
+    H.reset(); H.S.knownStrict[466930] = false
+    eq(H.mmSpec.activeHero(), "sentinel")
 end)
 
 test("MM pet lines gate on Unbreakable Bond (Lone Wolf -> no Call Pet)", function()
