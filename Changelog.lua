@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.6.8", {
+        "Marksmanship -- Moonlight Chakram no longer over-recommended. During Trueshot the button becomes Moonlight Chakram, usable once. PRIO now suggests it a single time near the end of the Trueshot window (~5s left) -- tracked so it won't re-appear every global cooldown until you press it.",
+    } },
     { "0.6.7", {
         "Marksmanship -- pet lines gate on Unbreakable Bond. MM is petless (Lone Wolf) without the Unbreakable Bond talent, so the Call Pet / Revive Pet lines now only appear when you've taken it -- no stray pet suggestions on a Lone Wolf build.",
     } },

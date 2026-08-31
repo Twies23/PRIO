@@ -44,6 +44,17 @@ test("MM pet lines gate on Unbreakable Bond (Lone Wolf -> no Call Pet)", functio
     H.API.PetExists = origE
 end)
 
+test("Moonlight Chakram once-per-Trueshot flag", function()
+    H.reset(); H.S.specID = 254; H.rebind()
+    local TS, CHAKRAM = 288613, 1264902
+    -- Casting Trueshot opens a fresh window (Chakram available).
+    H.fire("UNIT_SPELLCAST_SUCCEEDED", "player", nil, TS)
+    eq(H.Engine.P.predFlags.chakramUsed, false, "Trueshot opens the window (chakramUsed=false)")
+    -- Casting Moonlight Chakram spends it.
+    H.fire("UNIT_SPELLCAST_SUCCEEDED", "player", nil, CHAKRAM)
+    eq(H.Engine.P.predFlags.chakramUsed, true, "Moonlight Chakram marks it used")
+end)
+
 test("Trueshot duration + cooldown-reduction tracking", function()
     local TS, CANTMISS, CALLING = 288613, 1253830, 260404
 

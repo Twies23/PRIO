@@ -73,6 +73,8 @@ local function usable(id)      return { type = "usable",       spell = id } end
 local function petMissing()    return { type = "petMissing" } end
 local function petDead()       return { type = "petDead" } end
 local function talentYes(id)   return { type = "talentYes", spell = id } end
+local function auraRemainMax(id,n) return { type = "auraRemainMax", spell = id, v = n } end
+local function predFalse(key)  return { type = "predFalse", key = key } end
 -- MM only has a pet WITH Unbreakable Bond (petless Lone Wolf otherwise), so the pet-check
 -- lines gate on that talent -- inert on a Lone Wolf build, active once you take the pet.
 local function petGuarded(inner) return AND(talentYes(ID_UNBREAKABLE), inner) end
@@ -97,7 +99,7 @@ local st = {
     { spell = "KillShot",   cond = AND(buffUp(ID_PRECISE), usable(ID_KILLSHOT)) },   -- spend Precise (execute)
     { spell = "ArcaneShot", cond = AND(buffUp(ID_PRECISE), usable(ID_ARCANESHOT)) }, -- spend Precise -> apply Sentinel's Mark
     { spell = "AimedShot",  cond = usable(ID_AIMEDSHOT) },            -- on CD (charges), consumes Sentinel's Mark
-    { spell = "MoonlightChakram", cond = usable(ID_MOONCHAKRAM) },    -- Sentinel filler
+    { spell = "MoonlightChakram", cond = AND(buffUp(ID_TRUESHOT), auraRemainMax(ID_TRUESHOT, 5), predFalse("chakramUsed")) }, -- Sentinel: once, ~5s left in Trueshot
     { spell = "SteadyShot" },                                         -- Focus filler (resource-starved)
 }
 
@@ -249,7 +251,18 @@ local spec = {
         KillShot   = { consume = { ID_PRECISE } },
     },
 
-    OnCast = function(P, key, now) end,
+    -- Moonlight Chakram replaces the Trueshot button DURING Trueshot and can be used ONCE
+    -- per window. Track that: casting Trueshot opens a fresh window (chakramUsed = false),
+    -- casting Moonlight Chakram spends it (chakramUsed = true). The rotation gates on
+    -- predFalse("chakramUsed") so it's recommended once, not every GCD of Trueshot.
+    OnCast = function(P, key, now)
+        P.predFlags = P.predFlags or {}
+        if key == "Trueshot" then
+            P.predFlags.chakramUsed = false
+        elseif key == "MoonlightChakram" then
+            P.predFlags.chakramUsed = true
+        end
+    end,
 
     --------------------------------------------------------------------------------
     -- Debug metadata (/prio debug): the live tracking signals.
