@@ -74,6 +74,24 @@ test("charge-time condition reads predicted time to next charge", function()
     truthy(not H.Cond.Eval({ type = "chargeTimeMax", spell = BARBED, v = 1.5 }, H.S, BARBED), "next charge <= 1.5s fails")
 end)
 
+test("hasted charge recharge: Barbed Shot prediction scales with haste", function()
+    H.reset(); H.S.specID = 253; H.rebind()
+    local BARBED = 217200
+    -- 25% haste -> 12 / 1.25 = 9.6s recharge (not the unhasted 12s).
+    H.S.haste = 25
+    H.Engine.P.charges.BarbedShot = { cur = 2, rechargeEnd = 0, dur = 12 }
+    H.fire("UNIT_SPELLCAST_SUCCEEDED", "player", nil, BARBED)   -- spend 2->1, seeds rechargeEnd
+    local rem = H.Engine:ChargeTimeRemaining(BARBED)
+    truthy(rem and math.abs(rem - 9.6) < 0.02, "expected ~9.6s hasted, got " .. tostring(rem))
+
+    -- 0% haste -> the unhasted base 12s.
+    H.reset(); H.S.specID = 253; H.rebind()
+    H.S.haste = 0
+    H.Engine.P.charges.BarbedShot = { cur = 2, rechargeEnd = 0, dur = 12 }
+    H.fire("UNIT_SPELLCAST_SUCCEEDED", "player", nil, BARBED)
+    eq(H.Engine:ChargeTimeRemaining(BARBED), 12, "no haste -> base 12s")
+end)
+
 test("charge-time anchors to the clean readable recharge (no drift)", function()
     H.reset(); H.S.specID = 253; H.rebind()
     local BARBED = 217200

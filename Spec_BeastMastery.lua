@@ -300,9 +300,12 @@ local spec = {
 
     -- Barbed Shot and Kill Command both run on 2 charges (KC needs Alpha Predator; the
     -- tracker learns the real max from the client, so 1-charge builds self-correct).
+    -- Both recharge with spell haste, and the game's own recharge read is SECRET in combat
+    -- (verified in-game), so `hasted` tells the engine to predict from base / (1 + haste%)
+    -- using the live, readable haste -- keeping the "about to cap" timing honest.
     chargeTrack = {
-        BarbedShot  = { max = 2, recharge = 12 },
-        KillCommand = { max = 2, recharge = 7.5 },
+        BarbedShot  = { max = 2, recharge = 12,  hasted = true },
+        KillCommand = { max = 2, recharge = 7.5, hasted = true },
     },
 
     -- Static cooldown model for the "Bestial Wrath soon / not soon" gates. 90s base, -60s

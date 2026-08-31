@@ -276,6 +276,20 @@ local function ChargeCount(sid)
     return Engine:EffectiveCharges(sid)
 end
 
+-- Effective recharge seconds for a charge-tracked spell's PREDICTION. For entries flagged
+-- `hasted` (recharge scales with spell haste -- e.g. BM's Barbed Shot / Kill Command), the
+-- game's own recharge read goes SECRET in combat, so we compute it from the unhasted base
+-- and the live, readable haste: base / (1 + haste%). Non-hasted entries keep the prior
+-- behavior (the OOC-learned real duration, else the base). `c` is the P.charges entry.
+local function EffRecharge(cfg, c)
+    local base = cfg and cfg.recharge or 0
+    if cfg and cfg.hasted and base > 0 then
+        local h = (API.Haste and API.Haste()) or 0
+        return base / (1 + h / 100)
+    end
+    return (c and c.dur) or base
+end
+
 -- Talent-adjusted Energy cost from a spec entry ({cost,...} probe or {base,...} spender).
 local function EnergyCostOf(entry)
     if not entry then return nil end
@@ -852,7 +866,7 @@ PRIO:On("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
     local cc = spec.chargeTrack and spec.chargeTrack[key] and Engine.P.charges[key]
     if cc then
         cc.cur = math.max(0, cc.cur - 1)
-        if cc.rechargeEnd == 0 then cc.rechargeEnd = GetTime() + (cc.dur or spec.chargeTrack[key].recharge) end
+        if cc.rechargeEnd == 0 then cc.rechargeEnd = GetTime() + EffRecharge(spec.chargeTrack[key], cc) end
     end
     -- Advance predicted buff stacks (Executioner's Precision: +1 per Execute, reset on
     -- Mortal Strike) from our own cast.
@@ -936,7 +950,7 @@ PRIO:On("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
                     tc.rechargeEnd = tc.rechargeEnd - (r.sec or 0)
                     while tc.cur < cap and tc.rechargeEnd > 0 and nowT >= tc.rechargeEnd do
                         tc.cur = tc.cur + 1
-                        tc.rechargeEnd = (tc.cur < cap) and (tc.rechargeEnd + (tc.dur or cfg.recharge)) or 0
+                        tc.rechargeEnd = (tc.cur < cap) and (tc.rechargeEnd + EffRecharge(cfg, tc)) or 0
                     end
                 end
             end
@@ -982,26 +996,26 @@ function Engine:UpdateCharges(now)
             if dur and dur > 0 then c.dur = dur end          -- learn real (haste'd) recharge OOC
             if curC ~= nil then                              -- exact when readable (OOC)
                 c.cur = curC
-                c.rechargeEnd = (curC < cap) and (now + (c.dur or cfg.recharge)) or 0
+                c.rechargeEnd = (curC < cap) and (now + EffRecharge(cfg, c)) or 0
             else
                 -- Recharge over time.
                 while c.cur < cap and c.rechargeEnd > 0 and now >= c.rechargeEnd do
                     c.cur = c.cur + 1
-                    c.rechargeEnd = (c.cur < cap) and (c.rechargeEnd + (c.dur or cfg.recharge)) or 0
+                    c.rechargeEnd = (c.cur < cap) and (c.rechargeEnd + EffRecharge(cfg, c)) or 0
                 end
                 -- resetAura (Lava Surge) rising edge -> a full charge back.
                 if cfg.resetAura then
                     local up = API.IsAuraActive(cfg.resetAura) == true
                     if up and not c.resetPrev then
                         c.cur = math.min(cap, c.cur + 1)
-                        c.rechargeEnd = (c.cur < cap) and (now + (c.dur or cfg.recharge)) or 0
+                        c.rechargeEnd = (c.cur < cap) and (now + EffRecharge(cfg, c)) or 0
                     end
                     c.resetPrev = up
                 end
                 -- Clamp to the readable castable state.
                 if API.IsReady(sid) == false then
                     c.cur = 0
-                    if c.rechargeEnd == 0 then c.rechargeEnd = now + (c.dur or cfg.recharge) end
+                    if c.rechargeEnd == 0 then c.rechargeEnd = now + EffRecharge(cfg, c) end
                 elseif c.cur < 1 then
                     c.cur = 1
                 end

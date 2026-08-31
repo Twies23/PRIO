@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.5.6
+- **Beast Mastery — Barbed Shot / Kill Command "about to cap" is now haste-correct.** The game's own charge-recharge read turns out to be secret in combat, so PRIO predicts the next-charge time from the recharge base and your **live haste** (base ÷ (1 + haste%)) rather than a fixed duration — the timer no longer drifts as your haste changes. (Barbed Scales and the other cast-triggered reductions are already folded in; Pack Mentality's occasional beast-summon −4s is the only remaining unmodeled nudge.)
+
 ## 0.5.5
 - **Beast Mastery — fixed Barbed Shot / Kill Command charge-timer drift.** The "next charge in Xs" (and the "about to cap" Barbed Shot check) now reads the game's own recharge — which is correctly hasted — instead of a fixed-duration prediction that drifted with haste and unmodeled cooldown reductions. The cast-based prediction stays only as a fallback.
 - Rotation Debug tags each charge row **(live)** or **(predicted)** so you can see whether that readable recharge value stays available in combat or goes secret.
