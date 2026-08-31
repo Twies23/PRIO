@@ -151,6 +151,31 @@ test("cast-triggered charge CDR speeds Kill Command / Barbed Shot timers", funct
     eq(H.Engine:ChargeTimeRemaining(BARBED), 6, "Barbed Scales shaves 2s off Barbed Shot")
 end)
 
+-- Focus is secret in combat, so spenders are gated on the game's clean insufficient-power
+-- flag (spec.affordGate). Set up BM with only Kill Command (a non-filler Focus spender)
+-- castable, so it's the candidate under test.
+local KC = 34026
+local function setBMkc()
+    H.reset(); H.S.specID = 253; H.S.enemies = 1
+    setmetatable(H.S.ready, { __index = function() return false end })
+    H.S.ready[KC] = true
+    H.rebind()
+    H.Engine.openerActive = false
+end
+local function bmShowsKC()
+    local r = H.Engine:Evaluate(); local hit = {}
+    if r and r.primary then hit[r.primary.name] = true end
+    for _, e in ipairs((r and r.queue) or {}) do hit[e.name] = true end
+    return hit["Spell" .. KC] == true
+end
+
+test("BM affordGate: Kill Command gated on the insufficient-Focus flag", function()
+    setBMkc(); H.S.insufficientPower[KC] = true
+    falsy(bmShowsKC(), "insufficientPower=true: Kill Command withheld (can't afford)")
+    setBMkc(); H.S.insufficientPower[KC] = false
+    truthy(bmShowsKC(), "insufficientPower=false: Kill Command shows (affordable)")
+end)
+
 test("every priority row names a spell that exists in spec.spells", function()
     for variant, lists in pairs(H.bmSpec.priorityByVariant) do
         for mode, list in pairs(lists) do

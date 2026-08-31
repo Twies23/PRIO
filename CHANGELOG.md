@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.5.11
+- **Beast Mastery — Focus spenders are now gated on affordability.** Kill Command, Cobra Shot, and Wild Thrash (plus the other Focus costs) only show when you can actually afford them. Focus is secret in combat, but the game exposes a clean "insufficient power" flag even so — so this is exact, with no guessing: the spender appears the instant you have the Focus and stays hidden when you don't.
+
 ## 0.5.10
 - **Fixed the charge count reading 1 when it was actually 0.** The count was derived from WoW's "usable" flag, which ignores cooldown/charges and reads *true even at 0 charges*. It now uses the charge-aware cooldown — the same signal that makes Lava Burst castable at 1/3 but not 0/3 — so Barbed Shot / Kill Command show the true 0/1/2. (Applies to every 2-charge spell, not just Hunter.)
 - **Beast Mastery charge maintenance now gates on the readable count, not a predicted timer.** We confirmed in-game that the recharge *time* is fully secret in combat (both game reads come back blank), so "about to cap" is simply "at 2 charges" — exact and drift-free. Rotation Debug shows the true count and, out of combat, the recharge; in combat it honestly says "recharge secret".
