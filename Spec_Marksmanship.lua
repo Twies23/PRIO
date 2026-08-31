@@ -181,6 +181,15 @@ local spec = {
 
     condTags = { pet = true },
 
+    -- Named conditions surfaced in the editor. Glow reads aren't offered as raw options, so
+    -- expose them here: "Chakram glowing" is the castable signal (its icon glows), with the
+    -- individual frames too in case only one lights up on your Cooldown Manager.
+    condPresets = {
+        { key = "chakramGlow",   label = "Chakram glowing",       clause = OR(glow(ID_MOONCHAKRAM), glow(ID_TRUESHOT)) },
+        { key = "chakramIcon",   label = "Chakram icon glow",     clause = glow(ID_MOONCHAKRAM) },
+        { key = "trueshotIcon",  label = "Trueshot icon glow",    clause = glow(ID_TRUESHOT) },
+    },
+
     -- Action nodes: spell-less priority instructions the strip shows on a condition (always
     -- "off cooldown"). Placed in a list as { action = "<key>", cond = ... }.
     actions = {

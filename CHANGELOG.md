@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.6.17
+- **Marksmanship — "Chakram glowing" is now a selectable condition.** You can add it (plus the individual Chakram / Trueshot icon-glow reads) to any priority line in the condition editor, to tune the Moonlight Chakram timing yourself.
+
 ## 0.6.16
 - **Marksmanship — Moonlight Chakram now tracked by its glow, and shows the Trueshot keybind.** Chakram *replaces* the Trueshot button, so its own cooldown read is unreliable. PRIO now reads its "castable" state from the icon **glow** (which clears once you use it), so it's suggested only while actually available and only once per Trueshot. Its keybind now mirrors Trueshot's, and Rotation Debug shows the Chakram/Trueshot glow.
 
