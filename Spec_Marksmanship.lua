@@ -113,13 +113,13 @@ local st = {
     { spell = "Volley",      cond = cdReady(ID_VOLLEY) },             -- on CD
     { spell = "Trueshot",    cond = AND(cdRemainMin(ID_EXPLOSIVE, 15), buffDown(ID_TRUESHOT), cdReady(ID_TRUESHOT)) }, -- hold until Explosive is >=15s out
     { spell = "Trueshot",    cond = lastCast(ID_EXPLOSIVE) },         -- pop right after Explosive Shot
-    { spell = "MoonlightChakram", cond = AND(auraRemainMax(ID_TRUESHOT, 7), chakramGlow()) }, -- ~end of Trueshot (glow = castable, clears after use)
+    { spell = "MoonlightChakram", cond = AND(buffUp(ID_TRUESHOT), auraRemainMax(ID_TRUESHOT, 7), predFalse("chakramUsed")) }, -- ~end of Trueshot, once per window
     { spell = "RapidFire" },                                          -- on CD, builds Precise
     { spell = "KillShot",    cond = buffUp(ID_PRECISE) },             -- spend Precise (execute)
     { spell = "MultiShot",   cond = AND(buffUp(ID_PRECISE), enemiesMin(2), talentYes(ID_ASPECTHYDRA)) }, -- Hydra: spend Precise on 2+
     { spell = "ArcaneShot",  cond = buffUp(ID_PRECISE) },             -- spend Precise -> apply the mark
     { spell = "AimedShot" },                                          -- on CD (charges), consumes the mark
-    { spell = "MoonlightChakram", cond = chakramGlow() },             -- filler while it's castable (glow)
+    { spell = "MoonlightChakram", cond = AND(buffUp(ID_TRUESHOT), predFalse("chakramUsed")) }, -- in Trueshot, once per window
     { spell = "SteadyShot" },                                         -- Focus filler
 }
 
@@ -181,13 +181,13 @@ local spec = {
 
     condTags = { pet = true },
 
-    -- Named conditions surfaced in the editor. Glow reads aren't offered as raw options, so
-    -- expose them here: "Chakram glowing" is the castable signal (its icon glows), with the
-    -- individual frames too in case only one lights up on your Cooldown Manager.
+    -- Named conditions surfaced in the editor. The Chakram button glow doesn't read (it's
+    -- not a proc overlay), so "Chakram available" uses the reliable signal instead: Trueshot
+    -- active AND not yet used this window. (The raw glow reads are kept too, in case a future
+    -- client exposes them.)
     condPresets = {
-        { key = "chakramGlow",   label = "Chakram glowing",       clause = OR(glow(ID_MOONCHAKRAM), glow(ID_TRUESHOT)) },
-        { key = "chakramIcon",   label = "Chakram icon glow",     clause = glow(ID_MOONCHAKRAM) },
-        { key = "trueshotIcon",  label = "Trueshot icon glow",    clause = glow(ID_TRUESHOT) },
+        { key = "chakramReady", label = "Chakram available",  clause = AND(buffUp(ID_TRUESHOT), predFalse("chakramUsed")) },
+        { key = "chakramGlow",  label = "Chakram glowing (raw)", clause = OR(glow(ID_MOONCHAKRAM), glow(ID_TRUESHOT)) },
     },
 
     -- Action nodes: spell-less priority instructions the strip shows on a condition (always
@@ -320,16 +320,22 @@ local spec = {
         KillShot   = { consume = { ID_PRECISE } },
     },
 
-    -- Moonlight Chakram replaces the Trueshot button DURING Trueshot and can be used ONCE
-    -- per window. Track that: casting Trueshot opens a fresh window (chakramUsed = false),
-    -- casting Moonlight Chakram spends it (chakramUsed = true). The rotation gates on
-    -- predFalse("chakramUsed") so it's recommended once, not every GCD of Trueshot.
+    -- Moonlight Chakram REPLACES the Trueshot button during Trueshot and can be used ONCE
+    -- per window. The button glow doesn't read (it's not a proc overlay) and Chakram's
+    -- cooldown/usable read is always true, so we track "used this window" from casts: the
+    -- override may report as Trueshot's id, so a Trueshot-key cast while Trueshot is ALREADY
+    -- active is really the Chakram press (mark used); a Trueshot cast while it's NOT active
+    -- is the window start (reset). The Chakram lines gate on buffUp(Trueshot) + predFalse.
     OnCast = function(P, key, now)
         P.predFlags = P.predFlags or {}
-        if key == "Trueshot" then
-            P.predFlags.chakramUsed = false
-        elseif key == "MoonlightChakram" then
+        if key == "MoonlightChakram" then
             P.predFlags.chakramUsed = true
+        elseif key == "Trueshot" then
+            if API.IsAuraActive(ID_TRUESHOT) == true then
+                P.predFlags.chakramUsed = true     -- Chakram press (override on the Trueshot key)
+            else
+                P.predFlags.chakramUsed = false    -- window start
+            end
         end
     end,
 
@@ -370,12 +376,10 @@ local spec = {
             { label = "Hunter's Mark (tgt)", spell = ID_HUNTERSMARK },
             { label = "Trueshot (active)",   spell = ID_TRUESHOT },
         },
-        glows = {
-            { label = "Chakram (castable)", spell = ID_MOONCHAKRAM },
-            { label = "Trueshot glow",      spell = ID_TRUESHOT },
-        },
         rangeProbes = {
             { label = "Focus", kind = "resource" },
+            -- Moonlight Chakram once-per-Trueshot: false = available this window, true = used.
+            { label = "Chakram used (window)", kind = "predFlag", key = "chakramUsed" },
         },
     },
 

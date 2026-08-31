@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.6.18
+- **Marksmanship — Moonlight Chakram tracking fixed properly.** Its button glow doesn't read (it's not a proc overlay) and its cooldown always reads ready, so PRIO now gates it on **Trueshot being active** plus a once-per-window flag that correctly handles the override — a Trueshot-key press *while Trueshot is active* is counted as the Chakram cast. So it's suggested once during Trueshot and doesn't come back after you use it. Added a **"Chakram available"** condition you can drop on any line.
+
 ## 0.6.17
 - **Marksmanship — "Chakram glowing" is now a selectable condition.** You can add it (plus the individual Chakram / Trueshot icon-glow reads) to any priority line in the condition editor, to tune the Moonlight Chakram timing yourself.
 

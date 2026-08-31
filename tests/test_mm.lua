@@ -75,12 +75,18 @@ end)
 test("Moonlight Chakram once-per-Trueshot flag", function()
     H.reset(); H.S.specID = 254; H.rebind()
     local TS, CHAKRAM = 288613, 1264902
-    -- Casting Trueshot opens a fresh window (Chakram available).
+    -- Casting Trueshot while it's NOT active opens a fresh window (Chakram available).
+    H.S.auras[TS] = false
     H.fire("UNIT_SPELLCAST_SUCCEEDED", "player", nil, TS)
-    eq(H.Engine.P.predFlags.chakramUsed, false, "Trueshot opens the window (chakramUsed=false)")
+    eq(H.Engine.P.predFlags.chakramUsed, false, "Trueshot start (not active) -> window open")
     -- Casting Moonlight Chakram spends it.
     H.fire("UNIT_SPELLCAST_SUCCEEDED", "player", nil, CHAKRAM)
     eq(H.Engine.P.predFlags.chakramUsed, true, "Moonlight Chakram marks it used")
+    -- The override may report as Trueshot's id: a Trueshot-key cast WHILE active = Chakram.
+    H.reset(); H.S.specID = 254; H.rebind()
+    H.S.auras[TS] = true
+    H.fire("UNIT_SPELLCAST_SUCCEEDED", "player", nil, TS)
+    eq(H.Engine.P.predFlags.chakramUsed, true, "Trueshot-key cast while active = Chakram press -> used")
 end)
 
 test("Trueshot duration + cooldown-reduction tracking", function()
