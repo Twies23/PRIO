@@ -7,3 +7,4 @@ Thumbs.db
 
 # SavedVariables live in WTF, never in the addon folder, but just in case
 *.lua.bak
+tools/.wcl_creds
