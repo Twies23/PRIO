@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.7.2
+- **Keybind nudge — confirm before dismissing.** **Ignore** and **Don't remind me** now ask you to confirm first, so you don't silence the nudge by accident.
+
 ## 0.7.1
 - **Keybind nudge.** On login, if the active spec has abilities PRIO can recommend that you don't have a key for, a small panel pops up listing them — bind each on your bars and its row turns green. Because it's easy to end up clicking an ability PRIO told you to press. Open it anytime with `/prio binds`.
   - Honors override abilities (e.g. Moonlight Chakram shares Trueshot's key) so they aren't false-flagged, and skips passives and abilities you don't know.

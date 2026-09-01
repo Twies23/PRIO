@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.7.2", {
+        "Keybind nudge -- Ignore and 'Don't remind me' now ask you to confirm first, so you can't silence the nudge by accident.",
+    } },
     { "0.7.1", {
         "Keybind nudge. On login, if the active spec has abilities PRIO can recommend that you have no key for, a small panel lists them -- bind each on your bars and its row turns green. Open anytime with /prio binds.",
         "Honors override abilities (e.g. Moonlight Chakram shares Trueshot's key) so they're not false-flagged; skips passives and abilities you don't know.",

@@ -21,6 +21,43 @@ local win, body, introFS, elapsed = nil, nil, nil, 0
 local rows, pool, builtKey = {}, {}, nil
 
 --------------------------------------------------------------------------------
+-- Persisting the two "stop bugging me" actions. Both are routed through a
+-- confirmation popup (below), so the actual writes live here as helpers.
+--------------------------------------------------------------------------------
+function Binds:ApplyIgnore(spec, id)
+    local db = PRIO.db
+    if not (db and id) then return end
+    db.bindsIgnore = db.bindsIgnore or {}
+    local key = spec and spec.key or "none"
+    db.bindsIgnore[key] = db.bindsIgnore[key] or {}
+    db.bindsIgnore[key][id] = true
+    self:Rebuild(spec)
+end
+
+function Binds:ApplyMute(spec)
+    local db = PRIO.db
+    if not db then return end
+    db.bindsMuted = db.bindsMuted or {}
+    db.bindsMuted[spec and spec.key or "none"] = true
+    if win then win:Hide() end
+end
+
+StaticPopupDialogs["PRIO_BINDS_IGNORE_CONFIRM"] = {
+    text = "Are you sure about that little chimperoo?",
+    button1 = YES, button2 = NO,
+    OnAccept = function(_, data) if data then Binds:ApplyIgnore(data.spec, data.id) end end,
+    OnCancel = function() end,
+    timeout = 0, whileDead = true, hideOnEscape = true, preferredIndex = 3,
+}
+StaticPopupDialogs["PRIO_BINDS_MUTE_CONFIRM"] = {
+    text = "Are you sure about that little chimperoo?",
+    button1 = YES, button2 = NO,
+    OnAccept = function(_, data) if data then Binds:ApplyMute(data.spec) end end,
+    OnCancel = function() end,
+    timeout = 0, whileDead = true, hideOnEscape = true, preferredIndex = 3,
+}
+
+--------------------------------------------------------------------------------
 -- The candidate set: distinct abilities the spec can recommend, in order of first
 -- appearance across the CURRENT hero variant's priority lists. Mirrors Setup's
 -- priorityAbilities so the two agree on "what PRIO might tell you to press".
@@ -139,12 +176,7 @@ function Binds:Rebuild(spec)
         r.icon:SetTexture(API.SpellTexture(item.id))
         r.name:SetText(item.name)
         r.ignore:SetScript("OnClick", function()
-            local db = PRIO.db
-            db.bindsIgnore = db.bindsIgnore or {}
-            local key = spec and spec.key or "none"
-            db.bindsIgnore[key] = db.bindsIgnore[key] or {}
-            db.bindsIgnore[key][item.id] = true
-            Binds:Rebuild(spec)
+            StaticPopup_Show("PRIO_BINDS_IGNORE_CONFIRM", nil, nil, { spec = spec, id = item.id })
         end)
         rows[#rows + 1] = { frame = r, item = item }
         y = y + 34
@@ -229,12 +261,9 @@ function Binds:Build()
 
     local openKB = mkButton("Open Key Bindings", 170, openKeybindings, true)
     local mute = mkButton("Don't remind me", 150, function()
-        local db = PRIO.db
         local specID = API.GetSpecID()
         local spec = specID and PRIO.specs and PRIO.specs[specID]
-        db.bindsMuted = db.bindsMuted or {}
-        db.bindsMuted[spec and spec.key or "none"] = true
-        win:Hide()
+        StaticPopup_Show("PRIO_BINDS_MUTE_CONFIRM", nil, nil, { spec = spec })
     end)
     local done = mkButton("Done", 90, function() win:Hide() end)
 
