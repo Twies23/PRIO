@@ -11,6 +11,11 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.7.1", {
+        "Keybind nudge. On login, if the active spec has abilities PRIO can recommend that you have no key for, a small panel lists them -- bind each on your bars and its row turns green. Open anytime with /prio binds.",
+        "Honors override abilities (e.g. Moonlight Chakram shares Trueshot's key) so they're not false-flagged; skips passives and abilities you don't know.",
+        "Macro users: hit Ignore on a row to silence it for that spec, or 'Don't remind me' to mute the panel per spec. Shows at most once per session, never nags.",
+    } },
     { "0.7.0", {
         "Marksmanship Hunter added -- full Sentinel and Dark Ranger support (auto-selected from your hero talent), built to the same bar as the other specs.",
         "Sentinel default rotation: hold Trueshot to line up with Explosive Shot, the Explosive Shot double-cast (Unstable Trigger), Moonlight Chakram inside Trueshot, Precise Shots spending (Kill Shot / Arcane), and Aimed Shot on charges.",

@@ -333,6 +333,7 @@ PRIO:On("PLAYER_ENTERING_WORLD", function()
         PRIO:MaybePromptDefaults()
         if PRIO.Changelog then PRIO.Changelog:MaybeAutoOpen() end   -- "what's new" first
         if PRIO.Setup then PRIO.Setup:MaybeAutoOpen() end           -- then verify setup (defers behind the changelog)
+        if PRIO.Binds then PRIO.Binds:MaybeAutoOpen() end           -- then nudge unbound abilities (defers behind both)
     end)
 end)
 
@@ -573,6 +574,8 @@ SlashCmdList.PRIO = function(msg)
         end
     elseif msg == "setup" then
         if PRIO.Setup then PRIO.Setup:Toggle() end
+    elseif msg == "binds" or msg == "keybinds" then
+        if PRIO.Binds then PRIO.Binds:Toggle() end
     elseif msg == "changelog" or msg == "changes" then
         if PRIO.Changelog then PRIO.Changelog:Toggle() end
     elseif msg == "export" then
