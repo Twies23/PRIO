@@ -285,6 +285,23 @@ local function ChargeCount(sid)
     return Engine:EffectiveCharges(sid)
 end
 
+-- Predicted aura stack count for specs that model a secret stack bar (Windwalker's
+-- Tigereye Brew). nil for anything not modeled -> callers fall back to the live read.
+function Engine:PredictedStacks(sid)
+    local te = spec and spec.tigereye
+    if te and sid == te.spell then
+        return (self.P and self.P.tbStacks) or (te.oocStart or 0)
+    end
+    return nil
+end
+
+-- Stack count for conditions: predicted where the spec models it, else the live read.
+local function StackCount(sid)
+    local p = Engine:PredictedStacks(sid)
+    if p ~= nil then return p end
+    return API.AuraStackCount(sid)
+end
+
 -- Effective recharge seconds for a charge-tracked spell's PREDICTION. For entries flagged
 -- `hasted` (recharge scales with spell haste -- e.g. BM's Barbed Shot / Kill Command), the
 -- game's own recharge read goes SECRET in combat, so we compute it from the unhasted base
@@ -466,9 +483,9 @@ local function EvalClause(cl, S, selfSid)
     elseif t == "refreshable" then return API.InPandemic(sid) == true
     -- Buff stack thresholds (secret-safe via the Cooldown Viewer). Unreadable/untracked
     -- reads as 0 stacks -> below any min, within any max.
-    elseif t == "stacksMin" then return (API.AuraStackCount(sid) or 0) >= (cl.v or 1)
-    elseif t == "stacksMax" then return (API.AuraStackCount(sid) or 0) <= (cl.v or 1)
-    elseif t == "stacksEq"  then return (API.AuraStackCount(sid) or 0) == (cl.v or 1)
+    elseif t == "stacksMin" then return (StackCount(sid) or 0) >= (cl.v or 1)
+    elseif t == "stacksMax" then return (StackCount(sid) or 0) <= (cl.v or 1)
+    elseif t == "stacksEq"  then return (StackCount(sid) or 0) == (cl.v or 1)
     -- Proc glow: clean boolean when readable; nil (API missing) -> treat as not glowing.
     elseif t == "glowing" then return API.SpellGlowing(sid) == true
     elseif t == "notGlowing" then return API.SpellGlowing(sid) == false
@@ -590,7 +607,7 @@ function Cond.ClauseStatus(cl, S, selfSid)
         local a = API.InPandemic(sid); if a == nil then return "open" end
         return a and "pass" or "fail"
     elseif t == "stacksMin" or t == "stacksMax" then
-        local s = API.AuraStackCount(sid); if s == nil then return "open" end
+        local s = StackCount(sid); if s == nil then return "open" end
         local ok; if t == "stacksMin" then ok = s >= (cl.v or 1) else ok = s <= (cl.v or 1) end
         return ok and "pass" or "fail"
     elseif t == "glowing" or t == "notGlowing" then
@@ -986,6 +1003,27 @@ PRIO:On("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
             end
         end
     end
+    -- Predicted stack bar (Windwalker Tigereye Brew): every `perChi` Chi spent -> +1 stack
+    -- (cap max); the consume ability (Zenith) eats up to `consume`. Stacks are secret, so
+    -- this predicted count drives the "20 stacks before the Zenith dump" gate.
+    local te = spec.tigereye
+    if te then
+        local P = Engine.P
+        if P.tbStacks == nil then P.tbStacks = te.oocStart or 0 end
+        if key == te.consumeKey then
+            P.tbStacks = math.max(0, P.tbStacks - (te.consume or 0))
+        else
+            local ok, cost = pcall(spec.ResourceCost, spec, key, spellID, {})
+            cost = (ok and type(cost) == "number") and cost or 0
+            if cost > 0 then
+                P.tbAccum = (P.tbAccum or 0) + cost
+                while P.tbAccum >= (te.perChi or 3) do
+                    P.tbAccum = P.tbAccum - te.perChi
+                    P.tbStacks = math.min(te.max or 30, P.tbStacks + 1)
+                end
+            end
+        end
+    end
     -- Assume a just-applied aura is up briefly, since the Cooldown Viewer read can lag
     -- a tick or two after you apply it (e.g. Flame Shock via Voltaic Blaze). The short
     -- window means a genuine immune/miss corrects itself once it expires.
@@ -1003,7 +1041,7 @@ PRIO:On("PLAYER_REGEN_ENABLED", function()
     -- Combat ended: clear volatile procs; Maelstrom and charges keep syncing from
     -- the real values now that they're readable again.
     local P = Engine.P
-    if P then P.fsExpire = 0; P.mote = false; P.skStacks = 0; P.ssT0 = nil; P.ssCP0 = nil; P.ssBumps = nil; P.ssLastCP = nil; P.oppStacks = 0; P.superCharge = 0; P.groundSouls = 0; P.seq = nil; if P.auraExpire then wipe(P.auraExpire) end; if P.auraWasActive then wipe(P.auraWasActive) end; if P.stacks then wipe(P.stacks) end; if P.predFlags then wipe(P.predFlags) end end
+    if P then P.fsExpire = 0; P.mote = false; P.skStacks = 0; P.ssT0 = nil; P.ssCP0 = nil; P.ssBumps = nil; P.ssLastCP = nil; P.oppStacks = 0; P.superCharge = 0; P.groundSouls = 0; P.seq = nil; P.tbStacks = spec and spec.tigereye and spec.tigereye.oocStart or nil; P.tbAccum = 0; if P.auraExpire then wipe(P.auraExpire) end; if P.auraWasActive then wipe(P.auraWasActive) end; if P.stacks then wipe(P.stacks) end; if P.predFlags then wipe(P.predFlags) end end
     Engine:ResetExecuteRange()
     Engine.openerActive = false
 end)

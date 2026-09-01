@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.7.10 (alpha)
+- **Zenith's overcap dump now waits for 20 Tigereye Brew stacks.** Zenith consumes up to 20 stacks to buff its crit, so dumping the 2nd charge early wastes value. Tigereye Brew stacks are secret, so PRIO predicts them (every 3 Chi spent = +1 stack, cap 30, Zenith eats 20) and holds the dump until you have 20. The burst Zenith (right after Celestial Conduit) still fires regardless. Debug shows predicted Tigereye stacks. Reset lists to default to pick it up.
+
+
 ## 0.7.9 (alpha)
 - **Conduit Zenith timing now matches the logs precisely.** Top players cast Zenith right after Celestial Conduit in the burst (Xuen → Celestial Conduit → Zenith), and dump the 2nd charge only to avoid overcapping. Zenith is now recommended right after Celestial Conduit, or at 2 charges — so you get the burst cast at 1 charge and the overcap dump, but it won't fire randomly mid-fight. Reset lists to default to pick it up.
 

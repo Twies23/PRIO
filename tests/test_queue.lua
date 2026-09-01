@@ -98,11 +98,12 @@ end)
 local ZENITH, CC, HOJS = 1249625, 443028, 443294
 local function has(r, id) for _, x in ipairs(ids(r)) do if x == id then return true end end return false end
 
-test("conduit: Zenith recommended at 2 charges (overcap dump)", function()
+test("conduit: Zenith recommended at 2 charges (overcap dump) with stacks", function()
     conduit("st")
     H.S.tracked[HOJS] = true; H.S.auras[HOJS] = true             -- HoJS up -> CC suppressed (no burst path)
     H.S.chargeState[ZENITH] = { max = 2, cur = 2, belowMax = false }
-    truthy(has(H.Engine:Evaluate(), ZENITH), "Zenith at 2 charges should be recommended")
+    H.Engine.P.tbStacks = 20                                     -- enough Tigereye stacks for the dump
+    truthy(has(H.Engine:Evaluate(), ZENITH), "Zenith at 2 charges + 20 stacks should be recommended")
 end)
 
 test("conduit: Zenith fires right after Celestial Conduit even at 1 charge (burst)", function()
@@ -117,4 +118,18 @@ test("conduit: Zenith NOT recommended at 1 charge outside the burst", function()
     H.S.tracked[HOJS] = true; H.S.auras[HOJS] = true             -- HoJS up -> CC suppressed, no lastCast trigger
     H.S.chargeState[ZENITH] = { max = 2, cur = 1, belowMax = true }
     falsy(has(H.Engine:Evaluate(), ZENITH), "Zenith should not fire at 1 charge outside burst")
+end)
+
+test("conduit: Zenith overcap dump needs 20 Tigereye stacks", function()
+    conduit("st")
+    H.S.tracked[HOJS] = true; H.S.auras[HOJS] = true                 -- HoJS up -> no burst path
+    H.S.chargeState[ZENITH] = { max = 2, cur = 2, belowMax = false } -- 2 charges (would overcap)
+    H.Engine.P.tbStacks = 20
+    truthy(has(H.Engine:Evaluate(), ZENITH), "dump allowed at 20 Tigereye stacks")
+
+    conduit("st")
+    H.S.tracked[HOJS] = true; H.S.auras[HOJS] = true
+    H.S.chargeState[ZENITH] = { max = 2, cur = 2, belowMax = false }
+    H.Engine.P.tbStacks = 5
+    falsy(has(H.Engine:Evaluate(), ZENITH), "dump held below 20 Tigereye stacks")
 end)

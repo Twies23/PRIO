@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.7.10", {
+        "Zenith's overcap dump now waits for 20 predicted Tigereye Brew stacks (Zenith consumes 20 for crit). Burst Zenith still fires. Debug shows predicted stacks.",
+    } },
     { "0.7.9", {
         "Conduit Zenith timing matches the logs: cast right after Celestial Conduit in the burst, or at 2 charges to avoid overcap (no random mid-fight casts).",
     } },

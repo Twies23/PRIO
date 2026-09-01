@@ -96,7 +96,7 @@ local conduit_st = {
     { spell = "ZenithStomp",      cond = OR(chiMax(2), auraRemainMax(ID_ZENITH, 5)) },  -- 3: low Chi / Zenith ending
     { spell = "InvokeXuen",       cond = cdReady(ID_CELESTIAL) },                       -- (Midnight) press Xuen to open the Celestial Conduit window
     { spell = "CelestialConduit", cond = buffDown(ID_HEARTJADE) },                      -- 4: build HoJS
-    { spell = "Zenith",           cond = OR(lastCast(ID_CELESTIAL), chargesMin(2)) }, -- (log) cast right after Celestial Conduit in burst; else dump the 2nd charge
+    { spell = "Zenith",           cond = OR(lastCast(ID_CELESTIAL), AND(chargesMin(2), stacksMin(ID_TIGEREYE, 20))) }, -- (log) burst cast after Celestial Conduit; else dump 2nd charge only with 20 Tigereye Brew stacks
     { spell = "FistsOfFury",      cond = auraRemainMax(ID_HEARTJADE, 1) },              -- 5: dump before HoJS falls off
     { spell = "TigerPalm",        cond = OR(AND(energyNearCap, buffDown(ID_ZENITH)), chiMax(2)) }, -- 6: energy cap / build for FoF
     { spell = "FistsOfFury" },                                                          -- 7
@@ -121,7 +121,7 @@ local conduit_aoe = {
     { spell = "ZenithStomp",      cond = OR(chiMax(2), auraRemainMax(ID_ZENITH, 5)) },  -- 3: low Chi / Zenith ending
     { spell = "InvokeXuen",       cond = cdReady(ID_CELESTIAL) },                       -- (Midnight) press Xuen to open the Celestial Conduit window
     { spell = "CelestialConduit", cond = buffDown(ID_HEARTJADE) },                      -- 4: build HoJS
-    { spell = "Zenith",           cond = OR(lastCast(ID_CELESTIAL), chargesMin(2)) }, -- (log) cast right after Celestial Conduit in burst; else dump the 2nd charge
+    { spell = "Zenith",           cond = OR(lastCast(ID_CELESTIAL), AND(chargesMin(2), stacksMin(ID_TIGEREYE, 20))) }, -- (log) burst cast after Celestial Conduit; else dump 2nd charge only with 20 Tigereye Brew stacks
     { spell = "TigerPalm",        cond = chiMax(2) },                                   -- 5: missing Chi for FoF
     { spell = "FistsOfFury" },                                                          -- 6
     { spell = "SpinningCraneKick", cond = buffUp(ID_UNBROKEN) },                        -- 7: 4pc / Unbroken Rhythm
@@ -282,6 +282,12 @@ local spec = {
         },
     },
 
+    -- Tigereye Brew stacks (secret like other stacks, so PREDICTED): every 3 Chi spent
+    -- generates 1 stack (cap 30, ~10 out of combat); casting Zenith consumes up to 20 to
+    -- buff its crit. Used to gate the Zenith overcap-dump so it isn't cast before you've
+    -- built the 20 stacks that make it worthwhile.
+    tigereye = { spell = ID_TIGEREYE, max = 30, perChi = 3, consumeKey = "Zenith", consume = 20, oocStart = 10 },
+
     -- Zenith's buff duration is SECRET in combat, but it's a fixed window: 15s base,
     -- +5s with Drinking Horn Cover. We seed a predicted timer when Zenith is cast and
     -- count it down, so a "Zenith remaining <= N" condition can gate the spend-before-it-
@@ -424,7 +430,7 @@ local spec = {
         { label = "Unbroken Rhythm", kind = "buff", spell = ID_UNBROKEN },
         { label = "Combo Breaker",  kind = "buff", spell = ID_COMBOBREAK },
         { label = "Blackout Kick!", kind = "buff", spell = ID_BOKPROC },
-        { label = "Tigereye Brew",  kind = "buff", spell = ID_TIGEREYE },
+        { label = "Tigereye stacks", kind = "predStacks", spell = ID_TIGEREYE },
         { label = "Dance of Chi-Ji", kind = "buff", spell = ID_DANCECHIJI },
         { label = "Rushing Wind Kick", kind = "buff", spell = ID_RUSHINGWIND },
         { label = "Touch of Death", kind = "buff", spell = ID_TOUCHOFDEATH },

@@ -283,6 +283,11 @@ function Debug:Update()
                 local tail = (rem and rem > 0) and ("  |cffe0685anext %.1fs|r  (%s)"):format(rem, src)
                     or "  |cff5a6a76full|r"
                 set(id, ("|cff0cd29f%s|r / %s%s"):format(tostring(eff or "?"), tostring(maxC or "?"), tail))
+            elseif d.kind == "predStacks" then
+                -- Predicted stack bar (Tigereye Brew): built from Chi spent, consumed by Zenith.
+                local n = PRIO.Engine and PRIO.Engine.PredictedStacks
+                    and PRIO.Engine:PredictedStacks(d.spell)
+                set(id, n and ("|cff0cd29f%d|r  |cff5a6a76(predicted)|r"):format(n) or "|cff5a6a76-|r")
             elseif d.kind == "auraRemain" then
                 -- Predicted buff time-left (Zenith): clean expirationTime out of combat,
                 -- cast-seeded timer in combat. What a "Buff time left <=" condition uses.
