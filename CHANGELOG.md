@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.7.3
+- Keybind nudge — reworded the Ignore / Don't remind me confirmation prompt.
+
 ## 0.7.2
 - **Keybind nudge — confirm before dismissing.** **Ignore** and **Don't remind me** now ask you to confirm first, so you don't silence the nudge by accident.
 

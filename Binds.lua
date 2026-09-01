@@ -43,14 +43,14 @@ function Binds:ApplyMute(spec)
 end
 
 StaticPopupDialogs["PRIO_BINDS_IGNORE_CONFIRM"] = {
-    text = "Are you sure about that little chimperoo?",
+    text = "The American Pope himself stated binding buttons is the path to the promised land. Are you sure?",
     button1 = YES, button2 = NO,
     OnAccept = function(_, data) if data then Binds:ApplyIgnore(data.spec, data.id) end end,
     OnCancel = function() end,
     timeout = 0, whileDead = true, hideOnEscape = true, preferredIndex = 3,
 }
 StaticPopupDialogs["PRIO_BINDS_MUTE_CONFIRM"] = {
-    text = "Are you sure about that little chimperoo?",
+    text = "The American Pope himself stated binding buttons is the path to the promised land. Are you sure?",
     button1 = YES, button2 = NO,
     OnAccept = function(_, data) if data then Binds:ApplyMute(data.spec) end end,
     OnCancel = function() end,
