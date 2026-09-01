@@ -718,20 +718,46 @@ PRIO:On("PLAYER_TALENT_UPDATE", function() Engine:RefreshTalentFlags() end)
 -- Per-mode opener sequences (ST / AoE). Custom copy in db.customOpeners[specKey][mode]
 -- wins; else the spec default (spec.openerAoe for aoe, spec.opener otherwise). A legacy
 -- flat array in customOpeners[specKey] is treated as the ST opener.
-local function CustomOpener(key, mode)
+-- Active hero variant for openers (mirrors the priority hero-split). nil unless the
+-- spec ships hero openers (spec.openerByVariant) and its activeHero resolves.
+local function OpenerVariant()
+    if spec and spec.openerByVariant and spec.activeHero then
+        local ok, key = pcall(spec.activeHero)
+        if ok and key and spec.openerByVariant[key] then return key end
+    end
+    return nil
+end
+local function CustomOpener(key, mode, variant)
     local co = PRIO.db.customOpeners and PRIO.db.customOpeners[key]
     if not co then return nil end
-    if co[1] ~= nil then return (mode == "st") and co or nil end
-    return co[mode]
+    if variant and co.variants and co.variants[variant] and co.variants[variant][mode] then
+        return co.variants[variant][mode]
+    end
+    if co[1] ~= nil then return (mode == "st") and co or nil end     -- legacy flat = ST
+    return co[mode]   -- shared (non-hero) custom applies as a fallback for both heroes
 end
-local function DefaultOpener(mode)
+local function DefaultOpener(mode, variant)
+    if variant and spec.openerByVariant and spec.openerByVariant[variant] then
+        local ov = spec.openerByVariant[variant]
+        return ov[mode] or ov.st
+    end
     if mode == "aoe" and spec.openerAoe then return spec.openerAoe end
     return spec.opener
 end
-function Engine:ActiveOpener(mode)
+function Engine:ActiveOpener(mode, variant)
     if not spec then return nil end
     mode = mode or self.openerMode or "st"
-    return CustomOpener(spec.key, mode) or DefaultOpener(mode)
+    if variant == nil then variant = OpenerVariant() end
+    return CustomOpener(spec.key, mode, variant) or DefaultOpener(mode, variant)
+end
+
+-- Signature cooldowns whose readiness gates the opener, hero-aware.
+function Engine:OpenerReady()
+    if spec and spec.openerReadyByVariant then
+        local v = OpenerVariant()
+        if v and spec.openerReadyByVariant[v] then return spec.openerReadyByVariant[v] end
+    end
+    return (spec and spec.openerReady) or {}
 end
 
 -- Begin the opener at combat start. Picks the ST/AoE opener from the pull's enemy
@@ -744,8 +770,8 @@ function Engine:StartOpener()
     self.openerMode = (enemies >= self:AoeThreshold(spec)) and "aoe" or "st"
     local op = self:ActiveOpener()
     if not (op and #op > 0) then return end
-    -- Fresh-pull gate on the spec's signature cooldowns.
-    local ready = spec.openerReady or {}
+    -- Fresh-pull gate on the spec's signature cooldowns (hero-aware).
+    local ready = self:OpenerReady()
     local requireAll = PRIO.db.openerRequireAll and PRIO.db.openerRequireAll[spec.key]
     local ok
     if requireAll then

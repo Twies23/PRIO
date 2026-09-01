@@ -133,3 +133,15 @@ test("conduit: Zenith overcap dump gated on the glow (20 Tigereye stacks)", func
     H.S.glows[ZENITH] = false
     falsy(has(H.Engine:Evaluate(), ZENITH), "dump held when Zenith not glowing")
 end)
+
+test("opener: resolves per hero (Conduit vs Shado-Pan)", function()
+    H.reset(); H.S.knownStrict[XUEN] = true; H.rebind()   -- Conduit
+    local c = H.Engine:ActiveOpener("st")
+    truthy(c and c[2] == "InvokeXuen", "Conduit opener includes Invoke Xuen early")
+
+    H.reset(); H.S.knownStrict[XUEN] = false; H.rebind()  -- Shado-Pan
+    local s = H.Engine:ActiveOpener("st")
+    truthy(s and s[2] == "Zenith", "Shado-Pan opener is Zenith-centric")
+    local hasXuen = false; for _, k in ipairs(s) do if k == "InvokeXuen" then hasXuen = true end end
+    falsy(hasXuen, "Shado-Pan opener has no Invoke Xuen")
+end)

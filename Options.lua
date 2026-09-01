@@ -899,23 +899,30 @@ local function KeyForSid(spec, sid)
     for k, s in pairs(spec.spells) do if s == sid then return k end end
     return nil
 end
-local function IsCustomOpener(spec, mode)
+local function IsCustomOpener(spec, mode, variant)
     local co = PRIO.db.customOpeners and PRIO.db.customOpeners[spec.key]
     if not co then return false end
+    if variant then return (co.variants and co.variants[variant] and co.variants[variant][mode]) ~= nil end
     if co[1] ~= nil then return mode == "st" end       -- legacy flat array = ST
     return co[mode] ~= nil
 end
-local function EnsureCustomOpener(spec, mode)
+local function EnsureCustomOpener(spec, mode, variant)
     PRIO.db.customOpeners = PRIO.db.customOpeners or {}
     local co = PRIO.db.customOpeners[spec.key]
     if co and co[1] ~= nil then co = { st = co }; PRIO.db.customOpeners[spec.key] = co end  -- migrate legacy
     if not co then co = {}; PRIO.db.customOpeners[spec.key] = co end
-    if not co[mode] then
-        local src = PRIO.Engine:ActiveOpener(mode) or {}
-        local copy = {}; for _, k in ipairs(src) do copy[#copy + 1] = k end
-        co[mode] = copy
+    local owner = co
+    if variant then
+        co.variants = co.variants or {}
+        co.variants[variant] = co.variants[variant] or {}
+        owner = co.variants[variant]
     end
-    return co[mode]
+    if not owner[mode] then
+        local src = PRIO.Engine:ActiveOpener(mode, variant) or {}
+        local copy = {}; for _, k in ipairs(src) do copy[#copy + 1] = k end
+        owner[mode] = copy
+    end
+    return owner[mode]
 end
 
 function Pages.opener()
@@ -946,6 +953,17 @@ function Pages.opener()
     end
 
     local mode = editOpenerMode
+    -- Hero switch (only for specs with hero-split openers, e.g. Windwalker).
+    local variant = spec.openerByVariant and CurrentVariant(spec) or nil
+    if variant and spec.priorityVariants then
+        SettingRow("Hero opener to edit", 30, function(r)
+            local opts = {}
+            for _, v in ipairs(spec.priorityVariants) do opts[#opts + 1] = { value = v.key, text = v.label or v.key } end
+            local seg = UI.Segmented(r, opts, function() return CurrentVariant(spec) end,
+                function(v) editVariant = v end, function() Options:ShowPage("opener") end)
+            seg:SetPoint("RIGHT", 0, 0)
+        end)
+    end
     SettingRow("Editing opener", 30, function(r)
         local seg = UI.Segmented(r, { { value = "st", text = "ST" }, { value = "aoe", text = "AoE" } },
             function() return editOpenerMode end,
@@ -953,8 +971,8 @@ function Pages.opener()
         seg:SetPoint("RIGHT", 0, 0)
     end)
 
-    local op = PRIO.Engine:ActiveOpener(mode) or {}
-    local custom = IsCustomOpener(spec, mode)
+    local op = PRIO.Engine:ActiveOpener(mode, variant) or {}
+    local custom = IsCustomOpener(spec, mode, variant)
     local function refresh() AfterChange(); Options:ShowPage("opener") end
 
     Section("Sequence  ·  " .. mode:upper() .. (custom and "   (custom)" or "   (default)"))
@@ -966,7 +984,11 @@ function Pages.opener()
             bb:SetScript("OnClick", function()
                 local co = PRIO.db.customOpeners and PRIO.db.customOpeners[spec.key]
                 if co then
-                    if co[1] ~= nil then PRIO.db.customOpeners[spec.key] = nil  -- legacy = ST only
+                    if variant and co.variants and co.variants[variant] then
+                        co.variants[variant][mode] = nil
+                        if not next(co.variants[variant]) then co.variants[variant] = nil end
+                        if not next(co.variants) and not next(co) then PRIO.db.customOpeners[spec.key] = nil end
+                    elseif co[1] ~= nil then PRIO.db.customOpeners[spec.key] = nil  -- legacy = ST only
                     else co[mode] = nil; if not next(co) then PRIO.db.customOpeners[spec.key] = nil end end
                 end
                 refresh()
@@ -981,10 +1003,10 @@ function Pages.opener()
         row:SetSize(contentW, 42); row:SetPoint("TOPLEFT", 0, -cursorY); cursorY = cursorY + 48
 
         local up = IconButton(row, "\226\150\178", i > 1, function()
-            local L = EnsureCustomOpener(spec, mode); L[i], L[i - 1] = L[i - 1], L[i]; refresh()
+            local L = EnsureCustomOpener(spec, mode, variant); L[i], L[i - 1] = L[i - 1], L[i]; refresh()
         end); up:SetPoint("TOPLEFT", 6, -3)
         local dn = IconButton(row, "\226\150\188", i < #op, function()
-            local L = EnsureCustomOpener(spec, mode); L[i], L[i + 1] = L[i + 1], L[i]; refresh()
+            local L = EnsureCustomOpener(spec, mode, variant); L[i], L[i + 1] = L[i + 1], L[i]; refresh()
         end); dn:SetPoint("BOTTOMLEFT", 6, 3)
 
         local idx = UI.Font(row, 11, C.faint); idx:SetPoint("LEFT", 30, 0); idx:SetText(tostring(i))
@@ -997,7 +1019,7 @@ function Pages.opener()
         pid:SetText((sid and ("#" .. sid) or tostring(key)) .. (known and "" or "  |cffe0685anot known|r"))
 
         local rm = IconButton(row, "\195\151", true, function()
-            local L = EnsureCustomOpener(spec, mode); table.remove(L, i); refresh()
+            local L = EnsureCustomOpener(spec, mode, variant); table.remove(L, i); refresh()
         end); rm:SetSize(18, 18); rm:SetPoint("RIGHT", -8, 0)
     end
 
@@ -1010,7 +1032,7 @@ function Pages.opener()
     addRow:SetScript("OnClick", function()
         ShowSpellPicker(addRow, spec, function(sid)
             local key = KeyForSid(spec, sid)
-            if key then local L = EnsureCustomOpener(spec, mode); L[#L + 1] = key; refresh() end
+            if key then local L = EnsureCustomOpener(spec, mode, variant); L[#L + 1] = key; refresh() end
         end)
     end)
     cursorY = cursorY + 38

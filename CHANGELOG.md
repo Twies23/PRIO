@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.7.13 (alpha)
+- **Windwalker openers are now hero-split and configurable.** Options → Opener has a "Hero opener to edit" switch (Shado-Pan / Conduit), each with its own ST and AoE sequence. Conduit opens the Xuen → Celestial Conduit → Zenith burst; Shado-Pan is Zenith-centric. The opener's "wait for cooldowns ready" gate is hero-aware too. Existing custom openers carry over as a shared fallback until you make a hero-specific one.
+
+
 ## 0.7.12 (alpha)
 - **Zenith's overcap dump now reads the real "lit up" state instead of predicting stacks.** When you hit 20 Tigereye Brew stacks, Blizzard glows Zenith on the Cooldown Manager — PRIO now gates the 2nd-charge dump on that glow (a clean read), which is more accurate than the predicted stack count. Reset lists to default to pick it up.
 

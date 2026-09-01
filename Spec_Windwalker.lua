@@ -376,6 +376,27 @@ local spec = {
           hint = "Track Zenith in the Cooldown Manager so its charge count reads cleanly for a \"Charges >=\" condition." },
     },
 
+    -- Hero-split openers (editable per hero in Options -> Opener). Conduit opens the
+    -- burst (Xuen -> Celestial Conduit -> Zenith), Shado-Pan is Zenith-centric.
+    openerByVariant = {
+        conduit = {
+            st  = { "TigerPalm", "InvokeXuen", "CelestialConduit", "Zenith", "FistsOfFury",
+                    "RisingSunKick", "FistsOfFury", "WhirlingDragonPunch" },
+            aoe = { "TigerPalm", "InvokeXuen", "CelestialConduit", "Zenith", "FistsOfFury",
+                    "RisingSunKick", "FistsOfFury", "WhirlingDragonPunch" },
+        },
+        shadopan = {
+            st  = { "TigerPalm", "Zenith", "WhirlingDragonPunch", "StrikeOfTheWindlord",
+                    "FistsOfFury", "RisingSunKick", "BlackoutKick" },
+            aoe = { "TigerPalm", "Zenith", "WhirlingDragonPunch", "StrikeOfTheWindlord",
+                    "FistsOfFury", "RisingSunKick", "BlackoutKick" },
+        },
+    },
+    openerReadyByVariant = {
+        conduit  = { "InvokeXuen" },
+        shadopan = { "Zenith" },
+    },
+    -- Fallback (used if hero detection is unavailable).
     openerReady = { "InvokeXuen" },
     opener = { "InvokeXuen", "StrikeOfTheWindlord", "RisingSunKick", "FistsOfFury",
                "WhirlingDragonPunch", "BlackoutKick", "TigerPalm" },

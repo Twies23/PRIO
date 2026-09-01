@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.7.13", {
+        "Windwalker openers are hero-split + configurable: Options -> Opener has a Shado-Pan / Conduit switch, each with its own ST and AoE sequence.",
+    } },
     { "0.7.12", {
         "Zenith overcap dump now gates on Zenith's Cooldown-Manager glow (the real 20-Tigereye-stack signal) instead of predicted stacks.",
     } },
