@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.7.6", {
+        "Conduit single-target: restored Strike of the Windlord (Xuen window) and Slicing Winds -- now matches the Icy Veins guide line-for-line.",
+    } },
     { "0.7.5", {
         "Conduit Windwalker ST + AoE rebuilt to match top-player logs / Icy Veins (RSK on cooldown, Rushing Wind Kick added to AoE). Reset lists to default.",
     } },

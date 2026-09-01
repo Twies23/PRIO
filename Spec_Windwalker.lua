@@ -91,20 +91,22 @@ local slicingWindsTalent = talentYes(ID_SLICINGWINDS)
 -- Rhythm (which it grants).
 local conduit_st = {
     { spell = "WhirlingDragonPunch", cond = xuenAway },                                 -- 1: hold unless Xuen >10s away
-    { spell = "ZenithStomp",      cond = OR(chiMax(2), auraRemainMax(ID_ZENITH, 5)) },  -- 2: low Chi / Zenith ending
-    { spell = "CelestialConduit", cond = buffDown(ID_HEARTJADE) },                      -- 3: build HoJS
-    { spell = "FistsOfFury",      cond = auraRemainMax(ID_HEARTJADE, 1) },              -- 4: dump before HoJS falls off
-    { spell = "TigerPalm",        cond = OR(AND(energyNearCap, buffDown(ID_ZENITH)), chiMax(2)) }, -- 5: energy cap / build for FoF
-    { spell = "FistsOfFury" },                                                          -- 6
-    { spell = "RushingWindKick",  cond = buffUp(ID_RUSHINGWIND) },                      -- 7: proc
-    { spell = "SpinningCraneKick", cond = buffUp(ID_UNBROKEN) },                        -- 8: Unbroken Rhythm
-    { spell = "RisingSunKick" },                                                        -- 9: on cooldown (HoJS spams it)
-    { spell = "BlackoutKick",     cond = OR(buffUp(ID_BOKPROC), AND(buffUp(ID_ZENITH), talentYes(ID_OBSIDIAN))) }, -- 10
-    { spell = "SpinningCraneKick", cond = sckZenith },                                  -- 11: Zenith spend (>4 Chi or Dance)
-    { spell = "TigerPalm",        cond = chiMax(1) },                                   -- 12: less than 2 Chi
-    { spell = "SpinningCraneKick", cond = buffUp(ID_DANCECHIJI) },                      -- 13: free Dance proc
-    { spell = "TigerPalm",        cond = chiMax(4) },                                   -- 14: filler, no overcap
-    { spell = "BlackoutKick" },                                                         -- 15: filler
+    { spell = "StrikeOfTheWindlord", cond = xuenAway },                                 -- 2: hold unless Xuen >10s away
+    { spell = "ZenithStomp",      cond = OR(chiMax(2), auraRemainMax(ID_ZENITH, 5)) },  -- 3: low Chi / Zenith ending
+    { spell = "CelestialConduit", cond = buffDown(ID_HEARTJADE) },                      -- 4: build HoJS
+    { spell = "FistsOfFury",      cond = auraRemainMax(ID_HEARTJADE, 1) },              -- 5: dump before HoJS falls off
+    { spell = "TigerPalm",        cond = OR(AND(energyNearCap, buffDown(ID_ZENITH)), chiMax(2)) }, -- 6: energy cap / build for FoF
+    { spell = "FistsOfFury" },                                                          -- 7
+    { spell = "RushingWindKick",  cond = buffUp(ID_RUSHINGWIND) },                      -- 8: proc
+    { spell = "SpinningCraneKick", cond = buffUp(ID_UNBROKEN) },                        -- 9: Unbroken Rhythm
+    { spell = "RisingSunKick" },                                                        -- 10: on cooldown (HoJS spams it)
+    { spell = "BlackoutKick",     cond = OR(buffUp(ID_COMBOBREAK), buffUp(ID_BOKPROC), AND(buffUp(ID_ZENITH), talentYes(ID_OBSIDIAN))) }, -- 11: proc / Zenith+Obsidian
+    { spell = "SpinningCraneKick", cond = sckZenith },                                  -- 12: Zenith spend (>4 Chi or Dance)
+    { spell = "TigerPalm",        cond = chiMax(1) },                                   -- 13: less than 2 Chi
+    { spell = "SpinningCraneKick", cond = buffUp(ID_DANCECHIJI) },                      -- 14: free Dance proc
+    { spell = "SlicingWinds",     cond = slicingWindsTalent },                          -- 15: on CD (talent)
+    { spell = "TigerPalm",        cond = chiMax(4) },                                   -- 16: filler, no overcap
+    { spell = "BlackoutKick" },                                                         -- 17: filler
 }
 
 -- Conduit cleave + AoE share one list -- mirrors the Icy Veins Conduit AoE priority
