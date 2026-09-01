@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.7.12 (alpha)
+- **Zenith's overcap dump now reads the real "lit up" state instead of predicting stacks.** When you hit 20 Tigereye Brew stacks, Blizzard glows Zenith on the Cooldown Manager — PRIO now gates the 2nd-charge dump on that glow (a clean read), which is more accurate than the predicted stack count. Reset lists to default to pick it up.
+
+
 ## 0.7.11 (alpha)
 - **Fixed "dead" condition rows in the editor.** A condition with a nested group (e.g. `A OR (B AND C)`) used to show a blank, un-editable row. The condition editor now renders any nested group as a read-only `( … )` summary. The Conduit Zenith line is also split into two clean rows (burst cast / overcap dump) so it's fully editable. Reset lists to default to pick up the split.
 

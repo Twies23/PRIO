@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.7.12", {
+        "Zenith overcap dump now gates on Zenith's Cooldown-Manager glow (the real 20-Tigereye-stack signal) instead of predicted stacks.",
+    } },
     { "0.7.11", {
         "Fixed 'dead' condition rows: nested groups (A OR (B AND C)) now show as a read-only summary instead of a blank dropdown. Conduit Zenith split into two editable rows.",
     } },
