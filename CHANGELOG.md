@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.7.4
+- **Keybind nudge — "Don't remind me" resets each update.** Muting the nudge for a spec now lasts only until the next PRIO version with changelog notes, then it comes back once — since a new version can add abilities worth binding. (Per-ability **Ignore** still sticks.)
+
 ## 0.7.3
 - Keybind nudge — reworded the Ignore / Don't remind me confirmation prompt.
 

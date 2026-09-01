@@ -2,7 +2,7 @@
 ## Title: |cff0cd29fPRIO|r
 ## Notes: Configurable priority & queue helper. Shows what to press now and what's next.
 ## Author: You
-## Version: 0.7.3
+## Version: 0.7.4
 ## SavedVariables: PRIODB
 ## IconTexture: Interface\Icons\spell_shaman_stormkeeper
 

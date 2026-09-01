@@ -34,11 +34,19 @@ function Binds:ApplyIgnore(spec, id)
     self:Rebuild(spec)
 end
 
+-- The newest version we have changelog notes for. "Don't remind me" is stamped with
+-- this, and only honoured while the stamp still matches -- so any release that adds a
+-- changelog entry lifts the mute and the nudge comes back (new versions can add newly
+-- recommendable abilities). Referenced at runtime, so Changelog is loaded by then.
+local function currentNotesVersion()
+    return (PRIO.Changelog and PRIO.Changelog.CurrentVersion and PRIO.Changelog:CurrentVersion()) or "?"
+end
+
 function Binds:ApplyMute(spec)
     local db = PRIO.db
     if not db then return end
     db.bindsMuted = db.bindsMuted or {}
-    db.bindsMuted[spec and spec.key or "none"] = true
+    db.bindsMuted[spec and spec.key or "none"] = currentNotesVersion()
     if win then win:Hide() end
 end
 
@@ -301,7 +309,10 @@ function Binds:MaybeAutoOpen()
     local specID = API.GetSpecID()
     local spec = specID and PRIO.specs and PRIO.specs[specID]
     if not spec then return end
-    if db.bindsMuted and db.bindsMuted[spec.key] then return end
+    -- Honour "don't remind me" only while its version stamp matches the current
+    -- changelog version. A new release with fresh notes lifts the mute automatically.
+    local muted = db.bindsMuted and db.bindsMuted[spec.key]
+    if muted and muted == currentNotesVersion() then return end
     if #computeUnbound(spec) == 0 then return end
 
     self._promptedThisSession = true

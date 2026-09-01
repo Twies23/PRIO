@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.7.4", {
+        "Keybind nudge -- 'Don't remind me' now resets on each PRIO update that has changelog notes, so the nudge returns once per new version (a new version can add abilities worth binding). Per-ability Ignore still sticks.",
+    } },
     { "0.7.3", {
         "Keybind nudge -- reworded the Ignore / Don't remind me confirmation prompt.",
     } },
