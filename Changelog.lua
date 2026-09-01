@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.7.11", {
+        "Fixed 'dead' condition rows: nested groups (A OR (B AND C)) now show as a read-only summary instead of a blank dropdown. Conduit Zenith split into two editable rows.",
+    } },
     { "0.7.10", {
         "Zenith's overcap dump now waits for 20 predicted Tigereye Brew stacks (Zenith consumes 20 for crit). Burst Zenith still fires. Debug shows predicted stacks.",
     } },

@@ -700,6 +700,14 @@ function Options:OpenCondEditorCore(spec, holder, field, selfSid, onChange)
                 dot:SetTextColor(col[1], col[2], col[3])
             end
 
+            if cl.clauses then
+                -- A nested group (e.g. AND inside an OR). The flat editor can't edit it
+                -- inline, so show it read-only as a summary instead of a broken dropdown.
+                local sum = UI.Font(rowf, 12, C.muted)
+                sum:SetPoint("LEFT", 16, 0); sum:SetPoint("RIGHT", -26, 0)
+                sum:SetJustifyH("LEFT"); sum:SetWordWrap(false)
+                sum:SetText("( " .. (Cond.Summary(cl, sid) or "group") .. " )")
+            else
             local typeDD = UI.Dropdown(rowf, 120, Cond.TypesForSpec(spec),
                 function() return cl.type end,
                 function(v)
@@ -729,6 +737,7 @@ function Options:OpenCondEditorCore(spec, holder, field, selfSid, onChange)
                     function() return cl.v or meta.def or 1 end,
                     function(v) cl.v = v; editorChanged() end)
                 st:SetPoint("LEFT", anchor, "RIGHT", 6, 0)
+            end
             end
 
             local rm = IconButton(rowf, "\195\151", true, function()

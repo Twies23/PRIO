@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.7.11 (alpha)
+- **Fixed "dead" condition rows in the editor.** A condition with a nested group (e.g. `A OR (B AND C)`) used to show a blank, un-editable row. The condition editor now renders any nested group as a read-only `( … )` summary. The Conduit Zenith line is also split into two clean rows (burst cast / overcap dump) so it's fully editable. Reset lists to default to pick up the split.
+
+
 ## 0.7.10 (alpha)
 - **Zenith's overcap dump now waits for 20 Tigereye Brew stacks.** Zenith consumes up to 20 stacks to buff its crit, so dumping the 2nd charge early wastes value. Tigereye Brew stacks are secret, so PRIO predicts them (every 3 Chi spent = +1 stack, cap 30, Zenith eats 20) and holds the dump until you have 20. The burst Zenith (right after Celestial Conduit) still fires regardless. Debug shows predicted Tigereye stacks. Reset lists to default to pick it up.
 
