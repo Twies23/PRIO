@@ -65,6 +65,7 @@ local function chargesMin(n) return { type = "chargesMin", v = n } end       -- 
 local function cdReady(id)  return { type = "cdReady",  spell = id } end
 local function usable(id)   return { type = "usable",   spell = id } end
 local function auraRemainMax(id, s) return { type = "auraRemainMax", spell = id, v = s } end -- buff <= s sec left
+local function lastCast(id)  return { type = "lastCast",  spell = id } end   -- previous cast was this
 local function cdRemainMin(id, s) return { type = "cdRemainMin", spell = id, v = s } end -- cooldown >= s sec left
 local function cdRemainMax(id, s) return { type = "cdRemainMax", spell = id, v = s } end -- cooldown <= s sec left
 local energyNearCap = { type = "energyNearCap" }   -- predicted Energy at/above the near-cap threshold
@@ -95,7 +96,7 @@ local conduit_st = {
     { spell = "ZenithStomp",      cond = OR(chiMax(2), auraRemainMax(ID_ZENITH, 5)) },  -- 3: low Chi / Zenith ending
     { spell = "InvokeXuen",       cond = cdReady(ID_CELESTIAL) },                       -- (Midnight) press Xuen to open the Celestial Conduit window
     { spell = "CelestialConduit", cond = buffDown(ID_HEARTJADE) },                      -- 4: build HoJS
-    { spell = "Zenith",           cond = chargesMin(2) },                              -- (log) spend in burst; never sit on both charges
+    { spell = "Zenith",           cond = OR(lastCast(ID_CELESTIAL), chargesMin(2)) }, -- (log) cast right after Celestial Conduit in burst; else dump the 2nd charge
     { spell = "FistsOfFury",      cond = auraRemainMax(ID_HEARTJADE, 1) },              -- 5: dump before HoJS falls off
     { spell = "TigerPalm",        cond = OR(AND(energyNearCap, buffDown(ID_ZENITH)), chiMax(2)) }, -- 6: energy cap / build for FoF
     { spell = "FistsOfFury" },                                                          -- 7
@@ -120,7 +121,7 @@ local conduit_aoe = {
     { spell = "ZenithStomp",      cond = OR(chiMax(2), auraRemainMax(ID_ZENITH, 5)) },  -- 3: low Chi / Zenith ending
     { spell = "InvokeXuen",       cond = cdReady(ID_CELESTIAL) },                       -- (Midnight) press Xuen to open the Celestial Conduit window
     { spell = "CelestialConduit", cond = buffDown(ID_HEARTJADE) },                      -- 4: build HoJS
-    { spell = "Zenith",           cond = chargesMin(2) },                              -- (log) spend in burst; never sit on both charges
+    { spell = "Zenith",           cond = OR(lastCast(ID_CELESTIAL), chargesMin(2)) }, -- (log) cast right after Celestial Conduit in burst; else dump the 2nd charge
     { spell = "TigerPalm",        cond = chiMax(2) },                                   -- 5: missing Chi for FoF
     { spell = "FistsOfFury" },                                                          -- 6
     { spell = "SpinningCraneKick", cond = buffUp(ID_UNBROKEN) },                        -- 7: 4pc / Unbroken Rhythm

@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.7.9", {
+        "Conduit Zenith timing matches the logs: cast right after Celestial Conduit in the burst, or at 2 charges to avoid overcap (no random mid-fight casts).",
+    } },
     { "0.7.8", {
         "Conduit now recommends casting Zenith (was missing) -- placed with the burst cooldowns, gated at 2 charges so the 2nd is never wasted.",
     } },

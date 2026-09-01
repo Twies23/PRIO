@@ -95,17 +95,26 @@ test("conduit AoE: Rushing Wind Kick absent without its proc", function()
     end
 end)
 
-test("conduit: Zenith recommended at 2 charges, not at 1", function()
-    local ZENITH = 1249625
-    conduit("st")
-    H.S.chargeState[ZENITH] = { max = 2, cur = 2, belowMax = false }   -- at max
-    local r = H.Engine:Evaluate()
-    local found = false
-    for _, id in ipairs(ids(r)) do if id == ZENITH then found = true end end
-    truthy(found, "Zenith should be recommended at 2 charges")
+local ZENITH, CC, HOJS = 1249625, 443028, 443294
+local function has(r, id) for _, x in ipairs(ids(r)) do if x == id then return true end end return false end
 
+test("conduit: Zenith recommended at 2 charges (overcap dump)", function()
     conduit("st")
-    H.S.chargeState[ZENITH] = { max = 2, cur = 1, belowMax = true }    -- one charge
-    r = H.Engine:Evaluate()
-    for _, id in ipairs(ids(r)) do truthy(id ~= ZENITH, "Zenith not forced at 1 charge") end
+    H.S.tracked[HOJS] = true; H.S.auras[HOJS] = true             -- HoJS up -> CC suppressed (no burst path)
+    H.S.chargeState[ZENITH] = { max = 2, cur = 2, belowMax = false }
+    truthy(has(H.Engine:Evaluate(), ZENITH), "Zenith at 2 charges should be recommended")
+end)
+
+test("conduit: Zenith fires right after Celestial Conduit even at 1 charge (burst)", function()
+    conduit("st")                                                -- HoJS down -> CC castable -> CC then Zenith
+    H.S.chargeState[ZENITH] = { max = 2, cur = 1, belowMax = true }
+    local r = H.Engine:Evaluate()
+    truthy(has(r, CC) and has(r, ZENITH), "Celestial Conduit then Zenith should both appear in the burst")
+end)
+
+test("conduit: Zenith NOT recommended at 1 charge outside the burst", function()
+    conduit("st")
+    H.S.tracked[HOJS] = true; H.S.auras[HOJS] = true             -- HoJS up -> CC suppressed, no lastCast trigger
+    H.S.chargeState[ZENITH] = { max = 2, cur = 1, belowMax = true }
+    falsy(has(H.Engine:Evaluate(), ZENITH), "Zenith should not fire at 1 charge outside burst")
 end)

@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.7.9 (alpha)
+- **Conduit Zenith timing now matches the logs precisely.** Top players cast Zenith right after Celestial Conduit in the burst (Xuen → Celestial Conduit → Zenith), and dump the 2nd charge only to avoid overcapping. Zenith is now recommended right after Celestial Conduit, or at 2 charges — so you get the burst cast at 1 charge and the overcap dump, but it won't fire randomly mid-fight. Reset lists to default to pick it up.
+
+
 ## 0.7.8 (alpha)
 - **Conduit now recommends casting Zenith.** Based on the logs (Zenith is popped in the burst window and its 2nd charge is never wasted), it's added high with the burst cooldowns, gated on being at 2 charges — you spend the first charge on judgment during burst, and PRIO flags the second before it overcaps. Reset lists to default to pick it up.
 
