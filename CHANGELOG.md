@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.7.7 (alpha)
+- **Conduit now actually recommends casting Invoke Xuen.** Both Conduit lists were missing a line to press Xuen itself — it's added high in the priority, gated to fire when Celestial Conduit is ready, so you press Xuen to open the Celestial Conduit window (its main role in Midnight). Reset lists to default to pick it up.
+
+
 ## 0.7.6 (alpha)
 - **Conduit single-target: restored the two lines dropped in 0.7.5** — Strike of the Windlord (held for the Xuen window, alongside Whirling Dragon Punch) and Slicing Winds. The ST list now matches the Icy Veins guide line-for-line (17 lines). Reset lists to default to pick it up.
 

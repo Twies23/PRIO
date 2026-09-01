@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.7.7", {
+        "Conduit now recommends casting Invoke Xuen (was missing) -- gated to fire when Celestial Conduit is ready, to open its window.",
+    } },
     { "0.7.6", {
         "Conduit single-target: restored Strike of the Windlord (Xuen window) and Slicing Winds -- now matches the Icy Veins guide line-for-line.",
     } },

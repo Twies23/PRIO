@@ -93,6 +93,7 @@ local conduit_st = {
     { spell = "WhirlingDragonPunch", cond = xuenAway },                                 -- 1: hold unless Xuen >10s away
     { spell = "StrikeOfTheWindlord", cond = xuenAway },                                 -- 2: hold unless Xuen >10s away
     { spell = "ZenithStomp",      cond = OR(chiMax(2), auraRemainMax(ID_ZENITH, 5)) },  -- 3: low Chi / Zenith ending
+    { spell = "InvokeXuen",       cond = cdReady(ID_CELESTIAL) },                       -- (Midnight) press Xuen to open the Celestial Conduit window
     { spell = "CelestialConduit", cond = buffDown(ID_HEARTJADE) },                      -- 4: build HoJS
     { spell = "FistsOfFury",      cond = auraRemainMax(ID_HEARTJADE, 1) },              -- 5: dump before HoJS falls off
     { spell = "TigerPalm",        cond = OR(AND(energyNearCap, buffDown(ID_ZENITH)), chiMax(2)) }, -- 6: energy cap / build for FoF
@@ -116,6 +117,7 @@ local conduit_aoe = {
     { spell = "FistsOfFury",      cond = auraRemainMax(ID_HEARTJADE, 1) },              -- 1: HoJS about to end
     { spell = "WhirlingDragonPunch", cond = xuenAway },                                 -- 2: Xuen >10s away
     { spell = "ZenithStomp",      cond = OR(chiMax(2), auraRemainMax(ID_ZENITH, 5)) },  -- 3: low Chi / Zenith ending
+    { spell = "InvokeXuen",       cond = cdReady(ID_CELESTIAL) },                       -- (Midnight) press Xuen to open the Celestial Conduit window
     { spell = "CelestialConduit", cond = buffDown(ID_HEARTJADE) },                      -- 4: build HoJS
     { spell = "TigerPalm",        cond = chiMax(2) },                                   -- 5: missing Chi for FoF
     { spell = "FistsOfFury" },                                                          -- 6
