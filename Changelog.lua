@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.7.8", {
+        "Conduit now recommends casting Zenith (was missing) -- placed with the burst cooldowns, gated at 2 charges so the 2nd is never wasted.",
+    } },
     { "0.7.7", {
         "Conduit now recommends casting Invoke Xuen (was missing) -- gated to fire when Celestial Conduit is ready, to open its window.",
     } },

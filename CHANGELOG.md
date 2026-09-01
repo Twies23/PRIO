@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.7.8 (alpha)
+- **Conduit now recommends casting Zenith.** Based on the logs (Zenith is popped in the burst window and its 2nd charge is never wasted), it's added high with the burst cooldowns, gated on being at 2 charges — you spend the first charge on judgment during burst, and PRIO flags the second before it overcaps. Reset lists to default to pick it up.
+
+
 ## 0.7.7 (alpha)
 - **Conduit now actually recommends casting Invoke Xuen.** Both Conduit lists were missing a line to press Xuen itself — it's added high in the priority, gated to fire when Celestial Conduit is ready, so you press Xuen to open the Celestial Conduit window (its main role in Midnight). Reset lists to default to pick it up.
 

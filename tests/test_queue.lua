@@ -80,6 +80,7 @@ test("conduit AoE: Rushing Wind Kick appears when its proc is up", function()
     H.S.ready[123904] = true                           -- Xuen ready -> WDP "Xuen >10s" fails
     H.S.tracked[443294] = true; H.S.auras[443294] = true  -- HoJS active -> Celestial Conduit fails
     H.S.ready[113656] = false                          -- Fists of Fury on cooldown
+    H.S.chargeState[1249625] = { max = 2, cur = 1, belowMax = true }  -- Zenith <2 charges -> its line fails
     local r = H.Engine:Evaluate()
     local found = false
     for _, id in ipairs(ids(r)) do if id == RWK_ID then found = true end end
@@ -92,4 +93,19 @@ test("conduit AoE: Rushing Wind Kick absent without its proc", function()
     for _, id in ipairs(ids(r)) do
         truthy(id ~= RWK_ID, "RWK must not appear without its proc")
     end
+end)
+
+test("conduit: Zenith recommended at 2 charges, not at 1", function()
+    local ZENITH = 1249625
+    conduit("st")
+    H.S.chargeState[ZENITH] = { max = 2, cur = 2, belowMax = false }   -- at max
+    local r = H.Engine:Evaluate()
+    local found = false
+    for _, id in ipairs(ids(r)) do if id == ZENITH then found = true end end
+    truthy(found, "Zenith should be recommended at 2 charges")
+
+    conduit("st")
+    H.S.chargeState[ZENITH] = { max = 2, cur = 1, belowMax = true }    -- one charge
+    r = H.Engine:Evaluate()
+    for _, id in ipairs(ids(r)) do truthy(id ~= ZENITH, "Zenith not forced at 1 charge") end
 end)
