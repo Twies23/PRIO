@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.7.5 (alpha)
+- **Conduit Windwalker rebuilt to match top-player logs.** Both the single-target and cleave/AoE lists now faithfully follow the Icy Veins Conduit priority, cross-checked against three top Conduit logs (consistent: Tiger Palm ~22%, Rising Sun Kick ~16%, Fists of Fury ~14%, Rushing Wind Kick ~5%). Rising Sun Kick is now cast on cooldown (Heart of the Jade Serpent spams it) and Rushing Wind Kick is properly included in the AoE list. Reset your Windwalker lists to default to pick it up.
+
+
 ## 0.7.4
 - **Keybind nudge — "Don't remind me" resets each update.** Muting the nudge for a spec now lasts only until the next PRIO version with changelog notes, then it comes back once — since a new version can add abilities worth binding. (Per-ability **Ignore** still sticks.)
 

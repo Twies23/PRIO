@@ -85,61 +85,52 @@ local touchOfDeathUp = buffUp(ID_TOUCHOFDEATH)
 local slicingWindsTalent = talentYes(ID_SLICINGWINDS)
 
 -- CONDUIT of the Celestials -----------------------------------------------------
--- Single target -- the user's tuned list. (Bloodlust RSK line intentionally omitted
--- until a lust buff is chosen to track.)
+-- Single target -- faithfully mirrors the Icy Veins Conduit ST priority, validated
+-- against three top-player logs (Xaehyun, Axofa). Undetectable gates are approximated:
+-- "channeling Celestial Conduit" is dropped; the tier-set 4pc collapses to Unbroken
+-- Rhythm (which it grants).
 local conduit_st = {
-    { spell = "WhirlingDragonPunch", cond = xuenAway },                                -- 1: WDP, Xuen > 10s
-    { spell = "ZenithStomp",      cond = OR(chiMax(3), auraRemainMax(ID_ZENITH, 8)) }, -- 2: low Chi or Zenith ending
-    { spell = "FistsOfFury",      cond = auraRemainMax(ID_HEARTJADE, 1) },             -- 3: dump before HoJS falls off
-    { spell = "TigerPalm",        cond = AND(chiMax(3), buffDown(ID_BOKPROC), energyNearCap, buffDown(ID_ZENITH)) }, -- 4
-    { spell = "CelestialConduit", cond = buffDown(ID_HEARTJADE) },                     -- 5: build HoJS
-    { spell = "InvokeXuen" },                                                          -- 6: burst
-    { spell = "FistsOfFury" },                                                         -- 7: always
-    { spell = "WhirlingDragonPunch", cond = xuenAway },                                -- 8: Xuen > 10s
-    { spell = "BlackoutKick",     cond = chiMax(2) },                                  -- 9: not enough Chi for FoF
-    { spell = "RushingWindKick",  cond = buffUp(ID_RUSHINGWIND) },                     -- 10: proc
-    { spell = "SpinningCraneKick", cond = AND(buffUp(ID_DANCECHIJI), buffUp(ID_UNBROKEN)) }, -- 11: Dance + Unbroken
-    { spell = "RisingSunKick",    cond = buffDown(ID_DANCECHIJI) },                    -- 12: no Dance
-    { spell = "SpinningCraneKick", cond = buffUp(ID_UNBROKEN) },                       -- 13: Unbroken Rhythm
-    { spell = "BlackoutKick",     cond = buffUp(ID_BOKPROC) },                         -- 14: BoK! proc
-    { spell = "BlackoutKick",     cond = OR(buffUp(ID_BOKPROC), buffUp(ID_ZENITH)) },  -- 15: BoK! or Zenith
-    { spell = "RisingSunKick" },                                                       -- 16: always
-    { spell = "BlackoutKick",     cond = OR(buffUp(ID_BOKPROC), buffUp(ID_ZENITH)) },  -- 17: BoK! or Zenith
-    { spell = "SpinningCraneKick", cond = AND(buffUp(ID_ZENITH), buffUp(ID_DANCECHIJI)) }, -- 18: Zenith + Dance
-    { spell = "TouchOfDeath",     cond = usable(ID_TOUCHOFDEATH) },                    -- 19: execute
-    { spell = "SpinningCraneKick", cond = buffUp(ID_DANCECHIJI) },                     -- 20: Dance proc
-    { spell = "SlicingWinds" },                                                        -- 21: on CD (talent)
-    { spell = "TigerPalm",        cond = chiMax(4) },                                  -- 22: filler, no overcap
-    { spell = "BlackoutKick" },                                                        -- 23: filler
+    { spell = "WhirlingDragonPunch", cond = xuenAway },                                 -- 1: hold unless Xuen >10s away
+    { spell = "ZenithStomp",      cond = OR(chiMax(2), auraRemainMax(ID_ZENITH, 5)) },  -- 2: low Chi / Zenith ending
+    { spell = "CelestialConduit", cond = buffDown(ID_HEARTJADE) },                      -- 3: build HoJS
+    { spell = "FistsOfFury",      cond = auraRemainMax(ID_HEARTJADE, 1) },              -- 4: dump before HoJS falls off
+    { spell = "TigerPalm",        cond = OR(AND(energyNearCap, buffDown(ID_ZENITH)), chiMax(2)) }, -- 5: energy cap / build for FoF
+    { spell = "FistsOfFury" },                                                          -- 6
+    { spell = "RushingWindKick",  cond = buffUp(ID_RUSHINGWIND) },                      -- 7: proc
+    { spell = "SpinningCraneKick", cond = buffUp(ID_UNBROKEN) },                        -- 8: Unbroken Rhythm
+    { spell = "RisingSunKick" },                                                        -- 9: on cooldown (HoJS spams it)
+    { spell = "BlackoutKick",     cond = OR(buffUp(ID_BOKPROC), AND(buffUp(ID_ZENITH), talentYes(ID_OBSIDIAN))) }, -- 10
+    { spell = "SpinningCraneKick", cond = sckZenith },                                  -- 11: Zenith spend (>4 Chi or Dance)
+    { spell = "TigerPalm",        cond = chiMax(1) },                                   -- 12: less than 2 Chi
+    { spell = "SpinningCraneKick", cond = buffUp(ID_DANCECHIJI) },                      -- 13: free Dance proc
+    { spell = "TigerPalm",        cond = chiMax(4) },                                   -- 14: filler, no overcap
+    { spell = "BlackoutKick" },                                                         -- 15: filler
 }
 
--- Conduit cleave + AoE share one list (the user's tuned multi-target rotation).
--- Since Blackout Kick! and Dance of Chi-Ji STACKS aren't readable, their proc dumps
--- (lines 10-11) sit high so they're spent aggressively and never overcap.
+-- Conduit cleave + AoE share one list -- mirrors the Icy Veins Conduit AoE priority
+-- (same log-validated shape). 4pc -> Unbroken Rhythm; Bloodlust (undetectable) dropped
+-- from the RSK line, leaving its Zenith/no-4pc gate.
 local conduit_aoe = {
-    { spell = "InvokeXuen",       cond = cdReady(ID_ZENITH) },                          -- 1: sync with Zenith
-    { spell = "Zenith",           cond = chargesMin(2) },                               -- 2: at 2 charges
-    { spell = "FistsOfFury",      cond = auraRemainMax(ID_HEARTJADE, 1) },              -- 3: before HoJS falls off
-    { spell = "WhirlingDragonPunch", cond = xuenAway },                                 -- 4: Xuen > 10s
-    { spell = "StrikeOfTheWindlord", cond = xuenAway },                                 -- 5: Xuen > 10s
-    { spell = "CelestialConduit", cond = buffDown(ID_HEARTJADE) },                      -- 6: build HoJS
-    { spell = "ZenithStomp",      cond = OR(chiMax(3), auraRemainMax(ID_HEARTJADE, 5)) }, -- 7
-    { spell = "TigerPalm",        cond = AND(cdReady(113656), chiMax(3)) },             -- 8: build Chi for FoF
-    { spell = "FistsOfFury" },                                                          -- 9: always
-    { spell = "SpinningCraneKick", cond = buffUp(ID_DANCECHIJI) },                      -- 10: dump Dance proc
-    { spell = "BlackoutKick",     cond = buffUp(ID_BOKPROC) },                          -- 11: dump BoK! proc
-    { spell = "SpinningCraneKick", cond = buffUp(ID_UNBROKEN) },                        -- 12: Unbroken Rhythm
-    { spell = "TigerPalm",        cond = AND(chiMax(2), energyNearCap, buffDown(ID_ZENITH)) }, -- 13: avoid cap
-    { spell = "RisingSunKick",    cond = buffUp(ID_HEARTJADE) },                        -- 14: HoJS active
-    { spell = "SpinningCraneKick", cond = AND(buffUp(ID_ZENITH), enemiesMin(5)) },      -- 15: Zenith, 5+
-    { spell = "RisingSunKick",    cond = buffUp(ID_ZENITH) },                           -- 16: during Zenith
-    { spell = "BlackoutKick",     cond = AND(talentYes(ID_OBSIDIAN), buffUp(ID_ZENITH), cdNotReady(107428)) }, -- 17
-    { spell = "SpinningCraneKick", cond = OR(chiMin(3), cdNotReady(113656)) },          -- 18: AoE spender
-    { spell = "SlicingWinds",     cond = slicingWindsTalent },                          -- 19
-    { spell = "TigerPalm",        cond = AND(chiMax(4), buffDown(ID_ZENITH)) },         -- 20: filler, no overcap
-    { spell = "BlackoutKick",     cond = talentYes(ID_SHADOWBOX) },                     -- 21: Shadowboxing Treads
-    { spell = "RisingSunKick" },                                                        -- 22: filler
-    { spell = "BlackoutKick" },                                                         -- 23: filler
+    { spell = "FistsOfFury",      cond = auraRemainMax(ID_HEARTJADE, 1) },              -- 1: HoJS about to end
+    { spell = "WhirlingDragonPunch", cond = xuenAway },                                 -- 2: Xuen >10s away
+    { spell = "ZenithStomp",      cond = OR(chiMax(2), auraRemainMax(ID_ZENITH, 5)) },  -- 3: low Chi / Zenith ending
+    { spell = "CelestialConduit", cond = buffDown(ID_HEARTJADE) },                      -- 4: build HoJS
+    { spell = "TigerPalm",        cond = chiMax(2) },                                   -- 5: missing Chi for FoF
+    { spell = "FistsOfFury" },                                                          -- 6
+    { spell = "SpinningCraneKick", cond = buffUp(ID_UNBROKEN) },                        -- 7: 4pc / Unbroken Rhythm
+    { spell = "TigerPalm",        cond = AND(energyNearCap, buffDown(ID_ZENITH)) },     -- 8: avoid cap outside Zenith
+    { spell = "RisingSunKick" },                                                        -- 9: on cooldown, enables WDP
+    { spell = "RushingWindKick",  cond = AND(buffUp(ID_RUSHINGWIND), buffDown(ID_UNBROKEN)) }, -- 10: proc, without 4pc
+    { spell = "RisingSunKick",    cond = AND(buffUp(ID_HEARTJADE), buffDown(ID_UNBROKEN)) }, -- 11: HoJS, no 4pc
+    { spell = "SpinningCraneKick", cond = AND(buffUp(ID_ZENITH), enemiesMin(5)) },      -- 12: Zenith, 5+ targets
+    { spell = "RisingSunKick",    cond = AND(buffUp(ID_ZENITH), buffDown(ID_UNBROKEN)) }, -- 13: Zenith/lust, no 4pc
+    { spell = "BlackoutKick",     cond = AND(talentYes(ID_OBSIDIAN), buffUp(ID_ZENITH), cdNotReady(107428)) }, -- 14
+    { spell = "SpinningCraneKick" },                                                     -- 15: main AoE spender
+    { spell = "BlackoutKick",     cond = buffUp(ID_BOKPROC) },                          -- 16: proc
+    { spell = "TigerPalm",        cond = AND(chiMax(4), buffDown(ID_ZENITH)) },         -- 17: <5 Chi, no Zenith
+    { spell = "BlackoutKick",     cond = talentYes(ID_SHADOWBOX) },                     -- 18: Shadowboxing Treads
+    { spell = "RisingSunKick" },                                                        -- 19: filler
+    { spell = "BlackoutKick" },                                                         -- 20: filler
 }
 
 -- SHADO-PAN ---------------------------------------------------------------------

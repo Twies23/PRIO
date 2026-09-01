@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.7.5", {
+        "Conduit Windwalker ST + AoE rebuilt to match top-player logs / Icy Veins (RSK on cooldown, Rushing Wind Kick added to AoE). Reset lists to default.",
+    } },
     { "0.7.4", {
         "Keybind nudge -- 'Don't remind me' now resets on each PRIO update that has changelog notes, so the nudge returns once per new version (a new version can add abilities worth binding). Per-ability Ignore still sticks.",
     } },

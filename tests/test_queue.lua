@@ -57,3 +57,39 @@ test("queue: Rushing Wind Kick NOT recommended without its proc (AoE)", function
         truthy(id ~= RWK, "Rushing Wind Kick must not appear without its proc")
     end
 end)
+
+-- Conduit (Invoke Xuen talented) -- RWK is now part of the AoE list and must appear
+-- when its proc is up, and never without it.
+local RWK_ID = 1250566
+local function conduit(mode)
+    H.reset()
+    H.S.knownStrict[XUEN] = true            -- Conduit
+    H.S.enemies = (mode == "aoe") and 4 or (mode == "cleave") and 2 or 1
+    H.rebind()
+    H.Engine.openerActive = false
+    H.db.numQueue = 3
+    H.S.power[12] = 3
+    H.Engine:UpdateEnergy(H.S.now)
+end
+
+test("conduit AoE: Rushing Wind Kick appears when its proc is up", function()
+    conduit("aoe")
+    H.S.tracked[RWK_PROC] = true; H.S.auras[RWK_PROC] = true   -- proc active + readable
+    -- Suppress everything ranked ABOVE Rushing Wind Kick so it's reached:
+    H.S.power[3] = 50                                  -- readable low Energy -> not near cap
+    H.S.ready[123904] = true                           -- Xuen ready -> WDP "Xuen >10s" fails
+    H.S.tracked[443294] = true; H.S.auras[443294] = true  -- HoJS active -> Celestial Conduit fails
+    H.S.ready[113656] = false                          -- Fists of Fury on cooldown
+    local r = H.Engine:Evaluate()
+    local found = false
+    for _, id in ipairs(ids(r)) do if id == RWK_ID then found = true end end
+    truthy(found, "RWK should be recommended while its proc is up")
+end)
+
+test("conduit AoE: Rushing Wind Kick absent without its proc", function()
+    conduit("aoe")   -- proc not active/tracked
+    local r = H.Engine:Evaluate()
+    for _, id in ipairs(ids(r)) do
+        truthy(id ~= RWK_ID, "RWK must not appear without its proc")
+    end
+end)
