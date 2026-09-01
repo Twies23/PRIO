@@ -1,5 +1,14 @@
 # PRIO Changelog
 
+## 0.7.0
+- **Marksmanship Hunter added.** Full Sentinel and Dark Ranger support (auto-selected from your hero talent), built to the same bar as the other specs.
+  - **Sentinel** default rotation: hold Trueshot to line up with Explosive Shot, the Explosive Shot double-cast (Unstable Trigger), Moonlight Chakram inside Trueshot, Precise Shots spending (Kill Shot / Arcane), and Aimed Shot on charges.
+  - **Trueshot** gets a predicted cooldown and duration that account for Can't Miss (+2s) and Calling the Shots (−30s), for the "Trueshot soon" hold logic.
+  - **Moonlight Chakram** tracked correctly through the Trueshot-button override — suggested once per Trueshot and cleared after use.
+  - **Target Switch** action node you can drop anywhere in the priority with your own condition.
+  - Focus-affordability dimming, an Aimed Shot charge+haste model, and a pet check gated on Unbreakable Bond (inert on Lone Wolf).
+  - Hunter's Mark upkeep is included but still being finalized (see Rotation Debug); it stays inert until the right per-target read is confirmed, so it won't misfire.
+
 ## 0.6.20
 - **Marksmanship — Hunter's Mark diagnostic.** Target auras are likely secret in combat, so Rotation Debug now shows the Hunter's Mark read **two ways** — the CDM buff frame and the target unit aura — side by side. With a marked target, note which reads "up"; then swap to an unmarked target and watch which one clears. Whichever follows the swap is the per-target signal, and the upkeep line will be wired to it. Until then the line stays inert (it won't misfire).
 
