@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.7.15 (alpha)
+- **Windwalker glow signals are now pickable conditions.** When you add or edit a condition, the type dropdown now offers named presets: **Zenith lit up (20 Tigereye stacks)**, **Blackout Kick! proc**, and **Dance of Chi-Ji proc** (each reads the Cooldown-Manager glow — the only in-combat-readable form of these), plus **Heart of the Jade Serpent up** and **Zenith window active**. No need to know the glow spell IDs.
+
+
 ## 0.7.14 (alpha)
 - **New Rotation Debug window for Windwalker.** Run `/prio rotdebug` (or `/prio rotation`) to open a standalone window showing the raw signals the rotation keys off: the Zenith glow (your 20 Tigereye Brew stacks "lit up" state), the Blackout Kick! and Dance of Chi-Ji proc glows, key buffs (Heart of the Jade Serpent, Zenith window, Unbroken Rhythm, Combo Breaker), and the predicted Tigereye Brew stack count.
 - **Windwalker spends free procs more aggressively.** Because Blackout Kick! and Dance of Chi-Ji stack *counts* aren't readable in combat, PRIO now dumps them on their glow/buff (placed high in both Conduit lists) so they don't overcap. Reset lists to default to pick it up.

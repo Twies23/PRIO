@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.7.15", {
+        "Windwalker glow signals are now pickable conditions in the editor: 'Zenith lit up (20 Tigereye stacks)', 'Blackout Kick! proc', and 'Dance of Chi-Ji proc', plus 'Heart of the Jade Serpent up' and 'Zenith window active'.",
+    } },
     { "0.7.14", {
         "New Rotation Debug window (/prio rotdebug) for Windwalker: tracks the Zenith glow (20 Tigereye stacks), Blackout Kick! and Dance of Chi-Ji proc glows, key buffs, and predicted Tigereye Brew stacks.",
         "Windwalker now spends Blackout Kick! and Dance of Chi-Ji procs more aggressively (glow-gated, high in both Conduit lists) since their stack counts aren't readable in combat. Reset lists to default to pick it up.",

@@ -334,6 +334,24 @@ local spec = {
         { key = "conduit",  label = "Conduit" },
     },
 
+    -- Named conditions offered in the editor's picker. Proc glows (Cooldown-Manager
+    -- overlay) are the only readable form of these signals in combat -- the stack
+    -- COUNTS behind them are secret -- so we surface them as friendly presets instead
+    -- of asking the user to know the glow spell IDs. Each OR's the glow with its
+    -- readable buff, so it works whether or not the aura itself reads.
+    condPresets = {
+        { key = "zenithLit",   label = "Zenith lit up (20 Tigereye stacks)",
+          clause = glowing(ID_ZENITH) },
+        { key = "bokProc",     label = "Blackout Kick! proc",
+          clause = OR(glowing(100784), buffUp(ID_BOKPROC), buffUp(ID_COMBOBREAK)) },
+        { key = "danceProc",   label = "Dance of Chi-Ji proc",
+          clause = OR(glowing(101546), buffUp(ID_DANCECHIJI)) },
+        { key = "hojsUp",      label = "Heart of the Jade Serpent up",
+          clause = buffUp(ID_HEARTJADE) },
+        { key = "zenithWindow", label = "Zenith window active",
+          clause = buffUp(ID_ZENITH) },
+    },
+
     spells = {
         TigerPalm          = 100780,
         BlackoutKick       = 100784,
