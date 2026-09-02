@@ -152,52 +152,34 @@ local conduit_aoe = {
 }
 
 -- SHADO-PAN ---------------------------------------------------------------------
--- Shado-Pan single target -- the user's tuned list (matches the in-game sim rotation).
-local shadopan_st = {
-    { spell = "Zenith",           cond = chargesMin(2) },                              -- 1: Zenith at 2 charges
-    { spell = "WhirlingDragonPunch" },                                                 -- 2: always
-    { spell = "ZenithStomp",      cond = AND(chiMax(2), auraRemainMax(ID_ZENITH, 5)) },-- 3: low Chi + Zenith ending
-    { spell = "TigerPalm",        cond = AND(chiMax(4), cdReady(100780), stacksMax(ID_BOKPROC, 1)) }, -- 4: build Chi, not overcapping BoK!
-    { spell = "FistsOfFury" },                                                         -- 5: always
-    { spell = "StrikeOfTheWindlord" },                                                 -- 6: always (talent-gated)
-    -- Free procs get dumped immediately -- their STACK count is unreadable, so a timed-out
-    -- or overcapped proc is silently lost. Glow OR buff, placed high so they never waste.
-    { spell = "BlackoutKick",     cond = OR(glowing(100784), buffUp(ID_BOKPROC), buffUp(ID_COMBOBREAK)) }, -- 7: Blackout Kick! / Combo Breaker proc
-    { spell = "SpinningCraneKick", cond = OR(glowing(101546), buffUp(ID_DANCECHIJI)) },-- 8: Dance of Chi-Ji proc
-    { spell = "RushingWindKick",  cond = buffUp(ID_RUSHINGWIND) },                     -- 9: proc
-    { spell = "BlackoutKick",     cond = chiMax(3) },                                  -- 10: spend at low Chi
-    { spell = "RisingSunKick" },                                                       -- 11: always
-    { spell = "BlackoutKick",     cond = buffUp(ID_ZENITH) },                          -- 12: during Zenith
-    { spell = "SpinningCraneKick", cond = AND(buffUp(ID_ZENITH), chiMin(5)) },         -- 13: Zenith spend, 5+ Chi
-    { spell = "TouchOfDeath",     cond = usable(ID_TOUCHOFDEATH) },                    -- 14: execute
-    { spell = "SlicingWinds",     cond = slicingWindsTalent },                         -- 15: on CD (talent)
-    { spell = "TigerPalm",        cond = chiMax(4) },                                  -- 16: filler / avoid cap
-    { spell = "BlackoutKick" },                                                        -- 17: filler
-}
+-- ONE list drives ST, cleave and AoE -- Windwalker doesn't need a separate cleave
+-- shape, so all three modes share this user-tuned Shado-Pan priority.
+local ID_TIGERPALM     = 100780
+local ID_BLACKOUTKICK  = 100784
+local ID_SPINNINGCK    = 101546
+local function notLast(id) return { type = "lastCastNot", spell = id } end  -- "not just cast X"
 
--- Shado-Pan cleave + AoE share one list (the user's tuned multi-target rotation).
-local shadopan_aoe = {
-    { spell = "Zenith",           cond = OR(chargesMin(2), glowing(ID_ZENITH)) },      -- 1: 2 charges / lit up (20 Tigereye stacks)
-    { spell = "ZenithStomp",      cond = OR(chiMax(3), auraRemainMax(ID_ZENITH, 7)) }, -- 2: low Chi or Zenith ending
-    { spell = "TigerPalm",        cond = AND(cdReady(113656), chiMax(2)) },            -- 3: build Chi for Fists of Fury
-    { spell = "FistsOfFury" },                                                         -- 4: always
-    -- Free procs get dumped immediately -- their STACK count is unreadable, so a timed-out
-    -- or overcapped proc is silently lost. Glow OR buff, placed high so they never waste.
-    { spell = "BlackoutKick",     cond = OR(glowing(100784), buffUp(ID_BOKPROC), buffUp(ID_COMBOBREAK)) }, -- 5: Blackout Kick! / Combo Breaker proc
-    { spell = "SpinningCraneKick", cond = OR(glowing(101546), buffUp(ID_DANCECHIJI)) },-- 6: Dance of Chi-Ji proc
-    { spell = "SpinningCraneKick", cond = buffUp(ID_UNBROKEN) },                       -- 7: Unbroken Rhythm
-    { spell = "RisingSunKick",    cond = AND(cdReady(152175), cdNotReady(113656)) },   -- 8: enable WDP while Fists on CD
-    { spell = "RushingWindKick",  cond = AND(buffUp(ID_RUSHINGWIND), buffDown(ID_UNBROKEN)) }, -- 9: proc, without Unbroken Rhythm
-    { spell = "SpinningCraneKick", cond = AND(buffUp(ID_ZENITH), enemiesMin(5)) },     -- 10: Zenith, 5+ targets
-    { spell = "TigerPalm",        cond = chiMax(2) },                                  -- 11: build Chi
-    { spell = "SpinningCraneKick" },                                                   -- 12: main AoE spender
-    { spell = "RisingSunKick" },                                                       -- 13: filler
-    { spell = "BlackoutKick" },                                                        -- 14: filler
+local shadopan = {
+    { spell = "Zenith",           cond = OR(chargesMin(2), glowing(ID_ZENITH)) },                  -- 1: 2 charges / lit up (20 Tigereye stacks)
+    { spell = "WhirlingDragonPunch" },                                                             -- 2: always
+    { spell = "ZenithStomp",      cond = OR(chiMax(2), auraRemainMax(ID_ZENITH, 7)) },             -- 3: low Chi or Zenith ending
+    { spell = "TigerPalm",        cond = AND(energyNearCap, buffDown(ID_ZENITH), chiMax(4), notLast(ID_TIGERPALM)) }, -- 4: energy dump / build, no Zenith
+    { spell = "FistsOfFury" },                                                                     -- 5: always
+    { spell = "RushingWindKick",  cond = buffUp(ID_RUSHINGWIND) },                                 -- 6: proc
+    { spell = "SpinningCraneKick", cond = AND(OR(glowing(101546), buffUp(ID_DANCECHIJI)), buffUp(ID_UNBROKEN)) }, -- 7: Dance proc + Unbroken Rhythm
+    { spell = "RisingSunKick" },                                                                   -- 8: always
+    { spell = "BlackoutKick",     cond = AND(OR(glowing(100784), buffUp(ID_BOKPROC), buffUp(ID_COMBOBREAK)), notLast(ID_BLACKOUTKICK), chiMax(5)) }, -- 9: Blackout Kick! / Combo Breaker proc
+    { spell = "TouchOfDeath" },                                                                    -- 10: always (per your list)
+    { spell = "TigerPalm",        cond = AND(chiMax(2), notLast(ID_TIGERPALM)) },                  -- 11: build at low Chi
+    { spell = "SpinningCraneKick", cond = AND(buffUp(ID_DANCECHIJI), notLast(ID_SPINNINGCK)) },    -- 12: free Dance proc
+    { spell = "SlicingWinds",     cond = slicingWindsTalent },                                     -- 13: on CD (talent)
+    { spell = "TigerPalm",        cond = AND(chiMax(4), notLast(ID_TIGERPALM)) },                  -- 14: filler / avoid cap
+    { spell = "BlackoutKick",     cond = notLast(ID_BLACKOUTKICK) },                               -- 15: filler
 }
 
 local heroLists = {
     conduit  = { st = conduit_st,  cleave = conduit_aoe,  aoe = conduit_aoe },
-    shadopan = { st = shadopan_st, cleave = shadopan_aoe, aoe = shadopan_aoe },
+    shadopan = { st = shadopan,    cleave = shadopan,     aoe = shadopan },   -- one list for all modes
 }
 
 -- Active hero: Invoke Xuen is a Conduit-of-the-Celestials ability (Shado-Pan doesn't

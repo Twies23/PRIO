@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.7.17 (alpha)
+- **Shado-Pan Windwalker now runs a single tuned list for every mode.** ST, cleave, and AoE all share one priority (Windwalker doesn't need a distinct cleave rotation), replacing the old split ST/AoE defaults with the user's tuned Shado-Pan rotation: Zenith on 2 charges / glow, Whirling Dragon Punch, Zenith Stomp, energy-dump Tiger Palm, Fists, Rushing Wind Kick proc, Dance+Unbroken SCK, Rising Sun Kick, aggressive Blackout Kick! dump, Touch of Death, then Chi-building/filler. Conduit ST/AoE are unchanged. Reset lists to default to pick it up.
+
+
 ## 0.7.16 (alpha)
 - **Shado-Pan now spends free procs aggressively.** Both the Shado-Pan ST and AoE lists dump Blackout Kick! (and Combo Breaker) and Dance of Chi-Ji the moment they proc — glow-gated, placed right after Fists of Fury — instead of leaving them buried near the bottom where they'd time out or overcap. Since the proc *stack counts* aren't readable in combat, a wasted proc is silently lost, so this protects your resource economy. Shado-Pan Zenith also dumps on its lit-up glow (20 Tigereye stacks), matching Conduit. Reset lists to default to pick it up.
 
