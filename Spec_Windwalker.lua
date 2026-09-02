@@ -102,9 +102,14 @@ local conduit_st = {
     { spell = "FistsOfFury",      cond = auraRemainMax(ID_HEARTJADE, 1) },              -- 5: dump before HoJS falls off
     { spell = "TigerPalm",        cond = OR(AND(energyNearCap, buffDown(ID_ZENITH)), chiMax(2)) }, -- 6: energy cap / build for FoF
     { spell = "FistsOfFury" },                                                          -- 7
-    { spell = "RushingWindKick",  cond = buffUp(ID_RUSHINGWIND) },                      -- 8: proc
-    { spell = "SpinningCraneKick", cond = buffUp(ID_UNBROKEN) },                        -- 9: Unbroken Rhythm
-    { spell = "RisingSunKick" },                                                        -- 10: on cooldown (HoJS spams it)
+    -- Free procs are dumped aggressively (we can't read their STACK count, only the
+    -- glow/buff): Dance of Chi-Ji glows Spinning Crane Kick, Blackout Kick! / Combo
+    -- Breaker glows Blackout Kick. Spend before they overcap.
+    { spell = "SpinningCraneKick", cond = OR(glowing(101546), buffUp(ID_DANCECHIJI)) }, -- 8: Dance of Chi-Ji proc
+    { spell = "BlackoutKick",     cond = OR(glowing(100784), buffUp(ID_BOKPROC), buffUp(ID_COMBOBREAK)) }, -- 9: Blackout Kick! / Combo Breaker proc
+    { spell = "RushingWindKick",  cond = buffUp(ID_RUSHINGWIND) },                      -- 10: proc
+    { spell = "SpinningCraneKick", cond = buffUp(ID_UNBROKEN) },                        -- 11: Unbroken Rhythm
+    { spell = "RisingSunKick" },                                                        -- 12: on cooldown (HoJS spams it)
     { spell = "BlackoutKick",     cond = OR(buffUp(ID_COMBOBREAK), buffUp(ID_BOKPROC), AND(buffUp(ID_ZENITH), talentYes(ID_OBSIDIAN))) }, -- 11: proc / Zenith+Obsidian
     { spell = "SpinningCraneKick", cond = sckZenith },                                  -- 12: Zenith spend (>4 Chi or Dance)
     { spell = "TigerPalm",        cond = chiMax(1) },                                   -- 13: less than 2 Chi
@@ -127,6 +132,9 @@ local conduit_aoe = {
     { spell = "Zenith",           cond = AND(chargesMin(2), glowing(ID_ZENITH)) }, -- dump 2nd charge only when Zenith is glowing (20 Tigereye Brew stacks ready)
     { spell = "TigerPalm",        cond = chiMax(2) },                                   -- 5: missing Chi for FoF
     { spell = "FistsOfFury" },                                                          -- 6
+    -- Aggressive free-proc dumps (glow = the only readable signal, no stack count):
+    { spell = "BlackoutKick",     cond = OR(glowing(100784), buffUp(ID_BOKPROC), buffUp(ID_COMBOBREAK)) }, -- 6b: Blackout Kick! / Combo Breaker proc
+    { spell = "SpinningCraneKick", cond = OR(glowing(101546), buffUp(ID_DANCECHIJI)) }, -- 6c: Dance of Chi-Ji proc
     { spell = "SpinningCraneKick", cond = buffUp(ID_UNBROKEN) },                        -- 7: 4pc / Unbroken Rhythm
     { spell = "TigerPalm",        cond = AND(energyNearCap, buffDown(ID_ZENITH)) },     -- 8: avoid cap outside Zenith
     { spell = "RisingSunKick" },                                                        -- 9: on cooldown, enables WDP
@@ -469,6 +477,36 @@ local spec = {
     economy = {
         gen   = { "Tiger Palm", "Zenith Stomp", "Blackout Kick! + Energy Burst", "Slicing Winds + Airborne Rhythm", "Obsidian Spiral during Zenith" },
         spend = { "Rising Sun Kick", "Fists of Fury", "Blackout Kick", "Spinning Crane Kick", "Whirling Dragon Punch" },
+    },
+
+    -- Dedicated rotation-debug view (/prio rotation-debug). Proc glows are the clean
+    -- Cooldown-Manager overlay reads: Zenith glows at 20 Tigereye stacks, Blackout Kick
+    -- glows on a free proc (Blackout Kick! / Combo Breaker), Spinning Crane Kick glows
+    -- on a Dance of Chi-Ji proc -- exactly the signals we can't get as stack COUNTS.
+    rotationDebug = {
+        title = "Windwalker Rotation Debug",
+        abilities = {
+            "Zenith", "InvokeXuen", "CelestialConduit", "FistsOfFury", "RisingSunKick",
+            "SpinningCraneKick", "BlackoutKick", "RushingWindKick", "WhirlingDragonPunch",
+            "StrikeOfTheWindlord", "ZenithStomp", "TigerPalm",
+        },
+        buffs = {
+            { label = "Heart of the Jade Serpent", spell = ID_HEARTJADE },
+            { label = "Zenith window",             spell = ID_ZENITH },
+            { label = "Unbroken Rhythm",           spell = ID_UNBROKEN },
+            { label = "Combo Breaker",             spell = ID_COMBOBREAK },
+            { label = "Blackout Kick!",            spell = ID_BOKPROC },
+            { label = "Dance of Chi-Ji",           spell = ID_DANCECHIJI },
+            { label = "Rushing Wind Kick avail.",  spell = ID_RUSHINGWIND },
+        },
+        predStacks = {
+            { label = "Tigereye Brew (predicted)", spell = ID_TIGEREYE },
+        },
+        glows = {
+            { label = "Zenith glow (20 Tigereye stacks)", spell = ID_ZENITH },
+            { label = "Blackout Kick glow (BoK! proc)",   spell = 100784 },
+            { label = "Spinning Crane Kick glow (Dance)", spell = 101546 },
+        },
     },
 }
 

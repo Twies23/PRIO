@@ -577,8 +577,9 @@ function RotationDebug:Update()
         set("b" .. i, ok and res or "|cffe0685aerr|r")
     end
     for i, p in ipairs(rd.predStacks or {}) do
-        local n = (PRIO.Engine and PRIO.Engine.P and PRIO.Engine.P.stacks
-            and PRIO.Engine.P.stacks[p.spell]) or 0
+        local n = (PRIO.Engine and PRIO.Engine.PredictedStacks and PRIO.Engine:PredictedStacks(p.spell))
+            or (PRIO.Engine and PRIO.Engine.P and PRIO.Engine.P.stacks and PRIO.Engine.P.stacks[p.spell])
+            or 0
         set("p" .. i, ("|cff0cd29f%d|r  |cff5a6a76(predicted)|r"):format(n))
     end
     for i, g in ipairs(rd.glows or {}) do

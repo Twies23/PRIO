@@ -134,6 +134,42 @@ test("conduit: Zenith overcap dump gated on the glow (20 Tigereye stacks)", func
     falsy(has(H.Engine:Evaluate(), ZENITH), "dump held when Zenith not glowing")
 end)
 
+local SCK, BOK, DANCE_GLOW, BOK_GLOW = 101546, 100784, 101546, 100784
+local BOKPROC, COMBOBREAK, DANCEBUFF = 116768, 137284, 325202
+
+-- Reach the aggressive proc lines (Conduit ST #8/#9) by suppressing everything above:
+-- Xuen ready (WDP/Strike hold), high Chi (Zenith Stomp off), Celestial not ready
+-- (Invoke Xuen off), HoJS up (Celestial Conduit off), Zenith <2 charges (both Zenith
+-- lines off). Fists of Fury (#7, unconditional) then the proc dumps are what remain.
+local function conduit_procready()
+    conduit("st")
+    H.S.ready[XUEN] = true                                          -- Xuen ready -> xuenAway false
+    H.S.power[12] = 5                                               -- Chi high -> chiMax(2) false
+    H.S.power[3]  = 50                                              -- readable low Energy -> not near cap
+    H.S.ready[443028] = false                                       -- Celestial Conduit not ready
+    H.S.tracked[443294] = true; H.S.auras[443294] = true           -- HoJS up -> Celestial Conduit line off
+    H.S.chargeState[1249625] = { max = 2, cur = 1, belowMax = true } -- Zenith <2 charges
+    H.S.ready[113656] = true                                        -- Fists of Fury available
+end
+
+test("conduit: Dance of Chi-Ji proc glow -> Spinning Crane Kick spent aggressively", function()
+    conduit_procready()
+    H.S.glows[DANCE_GLOW] = true                                   -- Dance proc lit on SCK
+    truthy(has(H.Engine:Evaluate(), SCK), "SCK should be recommended on a Dance of Chi-Ji glow")
+end)
+
+test("conduit: Blackout Kick! proc glow -> Blackout Kick spent aggressively", function()
+    conduit_procready()
+    H.S.glows[BOK_GLOW] = true                                     -- BoK! proc lit on Blackout Kick
+    truthy(has(H.Engine:Evaluate(), BOK), "Blackout Kick should be recommended on a BoK! glow")
+end)
+
+test("conduit: Blackout Kick! also spent on the readable Combo Breaker buff", function()
+    conduit_procready()
+    H.S.tracked[COMBOBREAK] = true; H.S.auras[COMBOBREAK] = true
+    truthy(has(H.Engine:Evaluate(), BOK), "Blackout Kick should be recommended on Combo Breaker")
+end)
+
 test("opener: resolves per hero (Conduit vs Shado-Pan)", function()
     H.reset(); H.S.knownStrict[XUEN] = true; H.rebind()   -- Conduit
     local c = H.Engine:ActiveOpener("st")

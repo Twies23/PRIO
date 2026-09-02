@@ -1,5 +1,10 @@
 # PRIO Changelog
 
+## 0.7.14 (alpha)
+- **New Rotation Debug window for Windwalker.** Run `/prio rotdebug` (or `/prio rotation`) to open a standalone window showing the raw signals the rotation keys off: the Zenith glow (your 20 Tigereye Brew stacks "lit up" state), the Blackout Kick! and Dance of Chi-Ji proc glows, key buffs (Heart of the Jade Serpent, Zenith window, Unbroken Rhythm, Combo Breaker), and the predicted Tigereye Brew stack count.
+- **Windwalker spends free procs more aggressively.** Because Blackout Kick! and Dance of Chi-Ji stack *counts* aren't readable in combat, PRIO now dumps them on their glow/buff (placed high in both Conduit lists) so they don't overcap. Reset lists to default to pick it up.
+
+
 ## 0.7.13 (alpha)
 - **Windwalker openers are now hero-split and configurable.** Options → Opener has a "Hero opener to edit" switch (Shado-Pan / Conduit), each with its own ST and AoE sequence. Conduit opens the Xuen → Celestial Conduit → Zenith burst; Shado-Pan is Zenith-centric. The opener's "wait for cooldowns ready" gate is hero-aware too. Existing custom openers carry over as a shared fallback until you make a hero-specific one.
 
