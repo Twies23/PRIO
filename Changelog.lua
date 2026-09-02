@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.7.21", {
+        "Shado-Pan AoE line 4 (free Energy-Burst Blackout Kick) now gates on the Blackout Kick! PROC preset (glow) instead of the raw buff, so it fires even when the proc buff doesn't read. Reset lists to default to pick it up.",
+    } },
     { "0.7.20", {
         "Shado-Pan finalized: separate ST and AoE lists again (cleave still hidden, aliases AoE). The AoE list is the user's Fists-pooling build -- Tiger Palm / free Energy-Burst BoK to bank Chi for Fists, spenders gate on Fists being on cooldown so they don't rob the pool. Reset lists to default to pick it up.",
     } },

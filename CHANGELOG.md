@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.7.21 (alpha)
+- **Shado-Pan AoE:** the free Energy-Burst Blackout Kick line (#4) now gates on the **Blackout Kick! proc** preset (glow OR proc/Combo Breaker buff) instead of the raw buff, so it triggers even when the proc buff isn't readable. Reset lists to default to pick it up.
+
+
 ## 0.7.20 (alpha)
 - **Shado-Pan rotation finalized.** ST and AoE are separate lists again (cleave stays hidden and aliases the AoE list). The AoE list is the user's Fists-pooling build: Tiger Palm and a free Energy-Burst Blackout Kick bank Chi for Fists of Fury, and the AoE spenders (Spinning Crane Kick / Rising Sun Kick / filler Blackout Kick) gate on Fists being on cooldown so they don't drain the pool right before it comes up. Reset lists to default to pick it up.
 

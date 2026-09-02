@@ -185,7 +185,7 @@ local shadopan_aoe = {
     { spell = "Zenith",           cond = OR(chargesMin(2), { type = "preset:zenithLit" }) },       -- 1: 2 charges / lit up
     { spell = "WhirlingDragonPunch" },                                                             -- 2: always
     { spell = "ZenithStomp",      cond = OR(chiMax(2), auraRemainMax(ID_ZENITH, 7)) },             -- 3: low Chi or Zenith ending
-    { spell = "BlackoutKick",     cond = AND(cdReady(ID_FISTSOFFURY), chiEq(2), buffUp(ID_BOKPROC), talentYes(ID_ENERGYBURST)) }, -- 4: free BoK! to refund energy while pooling for Fists (Energy Burst)
+    { spell = "BlackoutKick",     cond = AND(cdReady(ID_FISTSOFFURY), chiEq(2), { type = "preset:bokProc" }, talentYes(ID_ENERGYBURST)) }, -- 4: free BoK! (glow) to refund energy while pooling for Fists (Energy Burst)
     { spell = "TigerPalm",        cond = AND(cdReady(ID_FISTSOFFURY), chiMax(2)) },                -- 5: build Chi for Fists
     { spell = "FistsOfFury" },                                                                     -- 6: always
     { spell = "SpinningCraneKick", cond = AND(buffUp(ID_UNBROKEN), cdNotReady(ID_FISTSOFFURY), notLast(ID_SPINNINGCK)) }, -- 7: Unbroken Rhythm, not pooling
