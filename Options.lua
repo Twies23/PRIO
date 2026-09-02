@@ -1072,11 +1072,23 @@ function Pages.general()
     end)
 
     Section("Auto mode thresholds")
-    SettingRow("Cleave at (enemies)", 26, function(r)
-        local s = UI.Slider(r, 200, 2, 6, 1, function() return db.cleaveAt end,
-            function(v) db.cleaveAt = v end, AfterChange)
-        s:SetPoint("RIGHT", 0, 0)
-    end)
+    -- Only show the cleave threshold for specs that actually offer a cleave tier
+    -- (e.g. Windwalker collapses cleave into AoE and hides the tab).
+    local thSpec = CurrentSpec()
+    local offersCleave = true
+    if thSpec then
+        offersCleave = false
+        for _, m in ipairs(Cond.SpecModes(thSpec)) do
+            if m.value == "cleave" then offersCleave = true; break end
+        end
+    end
+    if offersCleave then
+        SettingRow("Cleave at (enemies)", 26, function(r)
+            local s = UI.Slider(r, 200, 2, 6, 1, function() return db.cleaveAt end,
+                function(v) db.cleaveAt = v end, AfterChange)
+            s:SetPoint("RIGHT", 0, 0)
+        end)
+    end
     SettingRow("AoE at (enemies)", 26, function(r)
         -- Per-spec threshold (specs like Arms default to 2 and drop the cleave tier);
         -- falls back to the global for the current spec.

@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.7.19", {
+        "Windwalker no longer shows a Cleave tier: the ST/AoE editor tabs and the Live-mode selector drop Cleave, the \"Cleave at\" threshold slider is hidden, and auto mode never resolves to cleave (it uses the one shared list for everything). No reset needed.",
+    } },
     { "0.7.18", {
         "Fixed Windwalker glow conditions showing as a blank \"-\" in the editor: the default lists now reference the named presets (Zenith lit up / Blackout Kick! proc / Dance of Chi-Ji proc) instead of a raw glow clause, so they display their label and the Shado-Pan proc lines are now flat, editable rows. Behavior is unchanged. Reset lists to default to pick it up.",
     } },

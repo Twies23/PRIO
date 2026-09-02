@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.7.19 (alpha)
+- **Windwalker drops the Cleave tier from the UI.** Windwalker uses one shared list for all target counts, so the Cleave tab is gone from the priority editor, the "Live mode (what's shown)" selector now offers only Auto / ST / AoE, the "Cleave at (enemies)" slider is hidden, and auto mode never resolves to cleave (it goes straight ST → AoE). No reset needed — takes effect on reload.
+
+
 ## 0.7.18 (alpha)
 - **Fixed Windwalker glow conditions rendering as a blank "—" in the condition editor.** Glow clause types are only surfaced through named presets, but the default lists were authored with a raw glow clause, so lines like Zenith's "lit up" second condition showed as an empty row. The lists now reference the presets (`Zenith lit up`, `Blackout Kick! proc`, `Dance of Chi-Ji proc`), so they display their label — and the Shado-Pan Dance/BoK! proc lines are now flat, fully editable rows instead of a read-only nested group. Evaluation is identical. Reset lists to default to pick it up.
 

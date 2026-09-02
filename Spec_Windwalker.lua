@@ -308,7 +308,10 @@ local spec = {
     cooldownTrack = {
         InvokeXuen = { base = 120, reduce = { [ID_XUENSBOND] = 30 } },
     },
-    cleaveAt = 2,   -- Shado-Pan uses the AoE priority for cleave as well
+    -- Windwalker doesn't need a distinct cleave rotation, so the cleave tier is
+    -- collapsed (cleaveAt == aoeAt) and the editor only offers ST / AoE tabs.
+    modes    = { { value = "st", text = "ST" }, { value = "aoe", text = "AoE" } },
+    cleaveAt = 3,   -- == aoeAt -> auto mode never resolves to "cleave"
     aoeAt    = 3,
     comboStrikes = true,   -- mastery: engine never queues the same ability twice in a row
     condTags = { energy = true },   -- offer the "Energy %" condition (avoid-capping lines)
