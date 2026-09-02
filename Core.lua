@@ -11,7 +11,7 @@ PRIO.version = C_AddOns and C_AddOns.GetAddOnMetadata(ADDON, "Version") or "0.1.
 
 -- Bump this ONLY when a shipped default PRIORITY LIST changes. On login, users who
 -- have customized lists and haven't seen this revision get prompted to reset.
-PRIO.defaultsRevision = 43
+PRIO.defaultsRevision = 44
 
 -- Settings a saved profile captures (everything except the display position).
 PRIO.PROFILE_KEYS = {

@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.7.16", {
+        "Shado-Pan lists (ST + AoE) now dump Blackout Kick! and Dance of Chi-Ji procs aggressively -- glow-gated, right after Fists of Fury -- so unreadable proc stacks don't waste to timeout/overcap. Shado-Pan Zenith also dumps on its lit-up glow. Reset lists to default to pick it up.",
+    } },
     { "0.7.15", {
         "Windwalker glow signals are now pickable conditions in the editor: 'Zenith lit up (20 Tigereye stacks)', 'Blackout Kick! proc', and 'Dance of Chi-Ji proc', plus 'Heart of the Jade Serpent up' and 'Zenith window active'.",
     } },

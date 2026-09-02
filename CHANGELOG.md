@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.7.16 (alpha)
+- **Shado-Pan now spends free procs aggressively.** Both the Shado-Pan ST and AoE lists dump Blackout Kick! (and Combo Breaker) and Dance of Chi-Ji the moment they proc — glow-gated, placed right after Fists of Fury — instead of leaving them buried near the bottom where they'd time out or overcap. Since the proc *stack counts* aren't readable in combat, a wasted proc is silently lost, so this protects your resource economy. Shado-Pan Zenith also dumps on its lit-up glow (20 Tigereye stacks), matching Conduit. Reset lists to default to pick it up.
+
+
 ## 0.7.15 (alpha)
 - **Windwalker glow signals are now pickable conditions.** When you add or edit a condition, the type dropdown now offers named presets: **Zenith lit up (20 Tigereye stacks)**, **Blackout Kick! proc**, and **Dance of Chi-Ji proc** (each reads the Cooldown-Manager glow — the only in-combat-readable form of these), plus **Heart of the Jade Serpent up** and **Zenith window active**. No need to know the glow spell IDs.
 
