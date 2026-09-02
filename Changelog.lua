@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.7.20", {
+        "Shado-Pan finalized: separate ST and AoE lists again (cleave still hidden, aliases AoE). The AoE list is the user's Fists-pooling build -- Tiger Palm / free Energy-Burst BoK to bank Chi for Fists, spenders gate on Fists being on cooldown so they don't rob the pool. Reset lists to default to pick it up.",
+    } },
     { "0.7.19", {
         "Windwalker no longer shows a Cleave tier: the ST/AoE editor tabs and the Live-mode selector drop Cleave, the \"Cleave at\" threshold slider is hidden, and auto mode never resolves to cleave (it uses the one shared list for everything). No reset needed.",
     } },

@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.7.20 (alpha)
+- **Shado-Pan rotation finalized.** ST and AoE are separate lists again (cleave stays hidden and aliases the AoE list). The AoE list is the user's Fists-pooling build: Tiger Palm and a free Energy-Burst Blackout Kick bank Chi for Fists of Fury, and the AoE spenders (Spinning Crane Kick / Rising Sun Kick / filler Blackout Kick) gate on Fists being on cooldown so they don't drain the pool right before it comes up. Reset lists to default to pick it up.
+
+
 ## 0.7.19 (alpha)
 - **Windwalker drops the Cleave tier from the UI.** Windwalker uses one shared list for all target counts, so the Cleave tab is gone from the priority editor, the "Live mode (what's shown)" selector now offers only Auto / ST / AoE, the "Cleave at (enemies)" slider is hidden, and auto mode never resolves to cleave (it goes straight ST → AoE). No reset needed — takes effect on reload.
 

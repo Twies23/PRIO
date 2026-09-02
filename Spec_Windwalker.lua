@@ -152,14 +152,18 @@ local conduit_aoe = {
 }
 
 -- SHADO-PAN ---------------------------------------------------------------------
--- ONE list drives ST, cleave and AoE -- Windwalker doesn't need a separate cleave
--- shape, so all three modes share this user-tuned Shado-Pan priority.
+-- Two user-tuned lists (ST + AoE). Windwalker has no separate cleave tier, so cleave
+-- aliases the AoE list and the cleave tab is hidden (spec.modes = ST/AoE).
 local ID_TIGERPALM     = 100780
 local ID_BLACKOUTKICK  = 100784
 local ID_SPINNINGCK    = 101546
+local ID_FISTSOFFURY   = 113656
+local ID_RISINGSUNKICK = 107428
+local ID_WHIRLINGDP    = 152175
 local function notLast(id) return { type = "lastCastNot", spell = id } end  -- "not just cast X"
+local function chiEq(n)    return { type = "resourceEq", v = n } end        -- Chi == n
 
-local shadopan = {
+local shadopan_st = {
     { spell = "Zenith",           cond = OR(chargesMin(2), { type = "preset:zenithLit" }) },       -- 1: 2 charges / lit up (20 Tigereye stacks)
     { spell = "WhirlingDragonPunch" },                                                             -- 2: always
     { spell = "ZenithStomp",      cond = OR(chiMax(2), auraRemainMax(ID_ZENITH, 7)) },             -- 3: low Chi or Zenith ending
@@ -177,9 +181,34 @@ local shadopan = {
     { spell = "BlackoutKick",     cond = notLast(ID_BLACKOUTKICK) },                               -- 15: filler
 }
 
+local shadopan_aoe = {
+    { spell = "Zenith",           cond = OR(chargesMin(2), { type = "preset:zenithLit" }) },       -- 1: 2 charges / lit up
+    { spell = "WhirlingDragonPunch" },                                                             -- 2: always
+    { spell = "ZenithStomp",      cond = OR(chiMax(2), auraRemainMax(ID_ZENITH, 7)) },             -- 3: low Chi or Zenith ending
+    { spell = "BlackoutKick",     cond = AND(cdReady(ID_FISTSOFFURY), chiEq(2), buffUp(ID_BOKPROC), talentYes(ID_ENERGYBURST)) }, -- 4: free BoK! to refund energy while pooling for Fists (Energy Burst)
+    { spell = "TigerPalm",        cond = AND(cdReady(ID_FISTSOFFURY), chiMax(2)) },                -- 5: build Chi for Fists
+    { spell = "FistsOfFury" },                                                                     -- 6: always
+    { spell = "SpinningCraneKick", cond = AND(buffUp(ID_UNBROKEN), cdNotReady(ID_FISTSOFFURY), notLast(ID_SPINNINGCK)) }, -- 7: Unbroken Rhythm, not pooling
+    { spell = "TigerPalm",        cond = AND(energyNearCap, buffDown(ID_ZENITH), chiMax(4), notLast(ID_TIGERPALM)) }, -- 8: energy dump / build, no Zenith
+    { spell = "RisingSunKick",    cond = AND(cdReady(ID_WHIRLINGDP), cdNotReady(ID_FISTSOFFURY)) },-- 9: enable WDP while Fists on CD
+    { spell = "RushingWindKick",  cond = AND(buffUp(ID_RUSHINGWIND), buffDown(ID_UNBROKEN)) },     -- 10: proc, without Unbroken Rhythm
+    { spell = "BlackoutKick",     cond = AND(talentYes(ID_OBSIDIAN), buffUp(ID_ZENITH), cdNotReady(ID_RISINGSUNKICK), notLast(ID_BLACKOUTKICK)) }, -- 11: Obsidian Spiral, Zenith window
+    { spell = "SpinningCraneKick", cond = AND(buffUp(ID_ZENITH), enemiesMin(5), cdNotReady(ID_FISTSOFFURY), notLast(ID_SPINNINGCK)) }, -- 12: Zenith, 5+ targets
+    { spell = "RisingSunKick",    cond = AND(buffUp(ID_ZENITH), buffDown(ID_UNBROKEN)) },          -- 13: Zenith window
+    { spell = "SpinningCraneKick", cond = AND(cdNotReady(ID_FISTSOFFURY), notLast(ID_SPINNINGCK)) },-- 14: main AoE spender, not pooling
+    { spell = "SlicingWinds",     cond = slicingWindsTalent },                                     -- 15: on CD (talent)
+    { spell = "BlackoutKick",     cond = AND({ type = "preset:bokProc" }, notLast(ID_BLACKOUTKICK), chiMax(5)) }, -- 16: Blackout Kick! / Combo Breaker proc
+    { spell = "TigerPalm",        cond = AND(chiMax(5), notLast(ID_TIGERPALM), buffDown(ID_ZENITH)) }, -- 17: build, no Zenith
+    { spell = "BlackoutKick",     cond = AND(notLast(ID_BLACKOUTKICK), talentYes(ID_SHADOWBOX), cdNotReady(ID_FISTSOFFURY)) }, -- 18: Shadowboxing Treads
+    { spell = "RisingSunKick",    cond = cdNotReady(ID_FISTSOFFURY) },                             -- 19: filler while Fists on CD
+    { spell = "TouchOfDeath" },                                                                    -- 20: always (per your list)
+    { spell = "BlackoutKick",     cond = AND(notLast(ID_BLACKOUTKICK), cdNotReady(ID_FISTSOFFURY)) }, -- 21: filler
+    { spell = "TigerPalm",        cond = notLast(ID_TIGERPALM) },                                  -- 22: filler
+}
+
 local heroLists = {
-    conduit  = { st = conduit_st,  cleave = conduit_aoe,  aoe = conduit_aoe },
-    shadopan = { st = shadopan,    cleave = shadopan,     aoe = shadopan },   -- one list for all modes
+    conduit  = { st = conduit_st,   cleave = conduit_aoe,   aoe = conduit_aoe },
+    shadopan = { st = shadopan_st,  cleave = shadopan_aoe,  aoe = shadopan_aoe },  -- cleave aliases AoE (tab hidden)
 }
 
 -- Active hero: Invoke Xuen is a Conduit-of-the-Celestials ability (Shado-Pan doesn't
