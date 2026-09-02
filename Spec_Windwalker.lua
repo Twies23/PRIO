@@ -96,7 +96,7 @@ local conduit_st = {
     { spell = "StrikeOfTheWindlord", cond = xuenAway },                                 -- 2: hold unless Xuen >10s away
     { spell = "ZenithStomp",      cond = OR(chiMax(2), auraRemainMax(ID_ZENITH, 5)) },  -- 3: low Chi / Zenith ending
     { spell = "InvokeXuen",       cond = cdReady(ID_CELESTIAL) },                       -- (Midnight) press Xuen to open the Celestial Conduit window
-    { spell = "CelestialConduit", cond = buffDown(ID_HEARTJADE) },                      -- 4: build HoJS
+    { spell = "CelestialConduit", cond = AND(buffDown(ID_HEARTJADE), cdNotReady(152175)) }, -- 4: build HoJS, only while Whirling Dragon Punch is on cooldown
     { spell = "Zenith",           cond = lastCast(ID_CELESTIAL) },                     -- (log) burst cast right after Celestial Conduit
     { spell = "Zenith",           cond = AND(chargesMin(2), { type = "preset:zenithLit" }) }, -- dump 2nd charge only when Zenith is glowing (20 Tigereye Brew stacks ready)
     { spell = "FistsOfFury",      cond = auraRemainMax(ID_HEARTJADE, 1) },              -- 5: dump before HoJS falls off
@@ -127,7 +127,7 @@ local conduit_aoe = {
     { spell = "WhirlingDragonPunch", cond = xuenAway },                                 -- 2: Xuen >10s away
     { spell = "ZenithStomp",      cond = OR(chiMax(2), auraRemainMax(ID_ZENITH, 5)) },  -- 3: low Chi / Zenith ending
     { spell = "InvokeXuen",       cond = cdReady(ID_CELESTIAL) },                       -- (Midnight) press Xuen to open the Celestial Conduit window
-    { spell = "CelestialConduit", cond = buffDown(ID_HEARTJADE) },                      -- 4: build HoJS
+    { spell = "CelestialConduit", cond = AND(buffDown(ID_HEARTJADE), cdNotReady(152175)) }, -- 4: build HoJS, only while Whirling Dragon Punch is on cooldown
     { spell = "Zenith",           cond = lastCast(ID_CELESTIAL) },                     -- (log) burst cast right after Celestial Conduit
     { spell = "Zenith",           cond = AND(chargesMin(2), { type = "preset:zenithLit" }) }, -- dump 2nd charge only when Zenith is glowing (20 Tigereye Brew stacks ready)
     { spell = "TigerPalm",        cond = chiMax(2) },                                   -- 5: missing Chi for FoF
@@ -423,16 +423,16 @@ local spec = {
     -- burst (Xuen -> Celestial Conduit -> Zenith), Shado-Pan is Zenith-centric.
     openerByVariant = {
         conduit = {
-            st  = { "TigerPalm", "InvokeXuen", "CelestialConduit", "Zenith", "FistsOfFury",
-                    "RisingSunKick", "FistsOfFury", "WhirlingDragonPunch" },
-            aoe = { "TigerPalm", "InvokeXuen", "CelestialConduit", "Zenith", "FistsOfFury",
-                    "RisingSunKick", "FistsOfFury", "WhirlingDragonPunch" },
+            st  = { "TigerPalm", "InvokeXuen", "Zenith", "StrikeOfTheWindlord",
+                    "FistsOfFury", "RisingSunKick" },
+            aoe = { "TigerPalm", "InvokeXuen", "Zenith", "StrikeOfTheWindlord",
+                    "FistsOfFury", "RisingSunKick" },
         },
         shadopan = {
-            st  = { "TigerPalm", "Zenith", "WhirlingDragonPunch", "StrikeOfTheWindlord",
-                    "FistsOfFury", "RisingSunKick", "BlackoutKick" },
-            aoe = { "TigerPalm", "Zenith", "WhirlingDragonPunch", "StrikeOfTheWindlord",
-                    "FistsOfFury", "RisingSunKick", "BlackoutKick" },
+            st  = { "TigerPalm", "Zenith", "StrikeOfTheWindlord",
+                    "FistsOfFury", "RisingSunKick" },
+            aoe = { "TigerPalm", "Zenith", "StrikeOfTheWindlord",
+                    "FistsOfFury", "RisingSunKick" },
         },
     },
     openerReadyByVariant = {

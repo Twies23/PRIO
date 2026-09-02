@@ -108,6 +108,7 @@ end)
 
 test("conduit: Zenith fires right after Celestial Conduit even at 1 charge (burst)", function()
     conduit("st")                                                -- HoJS down -> CC castable -> CC then Zenith
+    H.S.ready[152175] = false                                    -- Whirling Dragon Punch on CD -> CC's new gate passes
     H.S.chargeState[ZENITH] = { max = 2, cur = 1, belowMax = true }
     local r = H.Engine:Evaluate()
     truthy(has(r, CC) and has(r, ZENITH), "Celestial Conduit then Zenith should both appear in the burst")

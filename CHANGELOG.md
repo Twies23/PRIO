@@ -1,5 +1,10 @@
 # PRIO Changelog
 
+## 0.7.22 (alpha)
+- **Conduit:** Celestial Conduit (line 5, both ST and AoE) now also requires **Whirling Dragon Punch to be on cooldown** — it builds Heart of the Jade Serpent only when WDP isn't available. Reset lists to default to pick it up.
+- **Windwalker openers updated (all four).** Shado-Pan (ST & AoE): Tiger Palm → Zenith → Strike of the Windlord → Fists of Fury → Rising Sun Kick. Conduit (ST & AoE): Tiger Palm → Invoke Xuen → Zenith → Strike of the Windlord → Fists of Fury → Rising Sun Kick. Hit "Reset to default" on an opener to pick it up.
+
+
 ## 0.7.21 (alpha)
 - **Shado-Pan AoE:** the free Energy-Burst Blackout Kick line (#4) now gates on the **Blackout Kick! proc** preset (glow OR proc/Combo Breaker buff) instead of the raw buff, so it triggers even when the proc buff isn't readable. Reset lists to default to pick it up.
 
