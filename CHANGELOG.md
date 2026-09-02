@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.7.18 (alpha)
+- **Fixed Windwalker glow conditions rendering as a blank "—" in the condition editor.** Glow clause types are only surfaced through named presets, but the default lists were authored with a raw glow clause, so lines like Zenith's "lit up" second condition showed as an empty row. The lists now reference the presets (`Zenith lit up`, `Blackout Kick! proc`, `Dance of Chi-Ji proc`), so they display their label — and the Shado-Pan Dance/BoK! proc lines are now flat, fully editable rows instead of a read-only nested group. Evaluation is identical. Reset lists to default to pick it up.
+
+
 ## 0.7.17 (alpha)
 - **Shado-Pan Windwalker now runs a single tuned list for every mode.** ST, cleave, and AoE all share one priority (Windwalker doesn't need a distinct cleave rotation), replacing the old split ST/AoE defaults with the user's tuned Shado-Pan rotation: Zenith on 2 charges / glow, Whirling Dragon Punch, Zenith Stomp, energy-dump Tiger Palm, Fists, Rushing Wind Kick proc, Dance+Unbroken SCK, Rising Sun Kick, aggressive Blackout Kick! dump, Touch of Death, then Chi-building/filler. Conduit ST/AoE are unchanged. Reset lists to default to pick it up.
 

@@ -98,15 +98,15 @@ local conduit_st = {
     { spell = "InvokeXuen",       cond = cdReady(ID_CELESTIAL) },                       -- (Midnight) press Xuen to open the Celestial Conduit window
     { spell = "CelestialConduit", cond = buffDown(ID_HEARTJADE) },                      -- 4: build HoJS
     { spell = "Zenith",           cond = lastCast(ID_CELESTIAL) },                     -- (log) burst cast right after Celestial Conduit
-    { spell = "Zenith",           cond = AND(chargesMin(2), glowing(ID_ZENITH)) }, -- dump 2nd charge only when Zenith is glowing (20 Tigereye Brew stacks ready)
+    { spell = "Zenith",           cond = AND(chargesMin(2), { type = "preset:zenithLit" }) }, -- dump 2nd charge only when Zenith is glowing (20 Tigereye Brew stacks ready)
     { spell = "FistsOfFury",      cond = auraRemainMax(ID_HEARTJADE, 1) },              -- 5: dump before HoJS falls off
     { spell = "TigerPalm",        cond = OR(AND(energyNearCap, buffDown(ID_ZENITH)), chiMax(2)) }, -- 6: energy cap / build for FoF
     { spell = "FistsOfFury" },                                                          -- 7
     -- Free procs are dumped aggressively (we can't read their STACK count, only the
     -- glow/buff): Dance of Chi-Ji glows Spinning Crane Kick, Blackout Kick! / Combo
     -- Breaker glows Blackout Kick. Spend before they overcap.
-    { spell = "SpinningCraneKick", cond = OR(glowing(101546), buffUp(ID_DANCECHIJI)) }, -- 8: Dance of Chi-Ji proc
-    { spell = "BlackoutKick",     cond = OR(glowing(100784), buffUp(ID_BOKPROC), buffUp(ID_COMBOBREAK)) }, -- 9: Blackout Kick! / Combo Breaker proc
+    { spell = "SpinningCraneKick", cond = { type = "preset:danceProc" } }, -- 8: Dance of Chi-Ji proc
+    { spell = "BlackoutKick",     cond = { type = "preset:bokProc" } }, -- 9: Blackout Kick! / Combo Breaker proc
     { spell = "RushingWindKick",  cond = buffUp(ID_RUSHINGWIND) },                      -- 10: proc
     { spell = "SpinningCraneKick", cond = buffUp(ID_UNBROKEN) },                        -- 11: Unbroken Rhythm
     { spell = "RisingSunKick" },                                                        -- 12: on cooldown (HoJS spams it)
@@ -129,12 +129,12 @@ local conduit_aoe = {
     { spell = "InvokeXuen",       cond = cdReady(ID_CELESTIAL) },                       -- (Midnight) press Xuen to open the Celestial Conduit window
     { spell = "CelestialConduit", cond = buffDown(ID_HEARTJADE) },                      -- 4: build HoJS
     { spell = "Zenith",           cond = lastCast(ID_CELESTIAL) },                     -- (log) burst cast right after Celestial Conduit
-    { spell = "Zenith",           cond = AND(chargesMin(2), glowing(ID_ZENITH)) }, -- dump 2nd charge only when Zenith is glowing (20 Tigereye Brew stacks ready)
+    { spell = "Zenith",           cond = AND(chargesMin(2), { type = "preset:zenithLit" }) }, -- dump 2nd charge only when Zenith is glowing (20 Tigereye Brew stacks ready)
     { spell = "TigerPalm",        cond = chiMax(2) },                                   -- 5: missing Chi for FoF
     { spell = "FistsOfFury" },                                                          -- 6
     -- Aggressive free-proc dumps (glow = the only readable signal, no stack count):
-    { spell = "BlackoutKick",     cond = OR(glowing(100784), buffUp(ID_BOKPROC), buffUp(ID_COMBOBREAK)) }, -- 6b: Blackout Kick! / Combo Breaker proc
-    { spell = "SpinningCraneKick", cond = OR(glowing(101546), buffUp(ID_DANCECHIJI)) }, -- 6c: Dance of Chi-Ji proc
+    { spell = "BlackoutKick",     cond = { type = "preset:bokProc" } }, -- 6b: Blackout Kick! / Combo Breaker proc
+    { spell = "SpinningCraneKick", cond = { type = "preset:danceProc" } }, -- 6c: Dance of Chi-Ji proc
     { spell = "SpinningCraneKick", cond = buffUp(ID_UNBROKEN) },                        -- 7: 4pc / Unbroken Rhythm
     { spell = "TigerPalm",        cond = AND(energyNearCap, buffDown(ID_ZENITH)) },     -- 8: avoid cap outside Zenith
     { spell = "RisingSunKick" },                                                        -- 9: on cooldown, enables WDP
@@ -160,15 +160,15 @@ local ID_SPINNINGCK    = 101546
 local function notLast(id) return { type = "lastCastNot", spell = id } end  -- "not just cast X"
 
 local shadopan = {
-    { spell = "Zenith",           cond = OR(chargesMin(2), glowing(ID_ZENITH)) },                  -- 1: 2 charges / lit up (20 Tigereye stacks)
+    { spell = "Zenith",           cond = OR(chargesMin(2), { type = "preset:zenithLit" }) },       -- 1: 2 charges / lit up (20 Tigereye stacks)
     { spell = "WhirlingDragonPunch" },                                                             -- 2: always
     { spell = "ZenithStomp",      cond = OR(chiMax(2), auraRemainMax(ID_ZENITH, 7)) },             -- 3: low Chi or Zenith ending
     { spell = "TigerPalm",        cond = AND(energyNearCap, buffDown(ID_ZENITH), chiMax(4), notLast(ID_TIGERPALM)) }, -- 4: energy dump / build, no Zenith
     { spell = "FistsOfFury" },                                                                     -- 5: always
     { spell = "RushingWindKick",  cond = buffUp(ID_RUSHINGWIND) },                                 -- 6: proc
-    { spell = "SpinningCraneKick", cond = AND(OR(glowing(101546), buffUp(ID_DANCECHIJI)), buffUp(ID_UNBROKEN)) }, -- 7: Dance proc + Unbroken Rhythm
+    { spell = "SpinningCraneKick", cond = AND({ type = "preset:danceProc" }, buffUp(ID_UNBROKEN)) }, -- 7: Dance proc + Unbroken Rhythm
     { spell = "RisingSunKick" },                                                                   -- 8: always
-    { spell = "BlackoutKick",     cond = AND(OR(glowing(100784), buffUp(ID_BOKPROC), buffUp(ID_COMBOBREAK)), notLast(ID_BLACKOUTKICK), chiMax(5)) }, -- 9: Blackout Kick! / Combo Breaker proc
+    { spell = "BlackoutKick",     cond = AND({ type = "preset:bokProc" }, notLast(ID_BLACKOUTKICK), chiMax(5)) }, -- 9: Blackout Kick! / Combo Breaker proc
     { spell = "TouchOfDeath" },                                                                    -- 10: always (per your list)
     { spell = "TigerPalm",        cond = AND(chiMax(2), notLast(ID_TIGERPALM)) },                  -- 11: build at low Chi
     { spell = "SpinningCraneKick", cond = AND(buffUp(ID_DANCECHIJI), notLast(ID_SPINNINGCK)) },    -- 12: free Dance proc

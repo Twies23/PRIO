@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.7.18", {
+        "Fixed Windwalker glow conditions showing as a blank \"-\" in the editor: the default lists now reference the named presets (Zenith lit up / Blackout Kick! proc / Dance of Chi-Ji proc) instead of a raw glow clause, so they display their label and the Shado-Pan proc lines are now flat, editable rows. Behavior is unchanged. Reset lists to default to pick it up.",
+    } },
     { "0.7.17", {
         "Shado-Pan Windwalker now uses ONE tuned priority list for ST, cleave and AoE (Windwalker doesn't need a separate cleave shape) -- replaces the old split lists with the user's tuned rotation. Conduit ST/AoE untouched. Reset lists to default to pick it up.",
     } },
