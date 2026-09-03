@@ -1,5 +1,17 @@
 # PRIO Changelog
 
+## 0.8.0
+First stable of the 0.8 line — **Windwalker Monk is now fully tuned** for both hero trees (Shado-Pan and Conduit of the Celestials), single-target and AoE.
+- **Shado-Pan:** separate tuned ST and AoE lists (AoE is a Fists-of-Fury-pooling build — Tiger Palm and a free Energy-Burst Blackout Kick bank Chi, spenders hold while Fists is coming up). Cleave tier removed (one shared shape). Zenith fires at 2 charges or on its lit-up glow (20 Tigereye Brew stacks).
+- **Conduit:** the Xuen → Celestial Conduit → Zenith burst, log-validated priority, and Celestial Conduit now also requires Whirling Dragon Punch to be on cooldown.
+- **Aggressive free-proc spending:** Blackout Kick! / Combo Breaker and Dance of Chi-Ji are dumped on their glow (their stack counts aren't readable in combat), so they don't waste to timeout or overcap.
+- **New Rotation Debug window** (`/prio rotdebug`): live proc glows, key buffs, and predicted Tigereye Brew stacks.
+- **Proc glows as named conditions** in the editor: "Zenith lit up", "Blackout Kick! proc", "Dance of Chi-Ji proc".
+- **Hero-split, configurable openers** for Shado-Pan and Conduit (ST + AoE).
+
+Reset lists and openers to default to pick up the tuned defaults.
+
+
 ## 0.7.22 (alpha)
 - **Conduit:** Celestial Conduit (line 5, both ST and AoE) now also requires **Whirling Dragon Punch to be on cooldown** — it builds Heart of the Jade Serpent only when WDP isn't available. Reset lists to default to pick it up.
 - **Windwalker openers updated (all four).** Shado-Pan (ST & AoE): Tiger Palm → Zenith → Strike of the Windlord → Fists of Fury → Rising Sun Kick. Conduit (ST & AoE): Tiger Palm → Invoke Xuen → Zenith → Strike of the Windlord → Fists of Fury → Rising Sun Kick. Hit "Reset to default" on an opener to pick it up.

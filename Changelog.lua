@@ -11,6 +11,12 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.8.0", {
+        "First stable of the 0.8 line: Windwalker Monk is now fully tuned for both hero trees (Shado-Pan + Conduit), ST and AoE.",
+        "Shado-Pan: split ST/AoE lists (AoE pools Chi for Fists of Fury), cleave tier removed, aggressive glow-gated Blackout Kick! / Dance of Chi-Ji spending, Zenith on 2 charges or its lit-up glow.",
+        "Conduit: Xuen -> Celestial Conduit -> Zenith burst; Celestial Conduit now also needs Whirling Dragon Punch on cooldown.",
+        "New Rotation Debug window (/prio rotdebug), proc glows as named editor conditions, and hero-split configurable openers. Reset lists + openers to default to pick up the tuned defaults.",
+    } },
     { "0.7.22", {
         "Conduit Celestial Conduit (line 5, ST + AoE) now also requires Whirling Dragon Punch to be on cooldown. Reset lists to default to pick it up.",
         "Windwalker default openers updated (all four): Shado-Pan = Tiger Palm, Zenith, Strike of the Windlord, Fists of Fury, Rising Sun Kick; Conduit = Tiger Palm, Invoke Xuen, Zenith, Strike of the Windlord, Fists of Fury, Rising Sun Kick. Hit \"Reset to default\" on an opener to pick it up.",
