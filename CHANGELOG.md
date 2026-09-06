@@ -1,5 +1,13 @@
 # PRIO Changelog
 
+## 0.8.1 (alpha)
+**New spec: Retribution Paladin (Herald of the Sun).** Single-target and AoE priorities built from the Herald of the Sun guide and cross-checked against three top logs.
+- **Holy Power is read directly** (it's a discrete resource), so the "5 Holy Power" dumps and the 3-Holy-Power spends are exact.
+- **Divine Arbiter** (the empowered Divine Storm / Final Verdict proc) and **Art of War** are read from your Cooldown Manager and, as a fallback, from the button proc-glow — surfaced as named editor conditions ("Divine Arbiter proc", "Art of War proc").
+- **Hammer of Wrath runs on 2 charges**, predicted the same way as other secret charge counts, so the "dump at 2 charges" line works.
+- **Judgment and Blade of Justice** are woven in as on-cooldown builders (the simplified guide priority leaves them implicit; the logs show they're core to keeping Holy Power flowing). Crusading Strikes is your auto-attack replacement, so it's intentionally not in the list.
+- **Rotation Debug window** (`/prio rotdebug`) and a configurable opener (Blade of Justice → Avenging Wrath → Execution Sentence → Wake of Ashes → Final Verdict → spend → Divine Toll).
+
 ## 0.8.0
 First stable of the 0.8 line — **Windwalker Monk is now fully tuned** for both hero trees (Shado-Pan and Conduit of the Celestials), single-target and AoE.
 - **Shado-Pan:** separate tuned ST and AoE lists (AoE is a Fists-of-Fury-pooling build — Tiger Palm and a free Energy-Burst Blackout Kick bank Chi, spenders hold while Fists is coming up). Cleave tier removed (one shared shape). Zenith fires at 2 charges or on its lit-up glow (20 Tigereye Brew stacks).

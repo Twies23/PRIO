@@ -11,6 +11,12 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.8.1", {
+        "New spec: Retribution Paladin (Herald of the Sun) -- ST + AoE priorities from the guide, cross-checked against three top logs.",
+        "Holy Power reads directly (discrete resource), so the 5-Holy-Power dumps and 3-HP spends are exact. Divine Arbiter / Art of War read from the Cooldown Manager with a proc-glow fallback (named editor conditions).",
+        "Hammer of Wrath runs on 2 charges (predicted). Judgment + Blade of Justice woven in as on-cooldown builders; Crusading Strikes is the auto-attack replacement, so it's not in the list.",
+        "Rotation Debug window (/prio rotdebug) and a configurable opener.",
+    } },
     { "0.8.0", {
         "First stable of the 0.8 line: Windwalker Monk is now fully tuned for both hero trees (Shado-Pan + Conduit), ST and AoE.",
         "Shado-Pan: split ST/AoE lists (AoE pools Chi for Fists of Fury), cleave tier removed, aggressive glow-gated Blackout Kick! / Dance of Chi-Ji spending, Zenith on 2 charges or its lit-up glow.",
