@@ -4,7 +4,7 @@
 **Raid cooldown planner (new "Encounters" tab).** Assign cooldowns to fight timings or boss abilities per encounter; PRIO takes those cooldowns *out* of your normal rotation and recommends them when their trigger fires — a triggered cooldown jumps to the primary slot while the rest of the strip keeps your usual rotation.
 - **Triggers:** at a time from the pull, on a boss cast (via BigWigs, matched by spell — with an occurrence count for "the 2nd one"), or on a phase. Boss-cast and phase triggers need **BigWigs** (the combat log isn't readable in 12.1); time triggers work without it.
 - **Import MRT notes.** Paste a lorrgs or guild MRT note and PRIO extracts just *your* cooldowns, decoding `{time:}` / `SCC` / phase tags into triggers. Review before it goes live.
-- **Abilities from BigWigs.** The encounter and boss-cast pickers read straight from BigWigs' loaded boss modules — real boss names and their ability lists — while you're in the raid, cached so they still show after you leave.
+- **Abilities from BigWigs — no pull needed.** Pick a raid from the new dropdown and PRIO force-loads that raid's BigWigs modules on the spot, so the encounter and boss-cast pickers list real boss names and their full ability lists without ever entering the instance. Cached so they persist afterward.
 - On-cooldown safety: if an assigned cooldown has drifted onto cooldown when its window opens, PRIO simply flows the normal rotation instead of nagging.
 
 **Fonts.** The UI now uses Saira Condensed (headers) + Barlow (body); both, plus Expressway and Fira Sans, are selectable for the in-game strip's keybind/name text. Falls back to the game font if media is missing. Backdrop colors matched to the design mockup.

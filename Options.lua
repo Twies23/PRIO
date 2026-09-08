@@ -160,6 +160,7 @@ local picker
 local function CurrentSpec() local id = API.GetSpecID(); return id and PRIO.specs and PRIO.specs[id] end
 local function CurrentMode() return editMode end   -- the list being edited (not the live mode)
 local editVariant
+local encRaid                -- selected raid instanceID on the Encounters page
 local encSel                 -- selected encounterID on the Encounters page
 local encDiff = 16           -- difficulty being edited (16=Mythic, 15=Heroic, 14=Normal)
 
@@ -1059,8 +1060,11 @@ local function EncCandidates(specKey)
             out[#out + 1] = { id = id, name = name or (db.encounterNames and db.encounterNames[id]) or ("Encounter " .. tostring(id)) }
         end
     end
-    -- Live from BigWigs (bosses in your current instance), then persisted sources.
-    if E and E.EncounterList then for _, c in ipairs(E.EncounterList(true)) do add(c.id, c.name) end end
+    -- Bosses of the selected raid (force-loaded from BigWigs), then persisted sources.
+    if E and E.EncounterList then
+        local zoneFilter = encRaid or true   -- selected raid, else the instance you're in
+        for _, c in ipairs(E.EncounterList(zoneFilter)) do add(c.id, c.name) end
+    end
     local plans = db.encounterPlans and db.encounterPlans[specKey]
     if plans then for id in pairs(plans) do add(id) end end
     if db.encounterLearned then for id in pairs(db.encounterLearned) do add(id) end end
@@ -1100,6 +1104,26 @@ function Pages.encounters()
         return
     end
 
+    -- Raid picker: force-loads that raid's BigWigs modules on demand, so bosses and
+    -- abilities are listed without ever pulling. Defaults to the raid you're standing in.
+    local raids = E.RaidZones and E.RaidZones() or {}
+    if #raids > 0 then
+        if not encRaid then
+            local hereInst = GetInstanceInfo and select(8, GetInstanceInfo())
+            for _, z in ipairs(raids) do if z.id == hereInst then encRaid = z.id break end end
+            encRaid = encRaid or raids[1].id
+        end
+        E.LoadZone(encRaid)   -- idempotent
+        SettingRow("Raid", 30, function(r)
+            local opts = {}
+            for _, z in ipairs(raids) do opts[#opts + 1] = { value = z.id, text = z.name } end
+            local dd = UI.Dropdown(r, 250, opts, function() return encRaid end,
+                function(v) encRaid = v; encSel = nil; E.LoadZone(v) end,
+                function() Options:ShowPage("encounters") end)
+            dd:SetPoint("RIGHT", 0, 0)
+        end)
+    end
+
     -- Difficulty (which plan variant we edit).
     SettingRow("Difficulty", 30, function(r)
         local opts = {}
@@ -1118,7 +1142,7 @@ function Pages.encounters()
     if #cands == 0 then
         local none = Track(UI.Font(content, 12.5, C.faint)); none:SetPoint("TOPLEFT", 0, -cursorY)
         none:SetWidth(contentW); none:SetJustifyH("LEFT"); none:SetWordWrap(true)
-        none:SetText("No encounters yet. Pull a raid boss (BigWigs registers it and learns its ability timings), or import an MRT note once you've pulled one.")
+        none:SetText("No encounters found. Install BigWigs to list raid bosses (pick a raid above \226\128\148 no pull needed), or import an MRT note.")
         cursorY = cursorY + 40
         return
     end

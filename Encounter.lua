@@ -325,14 +325,56 @@ end
 --   module:GetOptions()       -> { keys... }, numeric / {id,flag} entries are spellIDs
 --------------------------------------------------------------------------------
 local function bwCore() return _G.BigWigs end
+local function bwLoader() return _G.BigWigsLoader end
 
--- Every loaded boss module -> { { id = engageID, name = displayName }, ... }.
--- currentInstanceOnly filters to the instance you're standing in. Caches names.
-function E.EncounterList(currentInstanceOnly)
+-- Force-load a zone's BigWigs boss modules on demand (they're LoadOnDemand). This is what
+-- lets the editor list bosses/abilities WITHOUT being in the raid or pulling -- opening the
+-- options is the "demand". Idempotent (BigWigs skips packs it has already loaded).
+function E.LoadZone(instanceID)
+    local L = bwLoader()
+    if not (L and L.LoadZone and instanceID) then return end
+    -- Boss packs call BigWigs:NewBoss, so the (LoadOnDemand) core must be loaded first.
+    if not _G.BigWigs and C_AddOns and C_AddOns.LoadAddOn then
+        pcall(C_AddOns.LoadAddOn, "BigWigs_Core")
+    end
+    pcall(L.LoadZone, L, instanceID)
+end
+
+-- BigWigs raid modulepacks (from its zone table), for the raid picker. One entry per raid
+-- addon: { { id = instanceID, name = title }, ... }. Dungeons (LittleWigs / non-Raid) excluded.
+function E.RaidZones()
+    local L = bwLoader()
+    local out = {}
+    if not (L and L.zoneTbl) then return out end
+    local getMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
+    if not getMeta then return out end
+    local seen = {}
+    for id, addon in pairs(L.zoneTbl) do
+        if type(id) == "number" and id > 0 and type(addon) == "string" and not seen[addon] then
+            local okR, cat = pcall(getMeta, addon, "X-Category")
+            if okR and cat == "Raid" and not addon:find("LittleWigs", 1, true) then
+                seen[addon] = true
+                local okT, title = pcall(getMeta, addon, "Title")
+                title = (okT and type(title) == "string") and title or addon
+                title = title:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
+                             :gsub("BigWigs%s*%[?", ""):gsub("%]", "")
+                             :gsub("^%s+", ""):gsub("%s+$", "")
+                out[#out + 1] = { id = id, name = (title ~= "" and title) or addon }
+            end
+        end
+    end
+    table.sort(out, function(a, b) return tostring(a.name) < tostring(b.name) end)
+    return out
+end
+
+-- Loaded boss modules -> { { id = engageID, name = displayName }, ... }. `zone`: a number
+-- lists only that instance's bosses, `true` the instance you're in, nil = all loaded.
+function E.EncounterList(zone)
     local BW = bwCore()
     local out = {}
     if not (BW and BW.IterateBossModules) then return out end
-    local inst = currentInstanceOnly and GetInstanceInfo and select(8, GetInstanceInfo()) or nil
+    local inst = zone
+    if inst == true then inst = (GetInstanceInfo and select(8, GetInstanceInfo())) or nil end
     for _, module in BW:IterateBossModules() do
         local okZone = true
         if inst and module.IsZoneID then okZone = module:IsZoneID(inst) end
