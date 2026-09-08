@@ -586,15 +586,13 @@ SlashCmdList.PRIO = function(msg)
         print("  BigWigsLoader present: " .. tostring(_G.BigWigsLoader ~= nil))
         if E then
             local raids = E.RaidZones and E.RaidZones() or {}
-            print("  Raid packs found: " .. #raids)
-            for _, z in ipairs(raids) do print(("    [%s] %s"):format(tostring(z.id), tostring(z.name))) end
             local inst = GetInstanceInfo and select(8, GetInstanceInfo())
             print("  Current instanceID: " .. tostring(inst))
-            if raids[1] then
-                E.LoadZone(raids[1].id)
-                local bosses = E.EncounterList and E.EncounterList(raids[1].id) or {}
-                print(("  Bosses in '%s' after load: %d"):format(raids[1].name, #bosses))
-                for _, b in ipairs(bosses) do print(("    #%s %s"):format(tostring(b.id), tostring(b.name))) end
+            print("  Raid packs found: " .. #raids .. " (loading each, listing bosses):")
+            for _, z in ipairs(raids) do
+                local bosses = E.EncounterList and E.EncounterList(z.id) or {}
+                print(("    [%s] |cffffffff%s|r -- %d boss(es)"):format(tostring(z.id), tostring(z.name), #bosses))
+                for _, b in ipairs(bosses) do print(("        #%s %s"):format(tostring(b.id), tostring(b.name))) end
             end
         else
             print("  |cffe0685aPRIO.Encounter missing|r")

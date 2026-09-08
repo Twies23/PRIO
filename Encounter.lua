@@ -373,26 +373,41 @@ function E.RaidZones()
     return out
 end
 
--- Loaded boss modules -> { { id = engageID, name = displayName }, ... }. `zone`: a number
--- lists only that instance's bosses, `true` the instance you're in, nil = all loaded.
+-- Bosses of a zone -> { { id = engageID, name = displayName }, ... }. Mirrors exactly what
+-- BigWigs_Options does: LoadZone(id) then read GetZoneMenus()[id] (the module list BigWigs
+-- groups per zone, handling instanceId/mapId/otherMenu). `zone`: a number = that zone, `true`
+-- = the instance you're standing in.
 function E.EncounterList(zone)
-    local BW = bwCore()
     local out = {}
-    if not (BW and BW.IterateBossModules) then return out end
+    local L = bwLoader()
+    if not L then return out end
     local inst = zone
     if inst == true then inst = (GetInstanceInfo and select(8, GetInstanceInfo())) or nil end
-    for _, module in BW:IterateBossModules() do
-        local okZone = true
-        if inst and module.IsZoneID then okZone = module:IsZoneID(inst) end
-        if okZone and module.GetEncounterID then
-            local ok, eid = pcall(module.GetEncounterID, module)
-            if ok and eid then
-                local name = module.displayName or module.moduleName or ("Encounter " .. eid)
-                out[#out + 1] = { id = eid, name = name }
-                if PRIO.db then
-                    PRIO.db.encounterNames = PRIO.db.encounterNames or {}
-                    PRIO.db.encounterNames[eid] = name
-                end
+    if type(inst) ~= "number" then return out end
+    E.LoadZone(inst)   -- force-load the pack (idempotent), same as the BigWigs options panel
+
+    local function addModule(module)
+        if not (module and module.GetEncounterID) then return end
+        local ok, eid = pcall(module.GetEncounterID, module)   -- first return = engageId
+        if not (ok and eid) then return end
+        local name = module.displayName or module.moduleName or ("Encounter " .. eid)
+        out[#out + 1] = { id = eid, name = name }
+        if PRIO.db then
+            PRIO.db.encounterNames = PRIO.db.encounterNames or {}
+            PRIO.db.encounterNames[eid] = name
+        end
+    end
+
+    local list = L.GetZoneMenus and L:GetZoneMenus()
+    list = list and list[inst]
+    if type(list) == "table" then
+        for i = 1, #list do addModule(list[i]) end
+    else
+        -- Fallback for menu-id vs instance-id edge cases: iterate loaded modules by zone.
+        local BW = bwCore()
+        if BW and BW.IterateBossModules then
+            for _, module in BW:IterateBossModules() do
+                if module.IsZoneID and module:IsZoneID(inst) then addModule(module) end
             end
         end
     end

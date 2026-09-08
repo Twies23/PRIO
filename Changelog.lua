@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.9.3", {
+        "Fix: raids listed but their bosses didn't -- the encounter list now uses BigWigs' own zone->boss mapping (GetZoneMenus, same as its options panel), so picking a raid force-loads it and lists every boss and its abilities with no pull.",
+    } },
     { "0.9.2", {
         "Fix: the Encounters \"Raid\" dropdown came up empty -- it now detects your installed BigWigs raid packs directly, so raids (e.g. The Venomous Abyss) list their bosses/abilities with no pull. New /prio bw command prints what BigWigs content PRIO can see.",
     } },
