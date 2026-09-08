@@ -116,13 +116,20 @@ function Pages.display()
 
     Section("Fonts")
     SettingRow("Font", 30, function(r)
-        local dd = UI.Dropdown(r, 200, {
+        -- Stock game fonts first, then PRIO's bundled faces (Saira Condensed / Barlow /
+        -- Expressway / Fira Sans) so the strip can use the same faces as the options UI.
+        local fontOpts = {
             { value = "Fonts\\FRIZQT__.TTF", text = "Friz Quadrata" },
             { value = "Fonts\\ARIALN.TTF",   text = "Arial Narrow" },
             { value = "Fonts\\MORPHEUS.TTF", text = "Morpheus" },
             { value = "Fonts\\SKURRI.TTF",   text = "Skurri" },
             { value = "Fonts\\2002.TTF",     text = "2002" },
-        }, function() return db.font end, function(v) db.font = v end, AfterChange)
+        }
+        for _, f in ipairs(UI.BUNDLED_FONTS or {}) do
+            fontOpts[#fontOpts + 1] = { value = f.path, text = f.name }
+        end
+        local dd = UI.Dropdown(r, 200, fontOpts,
+            function() return db.font end, function(v) db.font = v end, AfterChange)
         dd:SetPoint("RIGHT", 0, 0)
     end)
     SettingRow("Title size", 26, function(r)
@@ -153,6 +160,8 @@ local picker
 local function CurrentSpec() local id = API.GetSpecID(); return id and PRIO.specs and PRIO.specs[id] end
 local function CurrentMode() return editMode end   -- the list being edited (not the live mode)
 local editVariant
+local encSel                 -- selected encounterID on the Encounters page
+local encDiff = 16           -- difficulty being edited (16=Mythic, 15=Heroic, 14=Normal)
 
 local function ActiveVariant(spec)
     if not (spec and spec.priorityVariants and spec.activeHero) then return nil end
@@ -1038,6 +1047,214 @@ function Pages.opener()
     cursorY = cursorY + 38
 end
 
+-- Ordered list of encounters to offer in the picker: saved plans + learned pulls +
+-- the last-seen encounter, de-duplicated, named from db.encounterNames.
+local function EncCandidates(specKey)
+    local db, E = PRIO.db, PRIO.Encounter
+    local seen, out = {}, {}
+    local function add(id, name)
+        id = tonumber(id) or id
+        if id and not seen[id] then
+            seen[id] = true
+            out[#out + 1] = { id = id, name = name or (db.encounterNames and db.encounterNames[id]) or ("Encounter " .. tostring(id)) }
+        end
+    end
+    local plans = db.encounterPlans and db.encounterPlans[specKey]
+    if plans then for id in pairs(plans) do add(id) end end
+    if db.encounterLearned then for id in pairs(db.encounterLearned) do add(id) end end
+    if E and E.lastEnc then add(E.lastEnc.id, E.lastEnc.name) end
+    table.sort(out, function(a, b) return tostring(a.name) < tostring(b.name) end)
+    return out
+end
+
+local function fmtMMSS(s) s = math.floor(s or 0); return ("%d:%02d"):format(math.floor(s / 60), s % 60) end
+local function defaultTrig(t)
+    if t == "cast" then return { type = "cast", spell = 0, occ = 1, off = 0 }
+    elseif t == "phase" then return { type = "phase", stage = 1 }
+    else return { type = "time", at = 5 } end
+end
+
+function Pages.encounters()
+    local db = PRIO.db
+    if picker then picker:Hide() end
+    local spec = CurrentSpec()
+    local E = PRIO.Encounter
+
+    Section("Raid cooldown planner")
+    do
+        local hasBW = E and E.HasBigWigs and E.HasBigWigs()
+        local r = Track(CreateFrame("Frame", nil, content)); r:SetSize(contentW, 20)
+        r:SetPoint("TOPLEFT", 0, -cursorY)
+        local fs = UI.Font(r, 12, hasBW and C.accent or C.faint); fs:SetPoint("LEFT", 0, 0)
+        fs:SetText(hasBW and "BigWigs detected \226\128\148 boss-cast and phase triggers are live."
+                          or "BigWigs not found \226\128\148 time triggers work now; boss-cast / phase triggers need BigWigs.")
+        cursorY = cursorY + 26
+    end
+
+    if not spec then
+        local none = Track(UI.Font(content, 13, C.faint)); none:SetPoint("TOPLEFT", 0, -cursorY)
+        none:SetText("Log in on a supported spec to build encounter plans.")
+        cursorY = cursorY + 30
+        return
+    end
+
+    -- Difficulty (which plan variant we edit).
+    SettingRow("Difficulty", 30, function(r)
+        local opts = {}
+        for _, d in ipairs(E.DIFF_ORDER) do opts[#opts + 1] = { value = d.id, text = d.label } end
+        local seg = UI.Segmented(r, opts, function() return encDiff end,
+            function(v) encDiff = v end, function() Options:ShowPage("encounters") end)
+        seg:SetPoint("RIGHT", 0, 0)
+    end)
+
+    local cands = EncCandidates(spec.key)
+    -- Validate / default the selection.
+    local valid = false
+    for _, c in ipairs(cands) do if c.id == encSel then valid = true break end end
+    if not valid then encSel = cands[1] and cands[1].id or nil end
+
+    if #cands == 0 then
+        local none = Track(UI.Font(content, 12.5, C.faint)); none:SetPoint("TOPLEFT", 0, -cursorY)
+        none:SetWidth(contentW); none:SetJustifyH("LEFT"); none:SetWordWrap(true)
+        none:SetText("No encounters yet. Pull a raid boss (BigWigs registers it and learns its ability timings), or import an MRT note once you've pulled one.")
+        cursorY = cursorY + 40
+        return
+    end
+
+    SettingRow("Encounter", 30, function(r)
+        local opts = {}
+        for _, c in ipairs(cands) do opts[#opts + 1] = { value = c.id, text = c.name } end
+        local dd = UI.Dropdown(r, 250, opts, function() return encSel end,
+            function(v) encSel = v end, function() Options:ShowPage("encounters") end)
+        dd:SetPoint("RIGHT", 0, 0)
+    end)
+
+    local plan = encSel and E:GetPlan(spec.key, encSel, encDiff, false) or nil
+
+    -- Import handler (paste an MRT / lorrgs note -> extract MY cooldowns).
+    local function doImport(text)
+        if not (encSel and text and text:gsub("%s", "") ~= "") then return end
+        local p = E:GetPlan(spec.key, encSel, encDiff, true)
+        local entries, skipped = E.ParseMRT(text, E.PlayerName(), E.SidToKey(spec))
+        for _, e in ipairs(entries) do p.entries[#p.entries + 1] = e end
+        print(("|cff%sPRIO|r: imported %d cooldown(s) from the MRT note%s.")
+            :format(UI.accentHex or "0cd29f", #entries,
+                    (#skipped > 0) and (", skipped " .. #skipped .. " line(s)") or ""))
+        AfterChange(); Options:ShowPage("encounters")
+    end
+
+    -- Action buttons row (Import / Create / Clear).
+    local function Btn(parent, label, w, primary, onClick)
+        local b = UI.Card(parent, primary and C.accent or C.control, 0.12); b:SetSize(w, 26)
+        if primary then b:SetBackdropColor(C.accent[1], C.accent[2], C.accent[3], 0.9) end
+        local bb = CreateFrame("Button", nil, b); bb:SetAllPoints()
+        local fs = UI.FontD(b, 12, primary and { 0.02, 0.13, 0.10 } or C.accent); fs:SetPoint("CENTER"); fs:SetText(label)
+        bb:SetScript("OnClick", onClick)
+        return b
+    end
+    do
+        local r = Track(CreateFrame("Frame", nil, content)); r:SetSize(contentW, 30)
+        r:SetPoint("TOPLEFT", 0, -cursorY)
+        local imp = Btn(r, "Import MRT note", 150, true, function()
+            UI.PasteBox("Import MRT note", "Paste a lorrgs / guild MRT note \226\128\148 PRIO keeps only your cooldowns", doImport)
+        end)
+        imp:SetPoint("LEFT", 0, 0)
+        if not plan then
+            local cr = Btn(r, "Create empty plan", 150, false, function()
+                E:GetPlan(spec.key, encSel, encDiff, true); AfterChange(); Options:ShowPage("encounters")
+            end)
+            cr:SetPoint("LEFT", imp, "RIGHT", 10, 0)
+        end
+        cursorY = cursorY + 38
+    end
+
+    if not plan then
+        local none = Track(UI.Font(content, 12.5, C.faint)); none:SetPoint("TOPLEFT", 0, -cursorY)
+        none:SetText("No plan for this encounter and difficulty yet \226\128\148 import a note or create an empty plan.")
+        cursorY = cursorY + 30
+        return
+    end
+
+    Section("Assigned cooldowns")
+    SettingRow("Plan enabled", 28, function(r)
+        local t = UI.Toggle(r, function() return plan.enabled ~= false end,
+            function(v) plan.enabled = v and true or false end, AfterChange)
+        t:SetPoint("RIGHT", 0, 0)
+    end)
+
+    -- Spell options for this spec (the pickable cooldowns).
+    local spellOpts = {}
+    for _, k in ipairs(spec.pickable or {}) do
+        local sid = spec.spells[k]
+        if sid then spellOpts[#spellOpts + 1] = { value = k, text = API.SpellName(sid) } end
+    end
+
+    local ROWH = 32
+    for i, entry in ipairs(plan.entries) do
+        entry.trig = entry.trig or defaultTrig("time")
+        local r = Track(CreateFrame("Frame", nil, content)); r:SetSize(contentW, ROWH)
+        r:SetPoint("TOPLEFT", 0, -cursorY)
+        -- ability
+        local sdd = UI.Dropdown(r, 138, spellOpts, function() return entry.spell end,
+            function(v) entry.spell = v end, AfterChange)
+        sdd:SetPoint("LEFT", 0, 0)
+        -- trigger type
+        local tdd = UI.Dropdown(r, 98, {
+            { value = "time", text = "At time" }, { value = "cast", text = "On cast" }, { value = "phase", text = "On phase" },
+        }, function() return entry.trig.type end,
+           function(v) entry.trig = defaultTrig(v); AfterChange(); Options:ShowPage("encounters") end)
+        tdd:SetPoint("LEFT", sdd, "RIGHT", 6, 0)
+        -- value control
+        if entry.trig.type == "time" then
+            local st = UI.Stepper(r, 92, 0, 900, function() return entry.trig.at or 0 end,
+                function(v) entry.trig.at = v end, AfterChange, 5, fmtMMSS)
+            st:SetPoint("LEFT", tdd, "RIGHT", 6, 0)
+        elseif entry.trig.type == "cast" then
+            local learned = db.encounterLearned and db.encounterLearned[encSel]
+            local copts = {}
+            if learned then for sid, info in pairs(learned) do copts[#copts + 1] = { value = sid, text = info.name or ("#" .. sid) } end end
+            if #copts == 0 then copts[1] = { value = entry.trig.spell or 0, text = "(pull boss to list)" } end
+            local cdd = UI.Dropdown(r, 132, copts, function() return entry.trig.spell end,
+                function(v) entry.trig.spell = tonumber(v) or v end, AfterChange)
+            cdd:SetPoint("LEFT", tdd, "RIGHT", 6, 0)
+            local occ = UI.Stepper(r, 52, 1, 8, function() return entry.trig.occ or 1 end,
+                function(v) entry.trig.occ = v end, AfterChange, 1, function(n) return "#" .. n end)
+            occ:SetPoint("LEFT", cdd, "RIGHT", 6, 0)
+        elseif entry.trig.type == "phase" then
+            local st = UI.Stepper(r, 100, 1, 8, function() return entry.trig.stage or 1 end,
+                function(v) entry.trig.stage = v end, AfterChange, 1, function(n) return "phase " .. n end)
+            st:SetPoint("LEFT", tdd, "RIGHT", 6, 0)
+        end
+        -- remove
+        local x = CreateFrame("Button", nil, r); x:SetSize(22, 22); x:SetPoint("RIGHT", 0, 0)
+        local xf = UI.Font(x, 15, C.faint); xf:SetPoint("CENTER"); xf:SetText("\195\151")
+        x:SetScript("OnEnter", function() xf:SetTextColor(0.88, 0.41, 0.35) end)
+        x:SetScript("OnLeave", function() xf:SetTextColor(C.faint[1], C.faint[2], C.faint[3]) end)
+        x:SetScript("OnClick", function() table.remove(plan.entries, i); AfterChange(); Options:ShowPage("encounters") end)
+        cursorY = cursorY + ROWH + 6
+    end
+
+    -- Add / clear.
+    do
+        local r = Track(CreateFrame("Frame", nil, content)); r:SetSize(contentW, 30)
+        r:SetPoint("TOPLEFT", 0, -cursorY)
+        local add = Btn(r, "+  Assign cooldown", 150, false, function()
+            local firstKey = spellOpts[1] and spellOpts[1].value
+            plan.entries[#plan.entries + 1] = { spell = firstKey, trig = defaultTrig("time") }
+            AfterChange(); Options:ShowPage("encounters")
+        end)
+        add:SetPoint("LEFT", 0, 0)
+        local clr = Btn(r, "Clear plan", 110, false, function()
+            local byEnc = db.encounterPlans and db.encounterPlans[spec.key]
+            local byDiff = byEnc and byEnc[encSel]
+            if byDiff then byDiff[encDiff] = nil end
+            AfterChange(); Options:ShowPage("encounters")
+        end)
+        clr:SetPoint("LEFT", add, "RIGHT", 10, 0)
+        cursorY = cursorY + 40
+    end
+end
+
 function Pages.general()
     local db = PRIO.db
     Section("Behavior")
@@ -1202,9 +1419,9 @@ local NAV = {
     { header = "DISPLAY",  items = { { label = "Icons & Layout", page = "display" } } },
     { header = "ROTATION", items = { { label = "Priorities",     page = "rotation" },
                                      { label = "Opener",         page = "opener" } } },
-    -- Encounter planner: designed (docs/encounter-planner.md), not yet built. Shown greyed
-    -- with a "Soon" pill so the destination is visible while the module is in progress.
-    { header = "RAID",     items = { { label = "Encounters",     page = "encounters", soon = true } } },
+    -- Encounter planner (docs/encounter-planner.md): assign cooldowns to fight timings /
+    -- boss abilities; the engine suppresses them from auto and injects on cue.
+    { header = "RAID",     items = { { label = "Encounters",     page = "encounters", new = true } } },
     { header = "GENERAL",  items = { { label = "Behavior",       page = "general" },
                                      { label = "Profiles",       page = "profiles" } } },
 }
@@ -1213,6 +1430,7 @@ local PAGE_META = {
     display  = { title = "Display",    desc = "Size, layout, and what the strip draws on each icon." },
     rotation = { title = "Priorities", desc = "Order abilities highest to lowest. PRIO shows the first one that's ready and passes its condition." },
     opener   = { title = "Opener",     desc = "The exact sequence PRIO shows at the pull, in order. Steps that aren't known or ready are skipped." },
+    encounters = { title = "Encounters", desc = "Assign cooldowns to fight timings or boss abilities. PRIO holds them out of the normal rotation and recommends them on cue (needs BigWigs for live triggers)." },
     general  = { title = "Behavior",   desc = "Enable, lock, out-of-combat visibility, and auto-mode thresholds." },
     profiles = { title = "Profiles",   desc = "Save your settings and priority lists as named profiles, or apply the recommended preset." },
 }

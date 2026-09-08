@@ -1,10 +1,19 @@
 # PRIO Changelog
 
+## 0.9.1 (alpha)
+**Raid cooldown planner (new "Encounters" tab).** Assign cooldowns to fight timings or boss abilities per encounter; PRIO takes those cooldowns *out* of your normal rotation and recommends them when their trigger fires — a triggered cooldown jumps to the primary slot while the rest of the strip keeps your usual rotation.
+- **Triggers:** at a time from the pull, on a boss cast (via BigWigs, matched by spell — with an occurrence count for "the 2nd one"), or on a phase. Boss-cast and phase triggers need **BigWigs** (the combat log isn't readable in 12.1); time triggers work without it.
+- **Import MRT notes.** Paste a lorrgs or guild MRT note and PRIO extracts just *your* cooldowns, decoding `{time:}` / `SCC` / phase tags into triggers. Review before it goes live.
+- **Learns from your pulls.** When you pull a boss with BigWigs, PRIO records which abilities it timed so the boss-cast picker lists real abilities.
+- On-cooldown safety: if an assigned cooldown has drifted onto cooldown when its window opens, PRIO simply flows the normal rotation instead of nagging.
+
+**Fonts.** The UI now uses Saira Condensed (headers) + Barlow (body); both, plus Expressway and Fira Sans, are selectable for the in-game strip's keybind/name text. Falls back to the game font if media is missing. Backdrop colors matched to the design mockup.
+
 ## 0.9.0 (alpha)
-**Options UI facelift + bundled fonts.**
-- **Bundled fonts.** PRIO now ships with Expressway (headers, titles, nav, section labels) and Fira Sans (body), matching the EllesmereUI-style design. Falls back to the default game font automatically if the font files are ever missing.
+**Options UI facelift.**
+- **Bundled UI fonts** with an automatic fallback to the default game font if the files are ever missing.
 - **Sidebar redesign.** Grouped navigation with an accent left-bar + dot marking the active page, hover states, a two-tone **PR·IO** wordmark, and your current spec profile shown under it.
-- **New "Raid" section with Encounters (coming soon).** The home for the encounter cooldown planner — assign cooldowns to fight timings or boss abilities and have PRIO recommend them on cue. Shown greyed with a "Soon" tag while it's in progress. See `docs/encounter-planner.md` for the design.
+- **New "Raid" section** — the home for the encounter cooldown planner. See `docs/encounter-planner.md` for the design.
 
 ## 0.8.2 (alpha)
 Retribution polish from live testing:

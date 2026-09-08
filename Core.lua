@@ -83,6 +83,12 @@ PRIO.defaults = {
     -- Opener gate: openerRequireAll[specKey] = true -> only open when ALL signature
     -- cooldowns are ready (default: any one is enough).
     openerRequireAll = {},
+    -- Encounter planner (see Encounter.lua / docs/encounter-planner.md):
+    --   encounterPlans[specKey][encounterID][difficultyID] = { enabled, entries = {...} }
+    -- plus learn-from-pull scratch the editor reads (abilities BigWigs timed, by encounter).
+    encounterPlans   = {},
+    encounterLearned = {},
+    encounterNames   = {},
 }
 
 --------------------------------------------------------------------------------

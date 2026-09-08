@@ -1822,6 +1822,15 @@ function Engine:Evaluate()
     self:UpdateCharges(S.now)
     self:UpdateEnergy(S.now)
 
+    -- Boss plan overlay (Encounter planner): S.bossManaged = cooldowns the active plan
+    -- owns (suppressed from the normal walk), S.bossInject = the cooldown to force as the
+    -- primary right now (its trigger window is open and it's castable). Both nil when no
+    -- plan is active -> the engine behaves exactly as without the module.
+    if PRIO.Encounter and PRIO.Encounter.Resolve then
+        local ok, managed, inject = pcall(PRIO.Encounter.Resolve, PRIO.Encounter, spec)
+        if ok then S.bossManaged, S.bossInject = managed, inject end
+    end
+
     -- Sequence follower: if a listed sequence is active or its start trigger fires, it
     -- drives the rotation (strict fixed order) until its stop trigger / completion.
     local seqPick = self:SequenceDrive(list, S, want)
@@ -1894,6 +1903,9 @@ function Engine:Evaluate()
         end
         local sid = self:EntrySpellID(e)
         if not (sid and not e.off and API.IsKnown(sid)) then return nil end
+        -- Boss-plan suppression: a cooldown the active encounter plan owns is removed from
+        -- the normal walk entirely -- it only returns via the plan's scheduled injection.
+        if S.bossManaged and S.bossManaged[sid] then return nil end
         local rep, maxC = Repeatable(sid)
         if maxC and (usedCharges[sid] or 0) >= maxC then return nil end   -- charges spent
         if usedSpell[sid] and not rep and not maxC then return nil end    -- single-use, already picked
@@ -1962,7 +1974,25 @@ function Engine:Evaluate()
         return { sid = sid, i = i, rep = rep, maxC = maxC }
     end
 
-    for slot = 1, want do
+    -- Boss-plan injection: a triggered, castable cooldown claims the PRIMARY slot; the
+    -- normal walk then fills the rest (managed cooldowns still suppressed). Unlike the
+    -- opener it doesn't take over the whole strip. On-cooldown drift -> not injected here
+    -- (Resolve already gates on ready) and it stays suppressed, so the rotation flows.
+    local startSlot, bossPlanActive = 1, false
+    local injectSid = S.bossInject
+    if injectSid and API.IsKnown(injectSid) and API.IsReady(injectSid) and API.IsUsable(injectSid) then
+        local e = Entry(injectSid); e.bossPlan = true
+        picks[1] = e
+        local ik = idToKey[injectSid]
+        if ik then
+            ApplyEffects(sim, ik); ApplyResourceDelta(sim, ik, injectSid, S); ApplyEnergy(sim, ik)
+            sim.lastCastKey, sim.lastCastID = ik, injectSid
+        end
+        usedSpell[injectSid] = true
+        startSlot, bossPlanActive = 2, true
+    end
+
+    for slot = startSlot, want do
         S.mote        = sim.mote and true or false
         S.skStacks    = sim.sk or 0
         S.maelstrom   = sim.resource or S.maelstrom
@@ -2069,10 +2099,12 @@ function Engine:Evaluate()
         end
     end
 
+    local modeLabel = bossPlanActive and "Boss plan" or (MODE_LABEL[mode] or mode)
     return {
         specLabel = spec.label or "",
-        modeLabel = MODE_LABEL[mode] or mode,
-        title     = (spec.label or "") .. "  ·  " .. (MODE_LABEL[mode] or mode),
+        modeLabel = modeLabel,
+        bossPlan  = bossPlanActive or nil,
+        title     = (spec.label or "") .. "  \194\183  " .. modeLabel,
         primary   = picks[1],
         queue     = { unpack(picks, 2) },
         alerts    = alerts,

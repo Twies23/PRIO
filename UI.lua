@@ -20,15 +20,29 @@ local function ResolveFont(file)
     local ok = probe:SetFont(FONTDIR .. file, 12, "")
     return ok and (FONTDIR .. file) or FALLBACK
 end
-local FONT       = ResolveFont("FiraSans-Medium.ttf")   -- body
-local FONT_DISP  = ResolveFont("Expressway.ttf")        -- display / headers / labels
-local FONT_DISPB = ResolveFont("Expressway-Bold.ttf")   -- heavy display (wordmark/titles)
+-- Options UI faces: Saira Condensed for display (matches the mockup), Barlow for body.
+local FONT       = ResolveFont("Barlow-Medium.ttf")            -- body
+local FONT_DISP  = ResolveFont("SairaCondensed-SemiBold.ttf")  -- display / headers / labels
+local FONT_DISPB = ResolveFont("SairaCondensed-Bold.ttf")      -- heavy display (wordmark/titles)
 UI.FONT, UI.FONT_DISP, UI.FONT_DISPB = FONT, FONT_DISP, FONT_DISPB
 
+-- Bundled, user-selectable faces for the in-game strip (keybind/name/title text). Each
+-- resolves to a path with a safe fallback; the Options font picker appends these to the
+-- stock game fonts. Ordered for the dropdown.
+UI.BUNDLED_FONTS = {
+    { name = "Saira Condensed", file = "SairaCondensed-SemiBold.ttf" },
+    { name = "Barlow",          file = "Barlow-Medium.ttf" },
+    { name = "Expressway",      file = "Expressway.ttf" },
+    { name = "Fira Sans",       file = "FiraSans-Medium.ttf" },
+}
+for _, f in ipairs(UI.BUNDLED_FONTS) do f.path = ResolveFont(f.file) end
+
 UI.C = {
-    panel     = { 0.051, 0.071, 0.090 },
-    sidebar   = { 0.031, 0.043, 0.057 },
-    surface   = { 0.086, 0.110, 0.141 },
+    -- Backdrops matched to the HTML mockup: content/panel #121822, sidebar #0A0E12,
+    -- card/inset surface #0F141C (darker than content, so insets read as recessed).
+    panel     = { 0.071, 0.094, 0.133 },
+    sidebar   = { 0.039, 0.055, 0.071 },
+    surface   = { 0.059, 0.078, 0.110 },
     control   = { 0.102, 0.122, 0.161 },
     accent    = { 0.047, 0.824, 0.616 },
     accentDim = { 0.035, 0.42,  0.32  },
@@ -428,21 +442,70 @@ end
 --------------------------------------------------------------------------------
 -- Compact -/+ stepper.
 --------------------------------------------------------------------------------
-function UI.Stepper(parent, w, minV, maxV, get, set, onChange)
+-- `step` (default 1) is the increment per press; `fmt` optionally formats the value.
+function UI.Stepper(parent, w, minV, maxV, get, set, onChange, step, fmt)
+    step = step or 1
     local f = UI.Card(parent, C.control, 0.08); f:SetSize(w, 24)
     local val = UI.Font(f, 12, C.head); val:SetPoint("CENTER")
-    local function upd() val:SetText(tostring(get() or minV)) end
+    local function upd() val:SetText((fmt and fmt(get() or minV)) or tostring(get() or minV)) end
     local function mk(sym, dir, anchor)
         local b = CreateFrame("Button", nil, f); b:SetSize(20, 24); b:SetPoint(anchor)
         local t = UI.Font(b, 13, C.accent); t:SetPoint("CENTER"); t:SetText(sym)
         b:SetScript("OnClick", function()
-            local v = math.min(maxV, math.max(minV, (get() or minV) + dir))
+            local v = math.min(maxV, math.max(minV, (get() or minV) + dir * step))
             set(v); upd(); if onChange then onChange() end
         end)
     end
     mk("-", -1, "LEFT"); mk("+", 1, "RIGHT")
     f.Update = upd; upd()
     return f
+end
+
+-- A modal PASTE box: editable multiline field + Import/Cancel. onAccept(text) fires on
+-- Import. Reused across calls. Mirrors CopyBox but for input.
+local pasteWin
+function UI.PasteBox(title, subtitle, onAccept)
+    if not pasteWin then
+        local w = UI.Window("PRIOPasteBox", 600, 440, "Import", subtitle)
+        w:SetFrameStrata("FULLSCREEN_DIALOG")
+        local scroll = CreateFrame("ScrollFrame", "PRIOPasteScroll", w, "UIPanelScrollFrameTemplate")
+        scroll:SetPoint("TOPLEFT", 18, -66); scroll:SetPoint("BOTTOMRIGHT", -34, 54)
+        local box = UI.Solid(w, "BACKGROUND", C.sidebar); box:SetPoint("TOPLEFT", scroll, -6, 6)
+        box:SetPoint("BOTTOMRIGHT", scroll, 26, -6)
+        local eb = CreateFrame("EditBox", nil, scroll)
+        eb:SetMultiLine(true); eb:SetAutoFocus(true); eb:SetFontObject(ChatFontNormal)
+        eb:SetWidth(520); eb:SetTextInsets(4, 4, 4, 4)
+        eb:SetScript("OnEscapePressed", function() pasteWin:Hide() end)
+        scroll:SetScrollChild(eb)
+        w._eb = eb
+
+        local function mkBtn(label, anchorX, primary, onClick)
+            local b = CreateFrame("Button", nil, w, "BackdropTemplate")
+            b:SetSize(120, 26); b:SetPoint("BOTTOMRIGHT", anchorX, 16)
+            b:SetBackdrop({ bgFile = WHITE, edgeFile = WHITE, edgeSize = 1 })
+            local col = primary and C.accent or C.control
+            b:SetBackdropColor(col[1], col[2], col[3], primary and 0.9 or 1)
+            b:SetBackdropBorderColor(1, 1, 1, 0.12)
+            local fs = UI.FontD(b, 12, primary and { 0.02, 0.13, 0.10 } or C.text); fs:SetPoint("CENTER")
+            fs:SetText(label)
+            b:SetScript("OnClick", onClick)
+            return b
+        end
+        mkBtn("Import", -18, true, function()
+            local text = pasteWin._eb:GetText()
+            pasteWin:Hide()
+            if pasteWin._cb then pasteWin._cb(text) end
+        end)
+        mkBtn("Cancel", -148, false, function() pasteWin:Hide() end)
+        pasteWin = w
+    end
+    pasteWin.title:SetText(title or "Import")
+    if pasteWin.sub then pasteWin.sub:SetText(subtitle or "Paste an MRT note, then Import") end
+    pasteWin._cb = onAccept
+    pasteWin._eb:SetText("")
+    pasteWin:Show()
+    pasteWin._eb:SetFocus()
+    return pasteWin
 end
 
 return UI

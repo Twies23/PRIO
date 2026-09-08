@@ -11,10 +11,15 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.9.1", {
+        "New Encounters tab: the raid cooldown planner. Assign cooldowns to fight timings or boss abilities per encounter -- PRIO holds them out of the normal rotation and pushes a triggered cooldown to the primary slot on cue (the rest of the strip keeps your usual rotation).",
+        "Triggers: at a pull time, on a BigWigs boss cast (matched by spell, with an occurrence count), or on a phase. Boss-cast / phase triggers need BigWigs; time triggers don't.",
+        "Import MRT notes -- paste a lorrgs / guild note and PRIO extracts just YOUR cooldowns, decoding time / SCC / phase tags into triggers.",
+        "Learns which abilities BigWigs timed on your pulls, so the boss-cast picker lists real abilities.",
+        "Fonts: Saira Condensed (headers) + Barlow (body); those plus Expressway and Fira Sans are selectable for the strip. Backdrop colors matched to the design mockup.",
+    } },
     { "0.9.0", {
-        "Options UI facelift: bundled Expressway (headers) + Fira Sans (body) fonts, with an automatic fallback to the game font if media is missing.",
-        "Redesigned sidebar -- grouped nav with an accent bar + dot on the active page, hover states, a two-tone PR\194\183IO wordmark, and your spec profile shown beneath it.",
-        "New \"Raid\" section with Encounters (coming soon) -- the home for the encounter cooldown planner (assign cooldowns to fight timings / boss abilities). Greyed with a \"Soon\" tag while it's in progress; design in docs/encounter-planner.md.",
+        "Options UI facelift: bundled UI fonts (with a safe fallback to the game font), and a redesigned grouped sidebar with an accent bar + dot on the active page, a two-tone PR\194\183IO wordmark, and your spec profile beneath it.",
     } },
     { "0.8.2", {
         "Retribution: Hammer of Wrath now reads its \"can be cast\" buff (execute / Avenging Wrath) as a clean signal instead of guessing from secret target health -- gates the HoW lines (usable flag as fallback), drives the proc-flash, and shows in debug. New \"Hammer of Wrath castable\" condition.",
