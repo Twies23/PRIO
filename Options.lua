@@ -1059,6 +1059,8 @@ local function EncCandidates(specKey)
             out[#out + 1] = { id = id, name = name or (db.encounterNames and db.encounterNames[id]) or ("Encounter " .. tostring(id)) }
         end
     end
+    -- Live from BigWigs (bosses in your current instance), then persisted sources.
+    if E and E.EncounterList then for _, c in ipairs(E.EncounterList(true)) do add(c.id, c.name) end end
     local plans = db.encounterPlans and db.encounterPlans[specKey]
     if plans then for id in pairs(plans) do add(id) end end
     if db.encounterLearned then for id in pairs(db.encounterLearned) do add(id) end end
@@ -1210,10 +1212,10 @@ function Pages.encounters()
                 function(v) entry.trig.at = v end, AfterChange, 5, fmtMMSS)
             st:SetPoint("LEFT", tdd, "RIGHT", 6, 0)
         elseif entry.trig.type == "cast" then
-            local learned = db.encounterLearned and db.encounterLearned[encSel]
+            -- Boss abilities straight from BigWigs (cached when out of the raid).
             local copts = {}
-            if learned then for sid, info in pairs(learned) do copts[#copts + 1] = { value = sid, text = info.name or ("#" .. sid) } end end
-            if #copts == 0 then copts[1] = { value = entry.trig.spell or 0, text = "(pull boss to list)" } end
+            for _, a in ipairs(E.AbilitiesFor(encSel)) do copts[#copts + 1] = { value = a.spell, text = a.name } end
+            if #copts == 0 then copts[1] = { value = entry.trig.spell or 0, text = "(enter the raid to list abilities)" } end
             local cdd = UI.Dropdown(r, 132, copts, function() return entry.trig.spell end,
                 function(v) entry.trig.spell = tonumber(v) or v end, AfterChange)
             cdd:SetPoint("LEFT", tdd, "RIGHT", 6, 0)

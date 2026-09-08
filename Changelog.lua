@@ -15,7 +15,7 @@ local ENTRIES = {
         "New Encounters tab: the raid cooldown planner. Assign cooldowns to fight timings or boss abilities per encounter -- PRIO holds them out of the normal rotation and pushes a triggered cooldown to the primary slot on cue (the rest of the strip keeps your usual rotation).",
         "Triggers: at a pull time, on a BigWigs boss cast (matched by spell, with an occurrence count), or on a phase. Boss-cast / phase triggers need BigWigs; time triggers don't.",
         "Import MRT notes -- paste a lorrgs / guild note and PRIO extracts just YOUR cooldowns, decoding time / SCC / phase tags into triggers.",
-        "Learns which abilities BigWigs timed on your pulls, so the boss-cast picker lists real abilities.",
+        "Reads encounters and their ability lists straight from BigWigs (real boss names + spells) while you're in the raid; cached so they still show after you leave.",
         "Fonts: Saira Condensed (headers) + Barlow (body); those plus Expressway and Fira Sans are selectable for the strip. Backdrop colors matched to the design mockup.",
     } },
     { "0.9.0", {

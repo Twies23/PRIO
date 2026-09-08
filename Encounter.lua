@@ -317,6 +317,88 @@ function E.PlayerName()
 end
 
 --------------------------------------------------------------------------------
+-- BigWigs catalog: read encounters and their ability lists straight from BigWigs'
+-- loaded boss modules. Modules are LoadOnDemand (available while you're in the
+-- instance), so names/abilities are cached to db and still show after you leave.
+--   module:GetEncounterID()  -> engageId (matches ENCOUNTER_START)
+--   module.displayName        -> localized boss name
+--   module:GetOptions()       -> { keys... }, numeric / {id,flag} entries are spellIDs
+--------------------------------------------------------------------------------
+local function bwCore() return _G.BigWigs end
+
+-- Every loaded boss module -> { { id = engageID, name = displayName }, ... }.
+-- currentInstanceOnly filters to the instance you're standing in. Caches names.
+function E.EncounterList(currentInstanceOnly)
+    local BW = bwCore()
+    local out = {}
+    if not (BW and BW.IterateBossModules) then return out end
+    local inst = currentInstanceOnly and GetInstanceInfo and select(8, GetInstanceInfo()) or nil
+    for _, module in BW:IterateBossModules() do
+        local okZone = true
+        if inst and module.IsZoneID then okZone = module:IsZoneID(inst) end
+        if okZone and module.GetEncounterID then
+            local ok, eid = pcall(module.GetEncounterID, module)
+            if ok and eid then
+                local name = module.displayName or module.moduleName or ("Encounter " .. eid)
+                out[#out + 1] = { id = eid, name = name }
+                if PRIO.db then
+                    PRIO.db.encounterNames = PRIO.db.encounterNames or {}
+                    PRIO.db.encounterNames[eid] = name
+                end
+            end
+        end
+    end
+    table.sort(out, function(a, b) return tostring(a.name) < tostring(b.name) end)
+    return out
+end
+
+local function moduleForEncounter(encID)
+    local BW = bwCore()
+    if not (BW and BW.IterateBossModules and encID) then return nil end
+    for _, module in BW:IterateBossModules() do
+        if module.GetEncounterID then
+            local ok, e1, e2, e3 = pcall(module.GetEncounterID, module)
+            if ok and (e1 == encID or e2 == encID or e3 == encID) then return module end
+        end
+    end
+end
+
+-- Ability list for an encounter's "on boss cast" picker: { {spell=id, name=}, ... }.
+-- From the BigWigs module's GetOptions() when loaded (cached to db.encounterLearned);
+-- falls back to the cache when the module isn't loaded (out of the raid).
+function E.AbilitiesFor(encID)
+    local out, seen = {}, {}
+    local function add(sid, name)
+        sid = tonumber(sid)
+        if sid and sid > 0 and not seen[sid] then
+            seen[sid] = true
+            out[#out + 1] = { spell = sid, name = name or (API.SpellName and API.SpellName(sid)) or ("#" .. sid) }
+        end
+    end
+    local module = moduleForEncounter(encID)
+    if module and module.GetOptions then
+        local ok, opts = pcall(module.GetOptions, module)
+        if ok and type(opts) == "table" then
+            for _, v in ipairs(opts) do
+                if type(v) == "number" then add(v)
+                elseif type(v) == "table" and type(v[1]) == "number" then add(v[1]) end
+            end
+        end
+    end
+    if #out > 0 and PRIO.db and encID then
+        PRIO.db.encounterLearned = PRIO.db.encounterLearned or {}
+        local cache = PRIO.db.encounterLearned[encID] or {}
+        for _, a in ipairs(out) do cache[a.spell] = cache[a.spell] or { name = a.name } end
+        PRIO.db.encounterLearned[encID] = cache
+    elseif #out == 0 then
+        local cache = PRIO.db and PRIO.db.encounterLearned and PRIO.db.encounterLearned[encID]
+        if cache then for sid, info in pairs(cache) do add(sid, info and info.name) end end
+    end
+    table.sort(out, function(a, b) return tostring(a.name) < tostring(b.name) end)
+    return out
+end
+
+--------------------------------------------------------------------------------
 -- Wiring (guarded so the headless harness -- which provides PRIO:On -- is unaffected).
 --------------------------------------------------------------------------------
 if PRIO.On then
