@@ -578,6 +578,27 @@ SlashCmdList.PRIO = function(msg)
                     :format(key, tostring(u), tostring(np), rec and "0cd29f" or "e0685a", tostring(rec)))
             end
         end
+    elseif msg == "bw" then
+        -- Diagnose BigWigs detection for the Encounter planner.
+        local E = PRIO.Encounter
+        print("|cff0cd29fPRIO|r BigWigs check:")
+        print("  BigWigs core loaded: " .. tostring(_G.BigWigs ~= nil))
+        print("  BigWigsLoader present: " .. tostring(_G.BigWigsLoader ~= nil))
+        if E then
+            local raids = E.RaidZones and E.RaidZones() or {}
+            print("  Raid packs found: " .. #raids)
+            for _, z in ipairs(raids) do print(("    [%s] %s"):format(tostring(z.id), tostring(z.name))) end
+            local inst = GetInstanceInfo and select(8, GetInstanceInfo())
+            print("  Current instanceID: " .. tostring(inst))
+            if raids[1] then
+                E.LoadZone(raids[1].id)
+                local bosses = E.EncounterList and E.EncounterList(raids[1].id) or {}
+                print(("  Bosses in '%s' after load: %d"):format(raids[1].name, #bosses))
+                for _, b in ipairs(bosses) do print(("    #%s %s"):format(tostring(b.id), tostring(b.name))) end
+            end
+        else
+            print("  |cffe0685aPRIO.Encounter missing|r")
+        end
     elseif msg == "setup" then
         if PRIO.Setup then PRIO.Setup:Toggle() end
     elseif msg == "binds" or msg == "keybinds" then

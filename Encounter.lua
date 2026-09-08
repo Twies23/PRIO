@@ -340,26 +340,32 @@ function E.LoadZone(instanceID)
     pcall(L.LoadZone, L, instanceID)
 end
 
--- BigWigs raid modulepacks (from its zone table), for the raid picker. One entry per raid
--- addon: { { id = instanceID, name = title }, ... }. Dungeons (LittleWigs / non-Raid) excluded.
+-- BigWigs raid modulepacks, for the raid picker. Scans INSTALLED addons directly (the
+-- loader's zoneTbl points at the expansion bundle "BigWigs_Midnight", which isn't tagged
+-- Raid) -- each individual raid pack (e.g. BigWigs_TheVenomousAbyss) has X-Category = Raid
+-- and X-BigWigs-LoadOn-InstanceId. Returns { { id = instanceID, name = title }, ... }.
 function E.RaidZones()
-    local L = bwLoader()
-    local out = {}
-    if not (L and L.zoneTbl) then return out end
+    local out, seen = {}, {}
+    local getN   = (C_AddOns and C_AddOns.GetNumAddOns) or GetNumAddOns
+    local getInfo = (C_AddOns and C_AddOns.GetAddOnInfo) or GetAddOnInfo
     local getMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
-    if not getMeta then return out end
-    local seen = {}
-    for id, addon in pairs(L.zoneTbl) do
-        if type(id) == "number" and id > 0 and type(addon) == "string" and not seen[addon] then
-            local okR, cat = pcall(getMeta, addon, "X-Category")
-            if okR and cat == "Raid" and not addon:find("LittleWigs", 1, true) then
-                seen[addon] = true
-                local okT, title = pcall(getMeta, addon, "Title")
-                title = (okT and type(title) == "string") and title or addon
+    if not (getN and getInfo and getMeta) then return out end
+    local n = getN() or 0
+    for i = 1, n do
+        local okC, cat = pcall(getMeta, i, "X-Category")
+        local okI, inst = pcall(getMeta, i, "X-BigWigs-LoadOn-InstanceId")
+        local name = select(1, getInfo(i))
+        local isBW = type(name) == "string" and name:find("BigWigs", 1, true) and not name:find("LittleWigs", 1, true)
+        if okC and cat == "Raid" and okI and inst and isBW then
+            local id = tonumber(tostring(inst):match("%d+"))   -- first instance id
+            if id and not seen[id] then
+                seen[id] = true
+                local okT, title = pcall(getMeta, i, "Title")
+                title = (okT and type(title) == "string") and title or name
                 title = title:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
                              :gsub("BigWigs%s*%[?", ""):gsub("%]", "")
                              :gsub("^%s+", ""):gsub("%s+$", "")
-                out[#out + 1] = { id = id, name = (title ~= "" and title) or addon }
+                out[#out + 1] = { id = id, name = (title ~= "" and title) or name }
             end
         end
     end

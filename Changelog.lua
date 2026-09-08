@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.9.2", {
+        "Fix: the Encounters \"Raid\" dropdown came up empty -- it now detects your installed BigWigs raid packs directly, so raids (e.g. The Venomous Abyss) list their bosses/abilities with no pull. New /prio bw command prints what BigWigs content PRIO can see.",
+    } },
     { "0.9.1", {
         "New Encounters tab: the raid cooldown planner. Assign cooldowns to fight timings or boss abilities per encounter -- PRIO holds them out of the normal rotation and pushes a triggered cooldown to the primary slot on cue (the rest of the strip keeps your usual rotation).",
         "Triggers: at a pull time, on a BigWigs boss cast (matched by spell, with an occurrence count), or on a phase. Boss-cast / phase triggers need BigWigs; time triggers don't.",
