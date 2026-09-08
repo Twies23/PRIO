@@ -1,5 +1,11 @@
 # PRIO Changelog
 
+## 0.9.0 (alpha)
+**Options UI facelift + bundled fonts.**
+- **Bundled fonts.** PRIO now ships with Expressway (headers, titles, nav, section labels) and Fira Sans (body), matching the EllesmereUI-style design. Falls back to the default game font automatically if the font files are ever missing.
+- **Sidebar redesign.** Grouped navigation with an accent left-bar + dot marking the active page, hover states, a two-tone **PR·IO** wordmark, and your current spec profile shown under it.
+- **New "Raid" section with Encounters (coming soon).** The home for the encounter cooldown planner — assign cooldowns to fight timings or boss abilities and have PRIO recommend them on cue. Shown greyed with a "Soon" tag while it's in progress. See `docs/encounter-planner.md` for the design.
+
 ## 0.8.2 (alpha)
 Retribution polish from live testing:
 - **Hammer of Wrath now reads its "can be cast" buff** (execute range / Avenging Wrath) as a clean signal instead of guessing from the target's health, which is often unreadable in combat. The Hammer of Wrath lines gate on it (with the usable flag as a fallback if you don't track the buff), it drives the icon proc-flash, and it shows in the debug windows. New named condition: "Hammer of Wrath castable".

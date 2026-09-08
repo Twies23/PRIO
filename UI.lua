@@ -9,7 +9,21 @@ local UI = {}
 PRIO.UI = UI
 
 local WHITE = "Interface\\Buttons\\WHITE8x8"
-local FONT  = STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF"
+local FALLBACK = STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF"
+
+-- Bundled fonts (EllesmereUI-matched): Expressway for display/headers, FiraSans for
+-- body. Probe each path once at load; if a file is missing (addon copied without media)
+-- fall back to the WoW default so text never vanishes. SetFont returns false on failure.
+local FONTDIR = "Interface\\AddOns\\PRIO\\media\\fonts\\"
+local function ResolveFont(file)
+    local probe = UIParent:CreateFontString(nil, "OVERLAY")
+    local ok = probe:SetFont(FONTDIR .. file, 12, "")
+    return ok and (FONTDIR .. file) or FALLBACK
+end
+local FONT       = ResolveFont("FiraSans-Medium.ttf")   -- body
+local FONT_DISP  = ResolveFont("Expressway.ttf")        -- display / headers / labels
+local FONT_DISPB = ResolveFont("Expressway-Bold.ttf")   -- heavy display (wordmark/titles)
+UI.FONT, UI.FONT_DISP, UI.FONT_DISPB = FONT, FONT_DISP, FONT_DISPB
 
 UI.C = {
     panel     = { 0.051, 0.071, 0.090 },
@@ -62,6 +76,16 @@ function UI.Font(parent, size, c, flags)
     local fs = parent:CreateFontString(nil, "OVERLAY")
     fs:SetFont(FONT, size or 12, flags)
     c = c or C.text
+    fs:SetTextColor(c[1], c[2], c[3], c[4] or 1)
+    return fs
+end
+
+-- Display-face fontstring (Expressway): headers, titles, nav labels, uppercase chips.
+-- `bold` selects the heavy weight. Falls back with the body font when media is absent.
+function UI.FontD(parent, size, c, bold)
+    local fs = parent:CreateFontString(nil, "OVERLAY")
+    fs:SetFont(bold and FONT_DISPB or FONT_DISP, size or 12, "")
+    c = c or C.head
     fs:SetTextColor(c[1], c[2], c[3], c[4] or 1)
     return fs
 end
@@ -226,7 +250,7 @@ function UI.Window(name, w, h, titleText, subText)
     f:SetScript("OnDragStop", f.StopMovingOrSizing)
     if name then tinsert(UISpecialFrames, name) end
 
-    local title = UI.Font(f, 22, C.accent)
+    local title = UI.FontD(f, 24, C.accent, true)
     title:SetPoint("TOPLEFT", 20, -18)
     title:SetText(titleText or "")
     f.title = title

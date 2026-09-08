@@ -11,6 +11,11 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.9.0", {
+        "Options UI facelift: bundled Expressway (headers) + Fira Sans (body) fonts, with an automatic fallback to the game font if media is missing.",
+        "Redesigned sidebar -- grouped nav with an accent bar + dot on the active page, hover states, a two-tone PR\194\183IO wordmark, and your spec profile shown beneath it.",
+        "New \"Raid\" section with Encounters (coming soon) -- the home for the encounter cooldown planner (assign cooldowns to fight timings / boss abilities). Greyed with a \"Soon\" tag while it's in progress; design in docs/encounter-planner.md.",
+    } },
     { "0.8.2", {
         "Retribution: Hammer of Wrath now reads its \"can be cast\" buff (execute / Avenging Wrath) as a clean signal instead of guessing from secret target health -- gates the HoW lines (usable flag as fallback), drives the proc-flash, and shows in debug. New \"Hammer of Wrath castable\" condition.",
         "Retribution: predicted cooldowns for Execution Sentence (60s), Divine Toll (60s), Wake of Ashes (30s) -- fixed (non-haste) CDs, so the timer stays accurate for cooldown-remaining conditions + queue placement. Divine Toll accounts for Quickened Invocation (-30s). Reset lists to default to pick up the HoW gating.",

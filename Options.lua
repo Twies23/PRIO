@@ -42,7 +42,7 @@ local function Section(text)
     local r = Track(CreateFrame("Frame", nil, content))
     r:SetSize(contentW, 20)
     r:SetPoint("TOPLEFT", 0, -cursorY)
-    local fs = UI.Font(r, 11, C.faint, "")
+    local fs = UI.FontD(r, 11.5, C.faint)
     fs:SetPoint("LEFT", 0, 0)
     fs:SetText(text:upper())
     local line = UI.Solid(r, "ARTWORK", { 1, 1, 1 }, 0.06)
@@ -1202,6 +1202,9 @@ local NAV = {
     { header = "DISPLAY",  items = { { label = "Icons & Layout", page = "display" } } },
     { header = "ROTATION", items = { { label = "Priorities",     page = "rotation" },
                                      { label = "Opener",         page = "opener" } } },
+    -- Encounter planner: designed (docs/encounter-planner.md), not yet built. Shown greyed
+    -- with a "Soon" pill so the destination is visible while the module is in progress.
+    { header = "RAID",     items = { { label = "Encounters",     page = "encounters", soon = true } } },
     { header = "GENERAL",  items = { { label = "Behavior",       page = "general" },
                                      { label = "Profiles",       page = "profiles" } } },
 }
@@ -1221,6 +1224,13 @@ function Options:ShowPage(key)
     local samePage = (key == currentPage)
     local prevScroll = (samePage and scroll) and scroll:GetVerticalScroll() or 0
     currentPage = key
+
+    -- Brand spec context (mirrors the active spec profile, or a neutral note).
+    if win and win.specLabel then
+        local id = API.GetSpecID and API.GetSpecID()
+        local sp = id and PRIO.specs and PRIO.specs[id]
+        win.specLabel:SetText(sp and sp.label or "No spec profile")
+    end
     -- clear old content (hide; new widgets overlay at the same positions)
     if picker then picker:Hide() end
     if editor and key ~= "rotation" then editor:Hide() end
@@ -1305,35 +1315,71 @@ function Options:Build()
     divider:SetPoint("TOPLEFT", SIDEBAR_W, -1); divider:SetPoint("BOTTOMLEFT", SIDEBAR_W, 1)
     divider:SetWidth(1)
 
+    -- Brand wordmark: PR in white, IO in accent (matches the mockup); spec context below.
+    win.title:ClearAllPoints(); win.title:SetPoint("TOPLEFT", 18, -16)
+    win.title:SetTextColor(C.head[1], C.head[2], C.head[3])
+    win.title:SetText("PR|cff" .. UI.accentHex .. "IO|r")
+    ver:ClearAllPoints(); ver:SetPoint("TOPLEFT", win.title, "BOTTOMLEFT", 1, -3)
+    win.specLabel = UI.Font(win, 11.5, C.muted)
+    win.specLabel:SetPoint("TOPLEFT", ver, "BOTTOMLEFT", 0, -3)
+    win.specLabel:SetPoint("RIGHT", win, "LEFT", SIDEBAR_W - 10, 0)
+    win.specLabel:SetJustifyH("LEFT"); win.specLabel:SetWordWrap(false)
+    local brandLine = UI.Solid(win, "BORDER", { 1, 1, 1 }, 0.06)
+    brandLine:SetPoint("TOPLEFT", 12, -74); brandLine:SetWidth(SIDEBAR_W - 24); brandLine:SetHeight(1)
+
     -- Nav
-    local y = 64
+    local y = 88
     for _, group in ipairs(NAV) do
-        local gh = UI.Font(win, 10.5, C.faint)
+        local gh = UI.FontD(win, 11, C.faint)
         gh:SetPoint("TOPLEFT", 18, -y); gh:SetText(group.header)
         y = y + 22
         for _, item in ipairs(group.items) do
+            local disabled = item.soon
             local b = CreateFrame("Button", nil, win)
             b:SetSize(SIDEBAR_W - 8, 30)
             b:SetPoint("TOPLEFT", 0, -y)
             b.page = item.page
-            local arrow = UI.Font(b, 12, C.accent)
-            arrow:SetPoint("LEFT", 8, 0); arrow:SetText("\226\150\182")  -- ▶
-            arrow:Hide()
+            local activeBg = UI.Solid(b, "BACKGROUND", C.accent, 0.09); activeBg:SetAllPoints(); activeBg:Hide()
+            local bar = UI.Solid(b, "ARTWORK", C.accent, 1)
+            bar:SetPoint("TOPLEFT", 0, -5); bar:SetPoint("BOTTOMLEFT", 0, 5); bar:SetWidth(3); bar:Hide()
+            local dot = UI.Solid(b, "OVERLAY", C.accent, 1); dot:SetSize(5, 5); dot:SetPoint("LEFT", 11, 0); dot:Hide()
             local hover = UI.Solid(b, "BACKGROUND", { 1, 1, 1 }, 0.04); hover:SetAllPoints(); hover:Hide()
-            local fs = UI.Font(b, 13.5, C.muted); fs:SetPoint("LEFT", 22, 0); fs:SetText(item.label)
-            b.SetActive = function(_, on)
-                arrow:SetShown(on)
-                fs:SetTextColor(on and C.head[1] or C.muted[1],
-                                on and C.head[2] or C.muted[2],
-                                on and C.head[3] or C.muted[3])
+            local baseCol = disabled and C.faint or C.muted
+            local fs = UI.Font(b, 13.5, baseCol); fs:SetPoint("LEFT", 22, 0); fs:SetText(item.label)
+
+            -- Optional pill (NEW / SOON), right-aligned.
+            local pill = item.soon and "SOON" or item.new and "NEW" or nil
+            if pill then
+                local accentPill = item.new
+                local pf = UI.FontD(b, 9.5, accentPill and C.accent or C.faint)
+                pf:SetPoint("RIGHT", -8, 0); pf:SetText(pill)
+                local pw = math.ceil(pf:GetStringWidth() + 0.5) + 10
+                local pillBg = CreateFrame("Frame", nil, b, "BackdropTemplate")
+                pillBg:SetPoint("RIGHT", -3, 0); pillBg:SetSize(pw, 15)
+                pillBg:SetBackdrop({ edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 })
+                local pc = accentPill and C.accent or C.faint
+                pillBg:SetBackdropBorderColor(pc[1], pc[2], pc[3], 0.5)
+                pf:SetParent(pillBg); pf:ClearAllPoints(); pf:SetPoint("CENTER", 0, 0)
             end
-            b:SetScript("OnEnter", function() if b.page ~= currentPage then hover:Show() end end)
-            b:SetScript("OnLeave", function() hover:Hide() end)
-            b:SetScript("OnClick", function() Options:ShowPage(b.page) end)
-            navButtons[#navButtons + 1] = b
+
+            if disabled then
+                b:EnableMouse(false)   -- greyed, non-interactive
+                b.SetActive = function() end
+            else
+                b.SetActive = function(_, on)
+                    activeBg:SetShown(on); bar:SetShown(on); dot:SetShown(on)
+                    fs:SetTextColor(on and C.head[1] or C.muted[1],
+                                    on and C.head[2] or C.muted[2],
+                                    on and C.head[3] or C.muted[3])
+                end
+                b:SetScript("OnEnter", function() if b.page ~= currentPage then hover:Show() end end)
+                b:SetScript("OnLeave", function() hover:Hide() end)
+                b:SetScript("OnClick", function() Options:ShowPage(b.page) end)
+                navButtons[#navButtons + 1] = b
+            end
             y = y + 32
         end
-        y = y + 10
+        y = y + 12
     end
 
     -- Header band (content side)
@@ -1341,7 +1387,7 @@ function Options:Build()
     header:SetPoint("TOPLEFT", SIDEBAR_W + 1, -1)
     header:SetPoint("TOPRIGHT", -1, -1)
     header:SetHeight(84)
-    header.title = UI.Font(header, 23, C.head)
+    header.title = UI.FontD(header, 26, C.head, true)
     header.title:SetPoint("TOPLEFT", 22, -22)
     header.desc = UI.Font(header, 12.5, C.muted)
     header.desc:SetPoint("TOPLEFT", 22, -52)
