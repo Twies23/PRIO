@@ -340,6 +340,10 @@ function E.LoadZone(instanceID)
     pcall(L.LoadZone, L, instanceID)
 end
 
+-- Only these instances appear in the raid picker (current progression). Set to nil to show
+-- every installed BigWigs raid pack. 3004 = The Venomous Abyss, 2987 = Midnight Lairs (Nymrissa).
+E.RAID_ALLOW = { [3004] = true, [2987] = true }
+
 -- BigWigs raid modulepacks, for the raid picker. Scans INSTALLED addons directly (the
 -- loader's zoneTbl points at the expansion bundle "BigWigs_Midnight", which isn't tagged
 -- Raid) -- each individual raid pack (e.g. BigWigs_TheVenomousAbyss) has X-Category = Raid
@@ -358,7 +362,7 @@ function E.RaidZones()
         local isBW = type(name) == "string" and name:find("BigWigs", 1, true) and not name:find("LittleWigs", 1, true)
         if okC and cat == "Raid" and okI and inst and isBW then
             local id = tonumber(tostring(inst):match("%d+"))   -- first instance id
-            if id and not seen[id] then
+            if id and not seen[id] and (not E.RAID_ALLOW or E.RAID_ALLOW[id]) then
                 seen[id] = true
                 local okT, title = pcall(getMeta, i, "Title")
                 title = (okT and type(title) == "string") and title or name

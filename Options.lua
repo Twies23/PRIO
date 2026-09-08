@@ -1080,22 +1080,47 @@ local function defaultTrig(t)
     else return { type = "time", at = 5 } end
 end
 
+-- Small styled button (card + click overlay).
+local function EncBtn(parent, label, w, primary, onClick)
+    local b = UI.Card(parent, primary and C.accent or C.control, 0.12); b:SetSize(w, 26)
+    if primary then b:SetBackdropColor(C.accent[1], C.accent[2], C.accent[3], 0.9) end
+    local bb = CreateFrame("Button", nil, b); bb:SetAllPoints()
+    local fs = UI.FontD(b, 12, primary and { 0.02, 0.13, 0.10 } or C.accent); fs:SetPoint("CENTER"); fs:SetText(label)
+    bb:SetScript("OnClick", onClick)
+    return b
+end
+-- A framed real spell icon.
+local function EncIcon(parent, sid, size)
+    local f = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+    f:SetSize(size, size)
+    f:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8x8", edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 })
+    f:SetBackdropColor(0, 0, 0, 0.6); f:SetBackdropBorderColor(1, 1, 1, 0.15)
+    local t = f:CreateTexture(nil, "ARTWORK"); t:SetPoint("TOPLEFT", 1, -1); t:SetPoint("BOTTOMRIGHT", -1, 1)
+    t:SetTexture((sid and API.SpellTexture and API.SpellTexture(sid)) or 134400)
+    t:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+    return f
+end
+
 function Pages.encounters()
     local db = PRIO.db
     if picker then picker:Hide() end
     local spec = CurrentSpec()
     local E = PRIO.Encounter
+    local CARD_PAD = 16
+    local cardW = math.max(240, (contentW or 400) - 2)
+    local innerW = cardW - CARD_PAD * 2
 
-    Section("Raid cooldown planner")
-    do
-        local hasBW = E and E.HasBigWigs and E.HasBigWigs()
-        local r = Track(CreateFrame("Frame", nil, content)); r:SetSize(contentW, 20)
-        r:SetPoint("TOPLEFT", 0, -cursorY)
-        local fs = UI.Font(r, 12, hasBW and C.accent or C.faint); fs:SetPoint("LEFT", 0, 0)
-        fs:SetText(hasBW and "BigWigs detected \226\128\148 boss-cast and phase triggers are live."
-                          or "BigWigs not found \226\128\148 time triggers work now; boss-cast / phase triggers need BigWigs.")
-        cursorY = cursorY + 26
+    -- Card container: a surface panel with an uppercase title; caller fills it then
+    -- calls EndCard with the measured inner height.
+    local function StartCard(title)
+        local card = Track(UI.Card(content, C.surface, 0.10))
+        card:SetPoint("TOPLEFT", 0, -cursorY); card:SetWidth(cardW)
+        if title then
+            local t = UI.FontD(card, 11.5, C.faint); t:SetPoint("TOPLEFT", CARD_PAD, -14); t:SetText(title:upper())
+        end
+        return card
     end
+    local function EndCard(card, innerH) card:SetHeight(innerH); cursorY = cursorY + innerH + 12 end
 
     if not spec then
         local none = Track(UI.Font(content, 13, C.faint)); none:SetPoint("TOPLEFT", 0, -cursorY)
@@ -1104,180 +1129,247 @@ function Pages.encounters()
         return
     end
 
-    -- Raid picker: force-loads that raid's BigWigs modules on demand, so bosses and
-    -- abilities are listed without ever pulling. Defaults to the raid you're standing in.
+    -- Resolve raid + candidates + plan up front.
     local raids = E.RaidZones and E.RaidZones() or {}
-    if #raids > 0 then
-        if not encRaid then
-            local hereInst = GetInstanceInfo and select(8, GetInstanceInfo())
-            for _, z in ipairs(raids) do if z.id == hereInst then encRaid = z.id break end end
-            encRaid = encRaid or raids[1].id
-        end
-        E.LoadZone(encRaid)   -- idempotent
-        SettingRow("Raid", 30, function(r)
-            local opts = {}
-            for _, z in ipairs(raids) do opts[#opts + 1] = { value = z.id, text = z.name } end
-            local dd = UI.Dropdown(r, 250, opts, function() return encRaid end,
-                function(v) encRaid = v; encSel = nil; E.LoadZone(v) end,
-                function() Options:ShowPage("encounters") end)
-            dd:SetPoint("RIGHT", 0, 0)
-        end)
+    if #raids > 0 and not encRaid then
+        local hereInst = GetInstanceInfo and select(8, GetInstanceInfo())
+        for _, z in ipairs(raids) do if z.id == hereInst then encRaid = z.id break end end
+        encRaid = encRaid or raids[1].id
     end
-
-    -- Difficulty (which plan variant we edit).
-    SettingRow("Difficulty", 30, function(r)
-        local opts = {}
-        for _, d in ipairs(E.DIFF_ORDER) do opts[#opts + 1] = { value = d.id, text = d.label } end
-        local seg = UI.Segmented(r, opts, function() return encDiff end,
-            function(v) encDiff = v end, function() Options:ShowPage("encounters") end)
-        seg:SetPoint("RIGHT", 0, 0)
-    end)
-
+    if encRaid then E.LoadZone(encRaid) end
     local cands = EncCandidates(spec.key)
-    -- Validate / default the selection.
     local valid = false
     for _, c in ipairs(cands) do if c.id == encSel then valid = true break end end
     if not valid then encSel = cands[1] and cands[1].id or nil end
-
-    if #cands == 0 then
-        local none = Track(UI.Font(content, 12.5, C.faint)); none:SetPoint("TOPLEFT", 0, -cursorY)
-        none:SetWidth(contentW); none:SetJustifyH("LEFT"); none:SetWordWrap(true)
-        none:SetText("No encounters found. Install BigWigs to list raid bosses (pick a raid above \226\128\148 no pull needed), or import an MRT note.")
-        cursorY = cursorY + 40
-        return
-    end
-
-    SettingRow("Encounter", 30, function(r)
-        local opts = {}
-        for _, c in ipairs(cands) do opts[#opts + 1] = { value = c.id, text = c.name } end
-        local dd = UI.Dropdown(r, 250, opts, function() return encSel end,
-            function(v) encSel = v end, function() Options:ShowPage("encounters") end)
-        dd:SetPoint("RIGHT", 0, 0)
-    end)
-
     local plan = encSel and E:GetPlan(spec.key, encSel, encDiff, false) or nil
 
-    -- Import handler (paste an MRT / lorrgs note -> extract MY cooldowns).
+    local hasBW = E and E.HasBigWigs and E.HasBigWigs()
     local function doImport(text)
         if not (encSel and text and text:gsub("%s", "") ~= "") then return end
         local p = E:GetPlan(spec.key, encSel, encDiff, true)
         local entries, skipped = E.ParseMRT(text, E.PlayerName(), E.SidToKey(spec))
         for _, e in ipairs(entries) do p.entries[#p.entries + 1] = e end
-        print(("|cff%sPRIO|r: imported %d cooldown(s) from the MRT note%s.")
-            :format(UI.accentHex or "0cd29f", #entries,
-                    (#skipped > 0) and (", skipped " .. #skipped .. " line(s)") or ""))
+        print(("|cff%sPRIO|r: imported %d cooldown(s)%s."):format(UI.accentHex or "0cd29f", #entries,
+            (#skipped > 0) and (", skipped " .. #skipped) or ""))
         AfterChange(); Options:ShowPage("encounters")
     end
 
-    -- Action buttons row (Import / Create / Clear).
-    local function Btn(parent, label, w, primary, onClick)
-        local b = UI.Card(parent, primary and C.accent or C.control, 0.12); b:SetSize(w, 26)
-        if primary then b:SetBackdropColor(C.accent[1], C.accent[2], C.accent[3], 0.9) end
-        local bb = CreateFrame("Button", nil, b); bb:SetAllPoints()
-        local fs = UI.FontD(b, 12, primary and { 0.02, 0.13, 0.10 } or C.accent); fs:SetPoint("CENTER"); fs:SetText(label)
-        bb:SetScript("OnClick", onClick)
-        return b
-    end
+    --------------------------------------------------------------------------
+    -- CARD: PLAN  (raid + difficulty, boss tabs, entry editor, buttons)
+    --------------------------------------------------------------------------
     do
-        local r = Track(CreateFrame("Frame", nil, content)); r:SetSize(contentW, 30)
-        r:SetPoint("TOPLEFT", 0, -cursorY)
-        local imp = Btn(r, "Import MRT note", 150, true, function()
-            UI.PasteBox("Import MRT note", "Paste a lorrgs / guild MRT note \226\128\148 PRIO keeps only your cooldowns", doImport)
-        end)
-        imp:SetPoint("LEFT", 0, 0)
-        if not plan then
-            local cr = Btn(r, "Create empty plan", 150, false, function()
-                E:GetPlan(spec.key, encSel, encDiff, true); AfterChange(); Options:ShowPage("encounters")
-            end)
-            cr:SetPoint("LEFT", imp, "RIGHT", 10, 0)
+        local card = StartCard("Plan")
+        -- Difficulty pills, top-right, on the title row.
+        do
+            local opts = {}
+            for _, d in ipairs(E.DIFF_ORDER) do opts[#opts + 1] = { value = d.id, text = d.label } end
+            local seg = UI.Segmented(card, opts, function() return encDiff end,
+                function(v) encDiff = v end, function() Options:ShowPage("encounters") end)
+            seg:SetPoint("TOPRIGHT", -CARD_PAD, -9)
         end
-        cursorY = cursorY + 38
-    end
-
-    if not plan then
-        local none = Track(UI.Font(content, 12.5, C.faint)); none:SetPoint("TOPLEFT", 0, -cursorY)
-        none:SetText("No plan for this encounter and difficulty yet \226\128\148 import a note or create an empty plan.")
-        cursorY = cursorY + 30
-        return
-    end
-
-    Section("Assigned cooldowns")
-    SettingRow("Plan enabled", 28, function(r)
-        local t = UI.Toggle(r, function() return plan.enabled ~= false end,
-            function(v) plan.enabled = v and true or false end, AfterChange)
-        t:SetPoint("RIGHT", 0, 0)
-    end)
-
-    -- Spell options for this spec (the pickable cooldowns).
-    local spellOpts = {}
-    for _, k in ipairs(spec.pickable or {}) do
-        local sid = spec.spells[k]
-        if sid then spellOpts[#spellOpts + 1] = { value = k, text = API.SpellName(sid) } end
-    end
-
-    local ROWH = 32
-    for i, entry in ipairs(plan.entries) do
-        entry.trig = entry.trig or defaultTrig("time")
-        local r = Track(CreateFrame("Frame", nil, content)); r:SetSize(contentW, ROWH)
-        r:SetPoint("TOPLEFT", 0, -cursorY)
-        -- ability
-        local sdd = UI.Dropdown(r, 138, spellOpts, function() return entry.spell end,
-            function(v) entry.spell = v end, AfterChange)
-        sdd:SetPoint("LEFT", 0, 0)
-        -- trigger type
-        local tdd = UI.Dropdown(r, 98, {
-            { value = "time", text = "At time" }, { value = "cast", text = "On cast" }, { value = "phase", text = "On phase" },
-        }, function() return entry.trig.type end,
-           function(v) entry.trig = defaultTrig(v); AfterChange(); Options:ShowPage("encounters") end)
-        tdd:SetPoint("LEFT", sdd, "RIGHT", 6, 0)
-        -- value control
-        if entry.trig.type == "time" then
-            local st = UI.Stepper(r, 92, 0, 900, function() return entry.trig.at or 0 end,
-                function(v) entry.trig.at = v end, AfterChange, 5, fmtMMSS)
-            st:SetPoint("LEFT", tdd, "RIGHT", 6, 0)
-        elseif entry.trig.type == "cast" then
-            -- Boss abilities straight from BigWigs (cached when out of the raid).
-            local copts = {}
-            for _, a in ipairs(E.AbilitiesFor(encSel)) do copts[#copts + 1] = { value = a.spell, text = a.name } end
-            if #copts == 0 then copts[1] = { value = entry.trig.spell or 0, text = "(enter the raid to list abilities)" } end
-            local cdd = UI.Dropdown(r, 132, copts, function() return entry.trig.spell end,
-                function(v) entry.trig.spell = tonumber(v) or v end, AfterChange)
-            cdd:SetPoint("LEFT", tdd, "RIGHT", 6, 0)
-            local occ = UI.Stepper(r, 52, 1, 8, function() return entry.trig.occ or 1 end,
-                function(v) entry.trig.occ = v end, AfterChange, 1, function(n) return "#" .. n end)
-            occ:SetPoint("LEFT", cdd, "RIGHT", 6, 0)
-        elseif entry.trig.type == "phase" then
-            local st = UI.Stepper(r, 100, 1, 8, function() return entry.trig.stage or 1 end,
-                function(v) entry.trig.stage = v end, AfterChange, 1, function(n) return "phase " .. n end)
-            st:SetPoint("LEFT", tdd, "RIGHT", 6, 0)
+        local iy = 40
+        -- Raid dropdown.
+        if #raids > 0 then
+            local rl = UI.Font(card, 12, C.muted); rl:SetPoint("TOPLEFT", CARD_PAD, -iy - 5); rl:SetText("Raid")
+            local opts = {}
+            for _, z in ipairs(raids) do opts[#opts + 1] = { value = z.id, text = z.name } end
+            local dd = UI.Dropdown(card, math.min(260, innerW - 60), opts, function() return encRaid end,
+                function(v) encRaid = v; encSel = nil; E.LoadZone(v) end,
+                function() Options:ShowPage("encounters") end)
+            dd:SetPoint("TOPLEFT", CARD_PAD + 44, -iy)
+            iy = iy + 36
         end
-        -- remove
-        local x = CreateFrame("Button", nil, r); x:SetSize(22, 22); x:SetPoint("RIGHT", 0, 0)
-        local xf = UI.Font(x, 15, C.faint); xf:SetPoint("CENTER"); xf:SetText("\195\151")
-        x:SetScript("OnEnter", function() xf:SetTextColor(0.88, 0.41, 0.35) end)
-        x:SetScript("OnLeave", function() xf:SetTextColor(C.faint[1], C.faint[2], C.faint[3]) end)
-        x:SetScript("OnClick", function() table.remove(plan.entries, i); AfterChange(); Options:ShowPage("encounters") end)
-        cursorY = cursorY + ROWH + 6
+        -- Boss tabs (wrap).
+        if #cands == 0 then
+            local none = UI.Font(card, 12.5, C.faint); none:SetPoint("TOPLEFT", CARD_PAD, -iy)
+            none:SetWidth(innerW); none:SetJustifyH("LEFT"); none:SetWordWrap(true)
+            none:SetText(hasBW and "No bosses for this raid yet \226\128\148 pick another raid, or import an MRT note."
+                or "Install BigWigs to list raid bosses (no pull needed), or import an MRT note.")
+            iy = iy + 40
+        else
+            local measure = card:CreateFontString(nil, "OVERLAY"); measure:SetFont(UI.FONT_DISP or "Fonts\\FRIZQT__.TTF", 12.5, "")
+            local x, rowH, th = 0, 40, 40
+            for _, c in ipairs(cands) do
+                measure:SetText(c.name)
+                local w = math.min(innerW, math.ceil(measure:GetStringWidth()) + 26)
+                if x > 0 and x + w > innerW then x = 0; th = th + rowH + 6 end
+                local active = (c.id == encSel)
+                local tab = UI.Card(card, active and C.accent or C.control, active and 0.5 or 0.08)
+                tab:SetSize(w, rowH); tab:SetPoint("TOPLEFT", CARD_PAD + x, -iy - (th - 40))
+                if active then tab:SetBackdropColor(C.accent[1], C.accent[2], C.accent[3], 0.12); tab:SetBackdropBorderColor(C.accent[1], C.accent[2], C.accent[3], 0.9) end
+                local nm = UI.FontD(tab, 12.5, active and C.head or C.muted); nm:SetPoint("CENTER"); nm:SetText(c.name)
+                local bb = CreateFrame("Button", nil, tab); bb:SetAllPoints()
+                bb:SetScript("OnClick", function() encSel = c.id; AfterChange(); Options:ShowPage("encounters") end)
+                x = x + w + 6
+            end
+            measure:Hide()
+            iy = iy + th + 8
+        end
+
+        -- Divider.
+        if #cands > 0 then
+            local div = UI.Solid(card, "ARTWORK", { 1, 1, 1 }, 0.06)
+            div:SetPoint("TOPLEFT", CARD_PAD, -iy); div:SetPoint("RIGHT", card, "RIGHT", -CARD_PAD, 0); div:SetHeight(1)
+            iy = iy + 12
+        end
+
+        if encSel and not plan then
+            local none = UI.Font(card, 12.5, C.faint); none:SetPoint("TOPLEFT", CARD_PAD, -iy)
+            none:SetText("No plan for this boss/difficulty yet.")
+            iy = iy + 26
+            local cr = EncBtn(card, "Create plan", 130, true, function()
+                E:GetPlan(spec.key, encSel, encDiff, true); AfterChange(); Options:ShowPage("encounters") end)
+            cr:SetPoint("TOPLEFT", CARD_PAD, -iy)
+            local imp = EncBtn(card, "Import MRT note", 150, false, function()
+                UI.PasteBox("Import MRT note", "Paste a lorrgs / guild MRT note \226\128\148 PRIO keeps only your cooldowns", doImport) end)
+            imp:SetPoint("LEFT", cr, "RIGHT", 10, 0)
+            iy = iy + 34
+        elseif plan then
+            -- Plan-enabled toggle on its own row.
+            local el = UI.Font(card, 12.5, C.text); el:SetPoint("TOPLEFT", CARD_PAD, -iy - 3); el:SetText("Plan enabled")
+            local et = UI.Toggle(card, function() return plan.enabled ~= false end,
+                function(v) plan.enabled = v and true or false end, AfterChange)
+            et:SetPoint("TOPLEFT", CARD_PAD + 100, -iy)
+            iy = iy + 32
+
+            local spellOpts = {}
+            for _, k in ipairs(spec.pickable or {}) do
+                local sid = spec.spells[k]
+                if sid then spellOpts[#spellOpts + 1] = { value = k, text = API.SpellName(sid) } end
+            end
+            local ROWH = 34
+            for i, entry in ipairs(plan.entries) do
+                entry.trig = entry.trig or defaultTrig("time")
+                local sid = spec.spells[entry.spell]
+                local ic = EncIcon(card, sid, 26); ic:SetPoint("TOPLEFT", CARD_PAD, -iy - 2)
+                local sdd = UI.Dropdown(card, 128, spellOpts, function() return entry.spell end,
+                    function(v) entry.spell = v; AfterChange(); Options:ShowPage("encounters") end)
+                sdd:SetPoint("TOPLEFT", CARD_PAD + 34, -iy)
+                local tdd = UI.Dropdown(card, 92, {
+                    { value = "time", text = "At time" }, { value = "cast", text = "On cast" }, { value = "phase", text = "On phase" },
+                }, function() return entry.trig.type end,
+                   function(v) entry.trig = defaultTrig(v); AfterChange(); Options:ShowPage("encounters") end)
+                tdd:SetPoint("LEFT", sdd, "RIGHT", 6, 0)
+                if entry.trig.type == "time" then
+                    local st = UI.Stepper(card, 92, 0, 900, function() return entry.trig.at or 0 end,
+                        function(v) entry.trig.at = v end, AfterChange, 5, fmtMMSS)
+                    st:SetPoint("LEFT", tdd, "RIGHT", 6, 0)
+                elseif entry.trig.type == "cast" then
+                    local copts = {}
+                    for _, a in ipairs(E.AbilitiesFor(encSel)) do copts[#copts + 1] = { value = a.spell, text = a.name } end
+                    if #copts == 0 then copts[1] = { value = entry.trig.spell or 0, text = "(enter the raid to list)" } end
+                    local cdd = UI.Dropdown(card, 128, copts, function() return entry.trig.spell end,
+                        function(v) entry.trig.spell = tonumber(v) or v end, AfterChange)
+                    cdd:SetPoint("LEFT", tdd, "RIGHT", 6, 0)
+                    local occ = UI.Stepper(card, 50, 1, 8, function() return entry.trig.occ or 1 end,
+                        function(v) entry.trig.occ = v end, AfterChange, 1, function(n) return "#" .. n end)
+                    occ:SetPoint("LEFT", cdd, "RIGHT", 6, 0)
+                elseif entry.trig.type == "phase" then
+                    local st = UI.Stepper(card, 96, 1, 8, function() return entry.trig.stage or 1 end,
+                        function(v) entry.trig.stage = v end, AfterChange, 1, function(n) return "phase " .. n end)
+                    st:SetPoint("LEFT", tdd, "RIGHT", 6, 0)
+                end
+                local x = CreateFrame("Button", nil, card); x:SetSize(22, 22); x:SetPoint("TOPRIGHT", -CARD_PAD, -iy - 2)
+                local xf = UI.Font(x, 15, C.faint); xf:SetPoint("CENTER"); xf:SetText("\195\151")
+                x:SetScript("OnEnter", function() xf:SetTextColor(0.88, 0.41, 0.35) end)
+                x:SetScript("OnLeave", function() xf:SetTextColor(C.faint[1], C.faint[2], C.faint[3]) end)
+                x:SetScript("OnClick", function() table.remove(plan.entries, i); AfterChange(); Options:ShowPage("encounters") end)
+                iy = iy + ROWH
+            end
+            iy = iy + 6
+            local add = EncBtn(card, "+  Assign cooldown", 150, false, function()
+                local firstKey = spellOpts[1] and spellOpts[1].value
+                plan.entries[#plan.entries + 1] = { spell = firstKey, trig = defaultTrig("time") }
+                AfterChange(); Options:ShowPage("encounters") end)
+            add:SetPoint("TOPLEFT", CARD_PAD, -iy)
+            local imp = EncBtn(card, "Import MRT", 110, false, function()
+                UI.PasteBox("Import MRT note", "Paste a lorrgs / guild MRT note \226\128\148 PRIO keeps only your cooldowns", doImport) end)
+            imp:SetPoint("LEFT", add, "RIGHT", 8, 0)
+            local clr = EncBtn(card, "Clear", 80, false, function()
+                local byEnc = db.encounterPlans and db.encounterPlans[spec.key]
+                if byEnc and byEnc[encSel] then byEnc[encSel][encDiff] = nil end
+                AfterChange(); Options:ShowPage("encounters") end)
+            clr:SetPoint("LEFT", imp, "RIGHT", 8, 0)
+            iy = iy + 36
+        end
+        EndCard(card, iy + 8)
     end
 
-    -- Add / clear.
+    if not plan then return end
+
+    --------------------------------------------------------------------------
+    -- CARD: TIMELINE  (ruler + time-triggered cooldown icons; event triggers listed)
+    --------------------------------------------------------------------------
     do
-        local r = Track(CreateFrame("Frame", nil, content)); r:SetSize(contentW, 30)
-        r:SetPoint("TOPLEFT", 0, -cursorY)
-        local add = Btn(r, "+  Assign cooldown", 150, false, function()
-            local firstKey = spellOpts[1] and spellOpts[1].value
-            plan.entries[#plan.entries + 1] = { spell = firstKey, trig = defaultTrig("time") }
-            AfterChange(); Options:ShowPage("encounters")
-        end)
-        add:SetPoint("LEFT", 0, 0)
-        local clr = Btn(r, "Clear plan", 110, false, function()
-            local byEnc = db.encounterPlans and db.encounterPlans[spec.key]
-            local byDiff = byEnc and byEnc[encSel]
-            if byDiff then byDiff[encDiff] = nil end
-            AfterChange(); Options:ShowPage("encounters")
-        end)
-        clr:SetPoint("LEFT", add, "RIGHT", 10, 0)
-        cursorY = cursorY + 40
+        local card = StartCard("Timeline")
+        local iy = 40
+        -- Fight length: longest time trigger + headroom, min 2:00.
+        local dur = 120
+        for _, e in ipairs(plan.entries) do
+            if e.trig.type == "time" then dur = math.max(dur, (e.trig.at or 0) + 30) end
+        end
+        local trackW = innerW
+        local track = CreateFrame("Frame", nil, card, "BackdropTemplate")
+        track:SetPoint("TOPLEFT", CARD_PAD, -iy); track:SetSize(trackW, 54)
+        track:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8x8", edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 })
+        track:SetBackdropColor(C.panel[1], C.panel[2], C.panel[3], 1); track:SetBackdropBorderColor(1, 1, 1, 0.08)
+        local function tx(sec) return (sec / dur) * trackW end
+        -- Ruler ticks every 30s.
+        for s = 0, dur, 30 do
+            local tick = UI.Font(card, 10, C.faint); tick:SetPoint("TOPLEFT", CARD_PAD + tx(s) - 12, -iy + 14)
+            tick:SetWidth(28); tick:SetJustifyH("CENTER"); tick:SetText(fmtMMSS(s))
+            local ln = UI.Solid(track, "ARTWORK", { 1, 1, 1 }, 0.05)
+            ln:SetPoint("TOP", track, "TOPLEFT", tx(s), 0); ln:SetPoint("BOTTOM", track, "BOTTOMLEFT", tx(s), 0); ln:SetWidth(1)
+        end
+        -- Cooldown icons: time triggers positioned; cast/phase clustered at the left with a marker.
+        local eventN = 0
+        for _, e in ipairs(plan.entries) do
+            local sid = spec.spells[e.spell]
+            if e.trig.type == "time" then
+                local ic = EncIcon(track, sid, 26)
+                ic:SetPoint("CENTER", track, "LEFT", math.max(13, math.min(trackW - 13, tx(e.trig.at or 0))), 2)
+            else
+                local ic = EncIcon(track, sid, 22)
+                ic:SetPoint("BOTTOMLEFT", track, "BOTTOMLEFT", 4 + eventN * 26, 4)
+                eventN = eventN + 1
+            end
+        end
+        iy = iy + 54 + 10
+        -- Legend.
+        local leg = UI.Font(card, 11, C.faint); leg:SetPoint("TOPLEFT", CARD_PAD, -iy)
+        leg:SetWidth(innerW); leg:SetJustifyH("LEFT"); leg:SetWordWrap(true)
+        leg:SetText(eventN > 0
+            and "Icons on the line are timed from the pull. Boss-cast / phase cooldowns (bottom-left) fire on their event, so they aren't placed on the clock."
+            or "Icons are timed from the pull.")
+        iy = iy + 30
+        EndCard(card, iy)
+    end
+
+    --------------------------------------------------------------------------
+    -- CARD: WHAT PRIO SHOWS  (assigned cooldowns, held out of the auto rotation)
+    --------------------------------------------------------------------------
+    do
+        local card = StartCard("What PRIO shows")
+        local iy = 40
+        local sub = UI.Font(card, 11.5, C.muted); sub:SetPoint("TOPLEFT", CARD_PAD, -iy)
+        sub:SetWidth(innerW); sub:SetJustifyH("LEFT"); sub:SetWordWrap(true)
+        sub:SetText("These cooldowns are held out of your normal rotation and pushed to the primary slot when their trigger fires:")
+        iy = iy + 30
+        if #plan.entries == 0 then
+            local none = UI.Font(card, 12, C.faint); none:SetPoint("TOPLEFT", CARD_PAD, -iy); none:SetText("Nothing assigned yet.")
+            iy = iy + 24
+        else
+            for _, e in ipairs(plan.entries) do
+                local sid = spec.spells[e.spell]
+                local ic = EncIcon(card, sid, 30); ic:SetPoint("TOPLEFT", CARD_PAD, -iy)
+                local nm = UI.Font(card, 13, C.head); nm:SetPoint("TOPLEFT", CARD_PAD + 40, -iy + 1)
+                nm:SetText((sid and API.SpellName(sid)) or tostring(e.spell))
+                local tg = UI.Font(card, 11.5, C.accent); tg:SetPoint("TOPLEFT", CARD_PAD + 40, -iy + 17)
+                tg:SetText(E.TriggerLabel and E.TriggerLabel(e.trig) or "")
+                iy = iy + 38
+            end
+        end
+        EndCard(card, iy + 4)
     end
 end
 

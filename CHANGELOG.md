@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.9.5 (alpha)
+- **Encounters tab redesigned to the mockup:** a Plan card (raid + difficulty, boss tabs, and the cooldown editor with real spell icons), a Timeline card that places your timed cooldowns along a pull clock, and a "What PRIO shows" card listing the cooldowns held out of your rotation and when they fire.
+- **Raid list trimmed to current progression** — only The Venomous Abyss and Midnight Lairs (Nymrissa) now show in the picker.
+
 ## 0.9.4 (alpha)
 - **Fix: boss abilities weren't listing for the "on boss cast" trigger.** PRIO now reads a boss's ability list the same way BigWigs' own options do (its processed `toggleOptions`, falling back to the raw declaration), matched by encounter ID. `/prio bw` now also prints each boss's ability count so issues are easy to spot.
 

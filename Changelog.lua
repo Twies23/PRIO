@@ -11,6 +11,10 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.9.5", {
+        "Encounters tab redesigned to the mockup: a Plan card (raid + difficulty, boss tabs, editor with real spell icons), a Timeline card placing timed cooldowns on a pull clock, and a 'What PRIO shows' card.",
+        "Raid picker trimmed to current progression -- only The Venomous Abyss and Midnight Lairs (Nymrissa).",
+    } },
     { "0.9.4", {
         "Fix: boss abilities weren't listing for the on-boss-cast trigger -- PRIO now reads a boss's abilities the same way BigWigs' options do (toggleOptions, falling back to GetOptions), matched by encounter ID. /prio bw prints each boss's ability count.",
     } },
