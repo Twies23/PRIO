@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.9.8 (alpha)
+- **Enable/disable the whole encounter planner** with one toggle at the top of the Encounters tab. When off, the engine ignores all plans (normal rotation everywhere); your plans are kept.
+- **Boss abilities now show on the timeline right away** as a reference row, instead of an empty "pull first" message. Exact positions still snap in once you've pulled the boss with BigWigs (Blizzard only exposes real timings during a pull).
+
 ## 0.9.7 (alpha)
 - **Fix: bosses from other raids leaked into the list** (Midnight Lairs showed 4 bosses instead of just Nymrissa). The boss list is now exactly the selected raid's bosses.
 - **Boss is now a dropdown** (like the raid picker).

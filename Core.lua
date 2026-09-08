@@ -21,6 +21,7 @@ PRIO.PROFILE_KEYS = {
     "advanceWhileCasting", "enemyDetect", "manageNameplates", "cleaveAt", "aoeAt",
     "combatRate", "idleRate", "minimapShow", "classColor",
     "font", "titleSize", "keybindSize", "nameSize", "showModeButtons",
+    "encountersEnabled",
 }
 
 -- Colors reused across the UI (EllesmereUI-style accent).
@@ -86,6 +87,7 @@ PRIO.defaults = {
     -- Encounter planner (see Encounter.lua / docs/encounter-planner.md):
     --   encounterPlans[specKey][encounterID][difficultyID] = { enabled, entries = {...} }
     -- plus learn-from-pull scratch the editor reads (abilities BigWigs timed, by encounter).
+    encountersEnabled = true,   -- master on/off for the encounter planner overlay
     encounterPlans   = {},
     encounterLearned = {},
     encounterNames   = {},

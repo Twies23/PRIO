@@ -99,6 +99,7 @@ local function addVariants(set, sid)
 end
 
 function E:Resolve(spec)
+    if PRIO.db and PRIO.db.encountersEnabled == false then return nil, nil end   -- module off
     local plan = self.active
     if not (spec and plan and plan.enabled ~= false and plan.entries and #plan.entries > 0) then
         return nil, nil

@@ -1127,6 +1127,21 @@ function Pages.encounters()
     end
     local function EndCard(card, innerH) card:SetHeight(innerH); cursorY = cursorY + innerH + 12 end
 
+    -- Master on/off for the whole module.
+    do
+        local r = Track(CreateFrame("Frame", nil, content)); r:SetSize(contentW, 26); r:SetPoint("TOPLEFT", 0, -cursorY)
+        local lbl = UI.Font(r, 13, C.text); lbl:SetPoint("LEFT", 0, 0); lbl:SetText("Enable encounter plans")
+        local t = UI.Toggle(r, function() return db.encountersEnabled ~= false end,
+            function(v) db.encountersEnabled = v and true or false end,
+            function() AfterChange(); Options:ShowPage("encounters") end)
+        t:SetPoint("LEFT", 200, 0)
+        if db.encountersEnabled == false then
+            local off = UI.Font(r, 11.5, C.faint); off:SetPoint("LEFT", t, "RIGHT", 10, 0)
+            off:SetText("paused \226\128\148 the engine won't recommend plans")
+        end
+        cursorY = cursorY + 34
+    end
+
     if not spec then
         local none = Track(UI.Font(content, 13, C.faint)); none:SetPoint("TOPLEFT", 0, -cursorY)
         none:SetText("Log in on a supported spec to build encounter plans.")
@@ -1319,23 +1334,37 @@ function Pages.encounters()
             tick:SetPoint("TOP", track, "TOPLEFT", tx(sec), -TOP_H - 3); tick:SetText(m .. ":00")
         end
 
-        -- TOP lane: boss abilities from learn-from-pull (empty until you've pulled with BigWigs).
+        -- TOP lane: boss abilities. If a pull has been recorded (learn-from-pull), place each
+        -- at its real time; otherwise show the boss's ability icons as an evenly-spaced
+        -- reference (Blizzard only exposes exact timings during a pull -- they snap into place
+        -- once you've pulled the boss with BigWigs).
+        local VIOLET = C.violet or { 0.71, 0.5, 0.91 }
         local learned = db.encounterLearned and db.encounterLearned[encSel]
-        local bossN = 0
+        local timed = {}
         if type(learned) == "table" then
             for sid, info in pairs(learned) do
                 local fireAt = (tonumber(info and info.at) or 0) + (tonumber(info and info.fireIn) or 0)
-                if fireAt > 0 and fireAt <= SPAN then
-                    bossN = bossN + 1
-                    local mk = UI.Solid(track, "ARTWORK", C.violet or { 0.71, 0.5, 0.91 }, 0.9)
-                    mk:SetPoint("TOP", track, "TOPLEFT", tx(fireAt), -2); mk:SetWidth(2); mk:SetHeight(TOP_H - 4)
-                    local ic = EncIcon(track, sid, 18); ic:SetPoint("CENTER", track, "TOPLEFT", tx(fireAt), -TOP_H / 2)
-                end
+                if fireAt > 0 and fireAt <= SPAN then timed[#timed + 1] = { sid = sid, at = fireAt } end
             end
         end
-        if bossN == 0 then
-            local bl = UI.Font(track, 10.5, C.faint); bl:SetPoint("LEFT", track, "TOPLEFT", 8, -TOP_H / 2)
-            bl:SetText("Boss abilities appear here after you pull this boss with BigWigs")
+        if #timed > 0 then
+            for _, m in ipairs(timed) do
+                local mk = UI.Solid(track, "ARTWORK", VIOLET, 0.9)
+                mk:SetPoint("TOP", track, "TOPLEFT", tx(m.at), -2); mk:SetWidth(2); mk:SetHeight(TOP_H - 4)
+                local ic = EncIcon(track, m.sid, 18); ic:SetPoint("CENTER", track, "TOPLEFT", tx(m.at), -TOP_H / 2)
+            end
+        else
+            local abils = (E.AbilitiesFor and E.AbilitiesFor(encSel)) or {}
+            local n = #abils
+            if n > 0 then
+                for i, a in ipairs(abils) do
+                    local ax = ((i - 0.5) / n) * trackW
+                    local ic = EncIcon(track, a.spell, 18); ic:SetPoint("CENTER", track, "TOPLEFT", ax, -TOP_H / 2)
+                end
+            else
+                local bl = UI.Font(track, 10.5, C.faint); bl:SetPoint("LEFT", track, "TOPLEFT", 8, -TOP_H / 2)
+                bl:SetText(hasBW and "Pick a boss to show its abilities" or "Install BigWigs to show boss abilities")
+            end
         end
 
         -- BOTTOM lane: your cooldowns. Time triggers are DRAGGABLE; cast/phase sit at the
@@ -1371,8 +1400,8 @@ function Pages.encounters()
 
         local leg = UI.Font(card, 11, C.faint); leg:SetPoint("TOPLEFT", CARD_PAD, -iy)
         leg:SetWidth(innerW); leg:SetJustifyH("LEFT"); leg:SetWordWrap(true)
-        leg:SetText("Drag your cooldowns along the bottom to set their pull time." ..
-            (eventN > 0 and "  Boss-cast / phase cooldowns (bottom-left) fire on their event, so they aren't placed on the clock." or ""))
+        leg:SetText("Top row = the boss's abilities (exact times fill in once you've pulled with BigWigs). Drag your cooldowns along the bottom to set their pull time." ..
+            (eventN > 0 and "  Boss-cast / phase cooldowns (bottom-left) fire on their event, so they aren't on the clock." or ""))
         iy = iy + 28
         EndCard(card, iy)
     end

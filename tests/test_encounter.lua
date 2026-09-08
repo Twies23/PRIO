@@ -82,6 +82,18 @@ test("resolve: no active plan -> nil (engine untouched)", function()
     eq(managed, nil); eq(inject, nil)
 end)
 
+test("resolve: master switch off -> nil (module paused)", function()
+    H.reset()
+    local k1 = (twoRetKeys())
+    E.state = { pullTime = GetTime(), events = {}, stage = 1, stageAt = GetTime() }
+    E.active = { enabled = true, entries = { { spell = k1, trig = { type = "time", at = 0, window = 60 } } } }
+    H.db.encountersEnabled = false
+    local managed, inject = E:Resolve(H.retSpec)
+    eq(managed, nil); eq(inject, nil)
+    H.db.encountersEnabled = nil   -- restore
+    E.active = nil
+end)
+
 --------------------------------------------------------------------------------
 -- ParseMRT: parse -> filter-to-me -> map
 --------------------------------------------------------------------------------

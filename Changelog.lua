@@ -11,6 +11,10 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.9.8", {
+        "Enable/disable the whole encounter planner with one toggle at the top of the Encounters tab -- when off, the engine ignores all plans (your plans are kept).",
+        "Boss abilities now show on the timeline right away as a reference row instead of an empty 'pull first' message; exact positions still snap in after a BigWigs pull.",
+    } },
     { "0.9.7", {
         "Fix: bosses from other raids leaked into the list (Midnight Lairs showed 4 instead of just Nymrissa) -- the boss list is now exactly the selected raid's bosses. Boss is now a dropdown.",
         "Timeline redesigned like lorrgs: a fixed 10-minute pull clock, boss abilities along the top (populate after you pull with BigWigs), and your cooldowns on the bottom that you can DRAG to set their pull time.",
