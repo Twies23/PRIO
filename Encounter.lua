@@ -143,27 +143,28 @@ function E.ParseMRT(note, playerName, sidToKey)
     local entries, skipped = {}, {}
     if type(note) ~= "string" then return entries, skipped end
     local me = baseName(playerName)
+
+    -- Note layouts vary: the assignee can sit AFTER the spell ("{spell:id} Name => Target")
+    -- or BEFORE it ("{time:..} - Name {spell:id}"), and personal/lorrgs exports may carry no
+    -- name at all. So we parse every {time:..}+{spell:} line, note whether it names the player,
+    -- then: if ANY line names the player, keep only those; otherwise treat the whole note as the
+    -- player's own (import all mapped lines). Unmapped spells are always skipped.
+    local mapped, anyMine = {}, false
     for rawline in (note .. "\n"):gmatch("(.-)\n") do
         local line = stripColor(rawline)
-        local braces = line:match("^%s*{time:([^}]*)}")
+        local braces   = line:match("{time:([^}]*)}")
         local assigned = line:match("{spell:(%d+)}")
         if braces and assigned then
             assigned = tonumber(assigned)
-            -- caster: first non-space token after the {spell:} tag, before "=>".
-            local caster = line:match("{spell:%d+}%s*([^%s=]+)")
             local key = sidToKey and sidToKey[assigned]
             if not key then
                 skipped[#skipped + 1] = { line = rawline, reason = "not a tracked cooldown" }
-            elseif not caster then
-                skipped[#skipped + 1] = { line = rawline, reason = "no assignee (group/role note?)" }
-            elseif me and baseName(caster) ~= me then
-                -- someone else's assignment; silently ignore (not surfaced as skipped)
             else
-                -- Decode the trigger from the {time:...} tokens.
-                local mm, ss = braces:match("^(%d+):(%d+)")
+                -- Trigger from the {time:...} tokens (mm:ss, optional SCC/SCS spell:occ, phase pN).
+                local mm, ss = braces:match("(%d+):(%d+)")
                 local timeSec = (tonumber(mm) or 0) * 60 + (tonumber(ss) or 0)
                 local scSpell, scOcc = braces:match("SC[CS]:(%d+):?(%d*)")
-                local phase = braces:match("[,{]?p(%d+)") or braces:match("p:(%d+)")
+                local phase = braces:match("p(%d+)")
                 local trig
                 if scSpell then
                     trig = { type = "cast", spell = tonumber(scSpell),
@@ -173,8 +174,24 @@ function E.ParseMRT(note, playerName, sidToKey)
                 else
                     trig = { type = "time", at = timeSec }
                 end
-                entries[#entries + 1] = { spell = key, trig = trig }
+                -- Assignee(s): strip every {..} tag and separators, scan the remaining words.
+                local names = line:gsub("{.-}", " "):gsub("|H.-|h", ""):gsub("[=>%-]", " ")
+                local mine = false
+                if me then
+                    for w in names:gmatch("[%a][%w']*") do
+                        if baseName(w) == me then mine = true; break end
+                    end
+                end
+                if mine then anyMine = true end
+                mapped[#mapped + 1] = { entry = { spell = key, trig = trig }, mine = mine }
             end
+        end
+    end
+    for _, m in ipairs(mapped) do
+        if not anyMine or m.mine then
+            entries[#entries + 1] = m.entry
+        else
+            skipped[#skipped + 1] = { reason = "assigned to someone else" }
         end
     end
     return entries, skipped

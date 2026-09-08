@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.9.6 (alpha)
+- **Fix: MRT import skipped everything.** The parser now reads notes where your name comes *before* the spell (e.g. `{time:0:05} - You {spell:...}`), handles decimal seconds, and — if no line names you — treats the whole note as your personal cooldown list and imports it. Previously it only recognized the name-after-spell layout and skipped the rest.
+
 ## 0.9.5 (alpha)
 - **Encounters tab redesigned to the mockup:** a Plan card (raid + difficulty, boss tabs, and the cooldown editor with real spell icons), a Timeline card that places your timed cooldowns along a pull clock, and a "What PRIO shows" card listing the cooldowns held out of your rotation and when they fire.
 - **Raid list trimmed to current progression** — only The Venomous Abyss and Midnight Lairs (Nymrissa) now show in the picker.

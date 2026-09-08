@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.9.6", {
+        "Fix: MRT import skipped everything -- the parser now handles notes where your name comes before the spell tag, decimal seconds, and personal notes with no name (imports the whole list).",
+    } },
     { "0.9.5", {
         "Encounters tab redesigned to the mockup: a Plan card (raid + difficulty, boss tabs, editor with real spell icons), a Timeline card placing timed cooldowns on a pull clock, and a 'What PRIO shows' card.",
         "Raid picker trimmed to current progression -- only The Venomous Abyss and Midnight Lairs (Nymrissa).",

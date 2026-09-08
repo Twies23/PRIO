@@ -113,6 +113,22 @@ test("MRT import: line with no {time:} tag is ignored", function()
     eq(#entries, 0)
 end)
 
+test("MRT import: assignee BEFORE the spell tag (lorrgs personal format)", function()
+    local map = { [31884] = "avengingWrath" }
+    local note = "{time:0:03} - Bilbrotem {spell:31884}\n{time:0:39.7} - Bilbrotem {spell:31884}"
+    -- Name doesn't match the importer -> treat as a personal note, import all mapped lines.
+    local entries = E.ParseMRT(note, "Someoneelse", map)
+    eq(#entries, 2, "personal-note fallback imports all")
+    eq(entries[1].trig.at, 3); eq(entries[2].trig.at, 39, "decimal seconds truncated")
+    -- Same note, importer IS Bilbrotem -> still imports both (they're mine).
+    eq(#(E.ParseMRT(note, "Bilbrotem-Realm", map)), 2)
+end)
+
+test("MRT import: note with no names at all imports every mapped line", function()
+    local entries = E.ParseMRT("{time:0:05} {spell:31884}\n{time:1:00} {spell:31884}", "Whoever", { [31884] = "avengingWrath" })
+    eq(#entries, 2)
+end)
+
 --------------------------------------------------------------------------------
 -- Engine overlay: suppression + injection through Engine:Evaluate
 --------------------------------------------------------------------------------
