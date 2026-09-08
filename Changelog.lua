@@ -11,6 +11,10 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.9.7", {
+        "Fix: bosses from other raids leaked into the list (Midnight Lairs showed 4 instead of just Nymrissa) -- the boss list is now exactly the selected raid's bosses. Boss is now a dropdown.",
+        "Timeline redesigned like lorrgs: a fixed 10-minute pull clock, boss abilities along the top (populate after you pull with BigWigs), and your cooldowns on the bottom that you can DRAG to set their pull time.",
+    } },
     { "0.9.6", {
         "Fix: MRT import skipped everything -- the parser now handles notes where your name comes before the spell tag, decimal seconds, and personal notes with no name (imports the whole list).",
     } },

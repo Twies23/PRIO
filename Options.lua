@@ -1060,14 +1060,19 @@ local function EncCandidates(specKey)
             out[#out + 1] = { id = id, name = name or (db.encounterNames and db.encounterNames[id]) or ("Encounter " .. tostring(id)) }
         end
     end
-    -- Bosses of the selected raid (force-loaded from BigWigs), then persisted sources.
-    if E and E.EncounterList then
-        local zoneFilter = encRaid or true   -- selected raid, else the instance you're in
-        for _, c in ipairs(E.EncounterList(zoneFilter)) do add(c.id, c.name) end
+    -- Authoritative: exactly the bosses of the SELECTED raid, from BigWigs (force-loaded).
+    -- Anything else in db.encounterLearned belongs to other raids and must not leak in.
+    if E and E.EncounterList and encRaid then
+        local list = E.EncounterList(encRaid)
+        if #list > 0 then
+            for _, c in ipairs(list) do add(c.id, c.name) end
+            return out
+        end
     end
+    -- Fallback only when BigWigs can't list the raid: current instance, saved plans, last seen.
+    if E and E.EncounterList then for _, c in ipairs(E.EncounterList(true)) do add(c.id, c.name) end end
     local plans = db.encounterPlans and db.encounterPlans[specKey]
     if plans then for id in pairs(plans) do add(id) end end
-    if db.encounterLearned then for id in pairs(db.encounterLearned) do add(id) end end
     if E and E.lastEnc then add(E.lastEnc.id, E.lastEnc.name) end
     table.sort(out, function(a, b) return tostring(a.name) < tostring(b.name) end)
     return out
@@ -1179,7 +1184,7 @@ function Pages.encounters()
             dd:SetPoint("TOPLEFT", CARD_PAD + 44, -iy)
             iy = iy + 36
         end
-        -- Boss tabs (wrap).
+        -- Boss dropdown.
         if #cands == 0 then
             local none = UI.Font(card, 12.5, C.faint); none:SetPoint("TOPLEFT", CARD_PAD, -iy)
             none:SetWidth(innerW); none:SetJustifyH("LEFT"); none:SetWordWrap(true)
@@ -1187,23 +1192,13 @@ function Pages.encounters()
                 or "Install BigWigs to list raid bosses (no pull needed), or import an MRT note.")
             iy = iy + 40
         else
-            local measure = card:CreateFontString(nil, "OVERLAY"); measure:SetFont(UI.FONT_DISP or "Fonts\\FRIZQT__.TTF", 12.5, "")
-            local x, rowH, th = 0, 40, 40
-            for _, c in ipairs(cands) do
-                measure:SetText(c.name)
-                local w = math.min(innerW, math.ceil(measure:GetStringWidth()) + 26)
-                if x > 0 and x + w > innerW then x = 0; th = th + rowH + 6 end
-                local active = (c.id == encSel)
-                local tab = UI.Card(card, active and C.accent or C.control, active and 0.5 or 0.08)
-                tab:SetSize(w, rowH); tab:SetPoint("TOPLEFT", CARD_PAD + x, -iy - (th - 40))
-                if active then tab:SetBackdropColor(C.accent[1], C.accent[2], C.accent[3], 0.12); tab:SetBackdropBorderColor(C.accent[1], C.accent[2], C.accent[3], 0.9) end
-                local nm = UI.FontD(tab, 12.5, active and C.head or C.muted); nm:SetPoint("CENTER"); nm:SetText(c.name)
-                local bb = CreateFrame("Button", nil, tab); bb:SetAllPoints()
-                bb:SetScript("OnClick", function() encSel = c.id; AfterChange(); Options:ShowPage("encounters") end)
-                x = x + w + 6
-            end
-            measure:Hide()
-            iy = iy + th + 8
+            local bl = UI.Font(card, 12, C.muted); bl:SetPoint("TOPLEFT", CARD_PAD, -iy - 5); bl:SetText("Boss")
+            local opts = {}
+            for _, c in ipairs(cands) do opts[#opts + 1] = { value = c.id, text = c.name } end
+            local dd = UI.Dropdown(card, math.min(260, innerW - 60), opts, function() return encSel end,
+                function(v) encSel = v end, function() Options:ShowPage("encounters") end)
+            dd:SetPoint("TOPLEFT", CARD_PAD + 44, -iy)
+            iy = iy + 36
         end
 
         -- Divider.
@@ -1298,50 +1293,87 @@ function Pages.encounters()
     if not plan then return end
 
     --------------------------------------------------------------------------
-    -- CARD: TIMELINE  (ruler + time-triggered cooldown icons; event triggers listed)
+    -- CARD: TIMELINE  (lorrgs-style: boss abilities up top, your cooldowns below,
+    -- draggable along a fixed 10-minute pull clock)
     --------------------------------------------------------------------------
     do
         local card = StartCard("Timeline")
         local iy = 40
-        -- Fight length: longest time trigger + headroom, min 2:00.
-        local dur = 120
-        for _, e in ipairs(plan.entries) do
-            if e.trig.type == "time" then dur = math.max(dur, (e.trig.at or 0) + 30) end
-        end
+        local SPAN = 600                     -- always show 0:00 - 10:00
         local trackW = innerW
-        local track = CreateFrame("Frame", nil, card, "BackdropTemplate")
-        track:SetPoint("TOPLEFT", CARD_PAD, -iy); track:SetSize(trackW, 54)
-        track:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8x8", edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 })
-        track:SetBackdropColor(C.panel[1], C.panel[2], C.panel[3], 1); track:SetBackdropBorderColor(1, 1, 1, 0.08)
-        local function tx(sec) return (sec / dur) * trackW end
-        -- Ruler ticks every 30s.
-        for s = 0, dur, 30 do
-            local tick = UI.Font(card, 10, C.faint); tick:SetPoint("TOPLEFT", CARD_PAD + tx(s) - 12, -iy + 14)
-            tick:SetWidth(28); tick:SetJustifyH("CENTER"); tick:SetText(fmtMMSS(s))
-            local ln = UI.Solid(track, "ARTWORK", { 1, 1, 1 }, 0.05)
-            ln:SetPoint("TOP", track, "TOPLEFT", tx(s), 0); ln:SetPoint("BOTTOM", track, "BOTTOMLEFT", tx(s), 0); ln:SetWidth(1)
+        local TOP_H, MID_H, BOT_H = 34, 18, 52
+        local trackH = TOP_H + MID_H + BOT_H
+        local function tx(sec) return (math.max(0, math.min(SPAN, sec)) / SPAN) * trackW end
+
+        local track = CreateFrame("Frame", nil, card)
+        track:SetPoint("TOPLEFT", CARD_PAD, -iy); track:SetSize(trackW, trackH)
+        -- Lane backgrounds.
+        local top = UI.Solid(track, "BACKGROUND", C.panel, 1); top:SetPoint("TOPLEFT", 0, 0); top:SetPoint("TOPRIGHT", 0, 0); top:SetHeight(TOP_H)
+        local bot = UI.Solid(track, "BACKGROUND", C.panel, 1); bot:SetPoint("BOTTOMLEFT", 0, 0); bot:SetPoint("BOTTOMRIGHT", 0, 0); bot:SetHeight(BOT_H)
+        -- Minute grid + labels (down the middle band).
+        for m = 0, 10 do
+            local sec = m * 60
+            local ln = UI.Solid(track, "ARTWORK", { 1, 1, 1 }, m % 5 == 0 and 0.12 or 0.05)
+            ln:SetPoint("TOP", track, "TOPLEFT", tx(sec), 0); ln:SetPoint("BOTTOM", track, "BOTTOMLEFT", tx(sec), 0); ln:SetWidth(1)
+            local tick = UI.Font(track, 10, C.faint); tick:SetWidth(30); tick:SetJustifyH("CENTER")
+            tick:SetPoint("TOP", track, "TOPLEFT", tx(sec), -TOP_H - 3); tick:SetText(m .. ":00")
         end
-        -- Cooldown icons: time triggers positioned; cast/phase clustered at the left with a marker.
+
+        -- TOP lane: boss abilities from learn-from-pull (empty until you've pulled with BigWigs).
+        local learned = db.encounterLearned and db.encounterLearned[encSel]
+        local bossN = 0
+        if type(learned) == "table" then
+            for sid, info in pairs(learned) do
+                local fireAt = (tonumber(info and info.at) or 0) + (tonumber(info and info.fireIn) or 0)
+                if fireAt > 0 and fireAt <= SPAN then
+                    bossN = bossN + 1
+                    local mk = UI.Solid(track, "ARTWORK", C.violet or { 0.71, 0.5, 0.91 }, 0.9)
+                    mk:SetPoint("TOP", track, "TOPLEFT", tx(fireAt), -2); mk:SetWidth(2); mk:SetHeight(TOP_H - 4)
+                    local ic = EncIcon(track, sid, 18); ic:SetPoint("CENTER", track, "TOPLEFT", tx(fireAt), -TOP_H / 2)
+                end
+            end
+        end
+        if bossN == 0 then
+            local bl = UI.Font(track, 10.5, C.faint); bl:SetPoint("LEFT", track, "TOPLEFT", 8, -TOP_H / 2)
+            bl:SetText("Boss abilities appear here after you pull this boss with BigWigs")
+        end
+
+        -- BOTTOM lane: your cooldowns. Time triggers are DRAGGABLE; cast/phase sit at the
+        -- left edge (they fire on their event, not the clock).
         local eventN = 0
         for _, e in ipairs(plan.entries) do
             local sid = spec.spells[e.spell]
             if e.trig.type == "time" then
-                local ic = EncIcon(track, sid, 26)
-                ic:SetPoint("CENTER", track, "LEFT", math.max(13, math.min(trackW - 13, tx(e.trig.at or 0))), 2)
+                local ic = EncIcon(track, sid, 30)
+                ic:EnableMouse(true)
+                local tl = UI.Font(ic, 10, C.head); tl:SetPoint("TOP", ic, "BOTTOM", 0, -1)
+                local function place() ic:ClearAllPoints(); ic:SetPoint("CENTER", track, "TOPLEFT", tx(e.trig.at or 0), -TOP_H - MID_H - BOT_H / 2); tl:SetText(fmtMMSS(e.trig.at or 0)) end
+                place()
+                local dragging = false
+                ic:SetScript("OnMouseDown", function() dragging = true end)
+                ic:SetScript("OnMouseUp", function() dragging = false; AfterChange(); Options:ShowPage("encounters") end)
+                ic:SetScript("OnUpdate", function()
+                    if not dragging then return end
+                    local left, scale = track:GetLeft(), track:GetEffectiveScale()
+                    if not (left and scale and scale > 0 and trackW > 0) then return end
+                    local mx = GetCursorPosition() / scale
+                    local f = math.max(0, math.min(1, (mx - left) / trackW))
+                    e.trig.at = math.floor((f * SPAN) / 5 + 0.5) * 5
+                    place()
+                end)
             else
-                local ic = EncIcon(track, sid, 22)
-                ic:SetPoint("BOTTOMLEFT", track, "BOTTOMLEFT", 4 + eventN * 26, 4)
+                local ic = EncIcon(track, sid, 24)
+                ic:SetPoint("BOTTOMLEFT", track, "BOTTOMLEFT", 4 + eventN * 28, 4)
                 eventN = eventN + 1
             end
         end
-        iy = iy + 54 + 10
-        -- Legend.
+        iy = iy + trackH + 16
+
         local leg = UI.Font(card, 11, C.faint); leg:SetPoint("TOPLEFT", CARD_PAD, -iy)
         leg:SetWidth(innerW); leg:SetJustifyH("LEFT"); leg:SetWordWrap(true)
-        leg:SetText(eventN > 0
-            and "Icons on the line are timed from the pull. Boss-cast / phase cooldowns (bottom-left) fire on their event, so they aren't placed on the clock."
-            or "Icons are timed from the pull.")
-        iy = iy + 30
+        leg:SetText("Drag your cooldowns along the bottom to set their pull time." ..
+            (eventN > 0 and "  Boss-cast / phase cooldowns (bottom-left) fire on their event, so they aren't placed on the clock." or ""))
+        iy = iy + 28
         EndCard(card, iy)
     end
 

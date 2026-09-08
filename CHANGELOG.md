@@ -1,5 +1,10 @@
 # PRIO Changelog
 
+## 0.9.7 (alpha)
+- **Fix: bosses from other raids leaked into the list** (Midnight Lairs showed 4 bosses instead of just Nymrissa). The boss list is now exactly the selected raid's bosses.
+- **Boss is now a dropdown** (like the raid picker).
+- **Timeline redesigned like lorrgs:** a fixed 10-minute pull clock, boss abilities marked along the top (they populate once you've pulled the boss with BigWigs), and **your cooldowns on the bottom that you can drag** to set their pull time.
+
 ## 0.9.6 (alpha)
 - **Fix: MRT import skipped everything.** The parser now reads notes where your name comes *before* the spell (e.g. `{time:0:05} - You {spell:...}`), handles decimal seconds, and — if no line names you — treats the whole note as your personal cooldown list and imports it. Previously it only recognized the name-after-spell layout and skipped the rest.
 
