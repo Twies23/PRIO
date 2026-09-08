@@ -1,5 +1,12 @@
 # PRIO Changelog
 
+## 0.8.2 (alpha)
+Retribution polish from live testing:
+- **Hammer of Wrath now reads its "can be cast" buff** (execute range / Avenging Wrath) as a clean signal instead of guessing from the target's health, which is often unreadable in combat. The Hammer of Wrath lines gate on it (with the usable flag as a fallback if you don't track the buff), it drives the icon proc-flash, and it shows in the debug windows. New named condition: "Hammer of Wrath castable".
+- **Predicted cooldowns for Execution Sentence (60s), Divine Toll (60s), and Wake of Ashes (30s).** These are fixed (non-haste) cooldowns, so the predicted timer stays accurate — it powers "cooldown remaining" conditions and more accurate placement of the big cooldowns in the "next" queue. Divine Toll automatically accounts for **Quickened Invocation** (−30s), the one talent that changes these.
+
+Reset lists to default to pick up the updated Hammer of Wrath gating.
+
 ## 0.8.1 (alpha)
 **New spec: Retribution Paladin (Herald of the Sun).** Single-target and AoE priorities built from the Herald of the Sun guide and cross-checked against three top logs.
 - **Holy Power is read directly** (it's a discrete resource), so the "5 Holy Power" dumps and the 3-Holy-Power spends are exact.

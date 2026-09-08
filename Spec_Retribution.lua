@@ -46,7 +46,9 @@ local ID_DIVINETOLL       = 375576
 local ID_BLADEOFJUSTICE   = 184575
 local ID_ARTOFWAR         = 406064    -- proc buff (free/empowered Blade of Justice)
 local ID_HAMMEROFWRATH    = 24275
+local ID_HOW_CASTABLE     = 1241410   -- "Hammer of Wrath can be cast" -- READABLE buff (execute range / Avenging Wrath). Cleaner than the usable flag, which leans on secret target health.
 local ID_JUDGMENT         = 20271
+local ID_QUICKENEDINVOCATION = 379391 -- talent: Divine Toll cooldown -30s (the only talent that shifts these three CDs)
 -- Reference only (passive auto-attack replacement, not pressed):
 -- local ID_CRUSADINGSTRIKES = 408385
 
@@ -59,6 +61,7 @@ local function cdReady(id)   return { type = "cdReady",     spell = id } end
 local function glow(id)      return { type = "glowing",     spell = id } end
 local function hpMin(n)      return { type = "resourceMin", v = n } end   -- Holy Power >= n
 local function chargesMin(n) return { type = "chargesMin",  v = n } end   -- self charges >= n
+local function usable(id)    return { type = "usable",      spell = id } end
 local function preset(key)   return { type = "preset:" .. key } end
 
 --------------------------------------------------------------------------------
@@ -74,10 +77,10 @@ local st = {
     { spell = "WakeOfAshes" },                                                          -- 5: on cooldown
     { spell = "DivineToll" },                                                           -- 6: on cooldown
     { spell = "BladeOfJustice", cond = AND(preset("artOfWar"), buffDown(ID_AVENGINGWRATH)) }, -- 7: Art of War proc, no Wings
-    { spell = "HammerOfWrath", cond = chargesMin(2) },                                  -- 8: dump at 2 charges
+    { spell = "HammerOfWrath", cond = AND(preset("hammerReady"), chargesMin(2)) },      -- 8: dump at 2 charges
     { spell = "DivineStorm",  cond = AND(preset("divineArbiter"), hpMin(3)) },          -- 9: Divine Arbiter proc spend
     { spell = "FinalVerdict", cond = hpMin(3) },                                        -- 10: normal spend
-    { spell = "HammerOfWrath" },                                                        -- 11: whenever usable
+    { spell = "HammerOfWrath", cond = preset("hammerReady") },                          -- 11: whenever castable
     -- Log-derived builders (keep Holy Power flowing; the source list omits these):
     { spell = "Judgment" },                                                             -- builder / debuff, on cooldown
     { spell = "BladeOfJustice" },                                                       -- main Holy-Power builder, on cooldown
@@ -94,11 +97,11 @@ local aoe = {
     { spell = "DivineStorm",  cond = hpMin(5) },                                        -- 4: dump at 5 HP
     { spell = "WakeOfAshes" },                                                          -- 5: on cooldown
     { spell = "DivineToll" },                                                           -- 6: on cooldown
-    { spell = "HammerOfWrath", cond = chargesMin(2) },                                  -- 7: dump at 2 charges
+    { spell = "HammerOfWrath", cond = AND(preset("hammerReady"), chargesMin(2)) },      -- 7: dump at 2 charges
     { spell = "BladeOfJustice", cond = AND(preset("artOfWar"), buffDown(ID_AVENGINGWRATH)) }, -- 8: Art of War proc, no Wings
     { spell = "FinalVerdict", cond = AND(preset("divineArbiter"), hpMin(3)) },          -- 9: Divine Arbiter proc spend
     { spell = "DivineStorm",  cond = hpMin(3) },                                        -- 10: normal AoE spend
-    { spell = "HammerOfWrath" },                                                        -- 11: whenever usable
+    { spell = "HammerOfWrath", cond = preset("hammerReady") },                          -- 11: whenever castable
     { spell = "BladeOfJustice" },                                                       -- 12: builder, on cooldown
     -- Log-derived builder:
     { spell = "Judgment" },                                                             -- builder / debuff, on cooldown
@@ -134,6 +137,10 @@ local spec = {
         { key = "wingsUp", label = "Avenging Wrath active",
           clause = buffUp(ID_AVENGINGWRATH) },
         { key = "maxHP", label = "Max Holy Power (>=5)", clause = hpMin(5) },
+        -- Hammer of Wrath's "can be cast" buff (1241410) is a READABLE proc for execute
+        -- range / Avenging Wrath. OR'd with the usable flag so it still works untracked.
+        { key = "hammerReady", label = "Hammer of Wrath castable",
+          clause = OR(buffUp(ID_HOW_CASTABLE), usable(ID_HAMMEROFWRATH)) },
     },
 
     spells = {
@@ -149,9 +156,10 @@ local spec = {
     },
 
     auras = {
-        DivineArbiter = ID_DIVINEARBITER,
-        ArtOfWar      = ID_ARTOFWAR,
-        AvengingWrath = ID_AVENGINGWRATH,
+        DivineArbiter    = ID_DIVINEARBITER,
+        ArtOfWar         = ID_ARTOFWAR,
+        AvengingWrath    = ID_AVENGINGWRATH,
+        HammerOfWrathReady = ID_HOW_CASTABLE,
     },
 
     setup = {
@@ -165,6 +173,8 @@ local spec = {
           hint = "Track Avenging Wrath so the \"if Wings aren't active\" Blade of Justice line reads." },
         { kind = "trackedAura", label = "Hammer of Wrath tracked (for Charges)", spell = ID_HAMMEROFWRATH,
           hint = "Track Hammer of Wrath in the Cooldown Manager so its charge count seeds cleanly for the \"2 charges\" dump line." },
+        { kind = "trackedAura", label = "Hammer of Wrath castable tracked", spell = ID_HOW_CASTABLE,
+          hint = "Track the \"Hammer of Wrath can be cast\" buff (1241410) so PRIO reads execute range / Avenging Wrath cleanly instead of guessing from target health. Falls back to the usable flag if untracked." },
     },
 
     -- Opener (screenshot / log-validated): Blade of Justice -> Avenging Wrath (+ potion &
@@ -188,6 +198,7 @@ local spec = {
         DivineStorm    = { type = "buffActive", spell = ID_DIVINEARBITER },   -- empowered (ST)
         FinalVerdict   = { type = "buffActive", spell = ID_DIVINEARBITER },   -- empowered (AoE)
         BladeOfJustice = { type = "buffActive", spell = ID_ARTOFWAR },        -- Art of War proc
+        HammerOfWrath  = { type = "buffActive", spell = ID_HOW_CASTABLE },    -- castable (execute / Wings)
     },
 
     -- Hammer of Wrath runs on 2 charges in the Herald build. Current charges are SECRET in
@@ -196,6 +207,18 @@ local spec = {
     -- castable state. `recharge` is a seed; the engine learns the real (haste'd) value OOC.
     chargeTrack = {
         HammerOfWrath = { max = 2, recharge = 7.5 },
+    },
+
+    -- Cooldown prediction: remaining cooldown is secret in combat, so we seed a timer on
+    -- cast and count it down (anchored to the clean off-cooldown flag). These three are
+    -- FIXED cooldowns (NOT haste-scaled), so the dead-reckoned timer stays accurate. The
+    -- only talent that shifts any of them is Quickened Invocation (Divine Toll -30s), so
+    -- that's the one talent we check. Drives cdRemain conditions + accurate "next" queue
+    -- placement for the big cooldowns.
+    cooldownTrack = {
+        ExecutionSentence = { base = 60 },
+        WakeOfAshes       = { base = 30 },
+        DivineToll        = { base = 60, reduce = { [ID_QUICKENEDINVOCATION] = 30 } },
     },
 
     -- Holy Power look-ahead (queue prediction). HP reads clean, so the sim seeds from the
@@ -223,10 +246,11 @@ local spec = {
         { label = "Divine Arbiter",  kind = "buff", spell = ID_DIVINEARBITER },
         { label = "Art of War",      kind = "buff", spell = ID_ARTOFWAR },
         { label = "Avenging Wrath",  kind = "buff", spell = ID_AVENGINGWRATH },
+        { label = "Hammer of Wrath castable", kind = "buff", spell = ID_HOW_CASTABLE },
         { label = "Hammer of Wrath charges", kind = "chargeClean", spell = ID_HAMMEROFWRATH },
-        { label = "Execution Sentence", kind = "cd", spell = ID_EXECUTIONSENTENCE },
-        { label = "Wake of Ashes",   kind = "cd", spell = ID_WAKEOFASHES },
-        { label = "Divine Toll",     kind = "cd", spell = ID_DIVINETOLL },
+        { label = "Execution Sentence CD", kind = "cdRemain", spell = ID_EXECUTIONSENTENCE },
+        { label = "Wake of Ashes CD", kind = "cdRemain", spell = ID_WAKEOFASHES },
+        { label = "Divine Toll CD",  kind = "cdRemain", spell = ID_DIVINETOLL },
     },
     economy = {
         gen   = { "Crusading Strikes (autos)", "Blade of Justice", "Judgment", "Wake of Ashes", "Divine Toll", "Hammer of Wrath" },
@@ -248,6 +272,7 @@ local spec = {
             { label = "Divine Arbiter", spell = ID_DIVINEARBITER },
             { label = "Art of War",     spell = ID_ARTOFWAR },
             { label = "Avenging Wrath", spell = ID_AVENGINGWRATH },
+            { label = "Hammer of Wrath castable", spell = ID_HOW_CASTABLE },
         },
         glows = {
             { label = "Divine Storm glow (Divine Arbiter)",  spell = ID_DIVINESTORM },

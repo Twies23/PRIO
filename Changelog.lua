@@ -11,6 +11,10 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.8.2", {
+        "Retribution: Hammer of Wrath now reads its \"can be cast\" buff (execute / Avenging Wrath) as a clean signal instead of guessing from secret target health -- gates the HoW lines (usable flag as fallback), drives the proc-flash, and shows in debug. New \"Hammer of Wrath castable\" condition.",
+        "Retribution: predicted cooldowns for Execution Sentence (60s), Divine Toll (60s), Wake of Ashes (30s) -- fixed (non-haste) CDs, so the timer stays accurate for cooldown-remaining conditions + queue placement. Divine Toll accounts for Quickened Invocation (-30s). Reset lists to default to pick up the HoW gating.",
+    } },
     { "0.8.1", {
         "New spec: Retribution Paladin (Herald of the Sun) -- ST + AoE priorities from the guide, cross-checked against three top logs.",
         "Holy Power reads directly (discrete resource), so the 5-Holy-Power dumps and 3-HP spends are exact. Divine Arbiter / Art of War read from the Cooldown Manager with a proc-glow fallback (named editor conditions).",

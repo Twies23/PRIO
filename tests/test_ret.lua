@@ -5,6 +5,7 @@
 
 local AW, ES, DS, FV, WOA, TOLL, BOJ, HOW, JUDG = 31884, 343527, 53385, 383328, 255937, 375576, 184575, 24275, 20271
 local DIVARBITER = 1306161
+local DIVCAST = 1241410   -- "Hammer of Wrath can be cast" buff
 
 -- Set up Ret in ST with all COOLDOWNS on cooldown so the Holy-Power lines are what
 -- the walk reaches (Avenging Wrath / Execution Sentence / Wake of Ashes / Divine Toll
@@ -83,4 +84,38 @@ test("AoE: at 5 HP with no proc, Divine Storm is the AoE dump", function()
     H.S.usable[HOW] = false
     local r = H.Engine:Evaluate()
     eq(r.primary and r.primary.id, DS, "Divine Storm dumps at 5 HP in AoE")
+end)
+
+test("Hammer of Wrath is withheld unless castable (buff 1241410 / usable)", function()
+    ret(0)
+    -- Not castable (target >20%, no Wings): usable flag off AND the castable buff down
+    -- -> HoW never shown, a builder carries instead.
+    H.S.usable[HOW] = false
+    H.S.tracked[DIVCAST] = true; H.S.auras[DIVCAST] = false
+    local r = H.Engine:Evaluate()
+    falsy(has(r, HOW), "HoW withheld when not castable")
+
+    -- Castable (execute range / Wings): usable flag on and the 'can be cast' buff up.
+    H.S.usable[HOW] = true
+    H.S.auras[DIVCAST] = true
+    r = H.Engine:Evaluate()
+    truthy(has(r, HOW), "HoW shown when castable (buff 1241410 up)")
+end)
+
+test("cooldownTrack: Divine Toll base 60s, -30s with Quickened Invocation", function()
+    local QI = 379391
+    -- Base (talent not known): 60s.
+    H.reset(); H.S.specID = 70; H.S.known[QI] = false; H.rebind(); H.S.now = 1000
+    H.fire("UNIT_SPELLCAST_SUCCEEDED", "player", nil, TOLL)
+    eq(H.Engine.P.cdExpire[TOLL], 1060, "Divine Toll base 60s cooldown")
+
+    -- Quickened Invocation known: 30s.
+    H.reset(); H.S.specID = 70; H.S.known[QI] = true; H.rebind(); H.S.now = 1000
+    H.fire("UNIT_SPELLCAST_SUCCEEDED", "player", nil, TOLL)
+    eq(H.Engine.P.cdExpire[TOLL], 1030, "Quickened Invocation -> 30s cooldown")
+
+    -- Wake of Ashes fixed 30s (no talent reduction).
+    H.reset(); H.S.specID = 70; H.rebind(); H.S.now = 1000
+    H.fire("UNIT_SPELLCAST_SUCCEEDED", "player", nil, WOA)
+    eq(H.Engine.P.cdExpire[WOA], 1030, "Wake of Ashes 30s cooldown")
 end)
