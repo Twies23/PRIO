@@ -419,7 +419,10 @@ local function moduleForEncounter(encID)
     local BW = bwCore()
     if not (BW and BW.IterateBossModules and encID) then return nil end
     for _, module in BW:IterateBossModules() do
-        if module.GetEncounterID then
+        if module.IsEncounterID then
+            local ok, is = pcall(module.IsEncounterID, module, encID)
+            if ok and is then return module end
+        elseif module.GetEncounterID then
             local ok, e1, e2, e3 = pcall(module.GetEncounterID, module)
             if ok and (e1 == encID or e2 == encID or e3 == encID) then return module end
         end
@@ -427,8 +430,9 @@ local function moduleForEncounter(encID)
 end
 
 -- Ability list for an encounter's "on boss cast" picker: { {spell=id, name=}, ... }.
--- From the BigWigs module's GetOptions() when loaded (cached to db.encounterLearned);
--- falls back to the cache when the module isn't loaded (out of the raid).
+-- Reads the module's processed toggleOptions (what BigWigs_Options shows) and, failing that,
+-- raw GetOptions(); numeric / {id,flag} entries are spellIDs. Cached to db.encounterLearned
+-- so it still lists after the pack unloads.
 function E.AbilitiesFor(encID)
     local out, seen = {}, {}
     local function add(sid, name)
@@ -438,14 +442,19 @@ function E.AbilitiesFor(encID)
             out[#out + 1] = { spell = sid, name = name or (API.SpellName and API.SpellName(sid)) or ("#" .. sid) }
         end
     end
+    local function harvest(tbl)
+        if type(tbl) ~= "table" then return end
+        for _, v in ipairs(tbl) do
+            if type(v) == "number" then add(v)
+            elseif type(v) == "table" and type(v[1]) == "number" then add(v[1]) end
+        end
+    end
     local module = moduleForEncounter(encID)
-    if module and module.GetOptions then
-        local ok, opts = pcall(module.GetOptions, module)
-        if ok and type(opts) == "table" then
-            for _, v in ipairs(opts) do
-                if type(v) == "number" then add(v)
-                elseif type(v) == "table" and type(v[1]) == "number" then add(v[1]) end
-            end
+    if module then
+        harvest(module.toggleOptions)                      -- BigWigs' processed option list
+        if #out == 0 and module.GetOptions then             -- fall back to the raw declaration
+            local ok, opts = pcall(module.GetOptions, module)
+            if ok then harvest(opts) end
         end
     end
     if #out > 0 and PRIO.db and encID then

@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.9.4 (alpha)
+- **Fix: boss abilities weren't listing for the "on boss cast" trigger.** PRIO now reads a boss's ability list the same way BigWigs' own options do (its processed `toggleOptions`, falling back to the raw declaration), matched by encounter ID. `/prio bw` now also prints each boss's ability count so issues are easy to spot.
+
 ## 0.9.3 (alpha)
 - **Fix: raids listed but their bosses didn't.** The encounter list now uses BigWigs' own zone→boss mapping (the same one its options panel uses), so picking a raid force-loads it and lists every boss — and each boss's abilities — with no pull. `/prio bw` now loads and lists all raids for easy diagnosis.
 

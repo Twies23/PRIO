@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.9.4", {
+        "Fix: boss abilities weren't listing for the on-boss-cast trigger -- PRIO now reads a boss's abilities the same way BigWigs' options do (toggleOptions, falling back to GetOptions), matched by encounter ID. /prio bw prints each boss's ability count.",
+    } },
     { "0.9.3", {
         "Fix: raids listed but their bosses didn't -- the encounter list now uses BigWigs' own zone->boss mapping (GetZoneMenus, same as its options panel), so picking a raid force-loads it and lists every boss and its abilities with no pull.",
     } },

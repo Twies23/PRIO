@@ -592,7 +592,13 @@ SlashCmdList.PRIO = function(msg)
             for _, z in ipairs(raids) do
                 local bosses = E.EncounterList and E.EncounterList(z.id) or {}
                 print(("    [%s] |cffffffff%s|r -- %d boss(es)"):format(tostring(z.id), tostring(z.name), #bosses))
-                for _, b in ipairs(bosses) do print(("        #%s %s"):format(tostring(b.id), tostring(b.name))) end
+                for _, b in ipairs(bosses) do
+                    local ab = E.AbilitiesFor and E.AbilitiesFor(b.id) or {}
+                    local names = {}
+                    for i = 1, math.min(3, #ab) do names[i] = ab[i].name end
+                    print(("        #%s %s -- %d abilities%s"):format(tostring(b.id), tostring(b.name), #ab,
+                        #names > 0 and (": " .. table.concat(names, ", ") .. (#ab > 3 and " ..." or "")) or ""))
+                end
             end
         else
             print("  |cffe0685aPRIO.Encounter missing|r")
