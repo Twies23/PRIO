@@ -11,6 +11,10 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.9.10", {
+        "Retribution: Hammer of Wrath is now modeled as the empowered Judgment during Avenging Wrath (not a health execute) -- suggested only while Wings are up, using the clean off-cooldown read for 'a charge is available' instead of a drifting charge prediction. Reset lists to default to pick it up.",
+        "Retribution: Avenging Wrath cooldown now tracked (fixed 60s), alongside Execution Sentence / Divine Toll / Wake of Ashes. /prio debug shows all four timers.",
+    } },
     { "0.9.9", {
         "Outlaw: a Keep It Rolling prompt now masks the primary icon exactly when you roll a Triple Threat or Jackpot and Keep It Rolling is ready -- it reads the real roll (not a guess) and no longer nudges on weaker rolls. Replaces the old '2+ roll detected' banner. Toggle: Roll-keeper prompt.",
     } },

@@ -1,5 +1,12 @@
 # PRIO Changelog
 
+## 0.9.10 (alpha)
+Retribution Hammer of Wrath fix + more cooldown tracking (from live testing):
+- **Hammer of Wrath is now modeled correctly** for Herald of the Sun: it's the empowered **Judgment during Avenging Wrath**, not a health-based execute. PRIO now suggests it only while Wings are up (read from the "Hammer of Wrath can be cast" buff / the Avenging Wrath buff), and relies on the clean off-cooldown read for "a charge is available" instead of predicting the charge count — the count is haste-scaled and refilled by Avenging Wrath, so predicting it just drifted. The old 2-charge prediction is gone.
+- **Avenging Wrath cooldown is now tracked** (fixed 60s), alongside Execution Sentence / Divine Toll / Wake of Ashes, for "cooldown remaining" conditions and queue placement. `/prio debug` shows all four timers.
+
+Reset lists to default to pick up the new Hammer of Wrath handling.
+
 ## 0.9.9 (alpha)
 - **Outlaw: exact Keep It Rolling prompt.** When you roll a **Triple Threat or Jackpot** and Keep It Rolling is off cooldown, a KiR icon (primary-sized, with its keybind) now masks the primary recommendation — so you press it, then it clears itself. It reads the *real* roll via a self-owned native `AuraContainer` (Blizzard drives its visibility; PRIO never reads the secret tier), so it's exact instead of inferred and no longer over-nudges on Double Trouble. Replaces the old "2+ roll detected" advisory banner. Self-owned, so it works with or without a Cooldown Manager setup. Toggle: **Roll-keeper prompt** (`showRollKeeper`, on by default).
 

@@ -86,20 +86,20 @@ test("AoE: at 5 HP with no proc, Divine Storm is the AoE dump", function()
     eq(r.primary and r.primary.id, DS, "Divine Storm dumps at 5 HP in AoE")
 end)
 
-test("Hammer of Wrath is withheld unless castable (buff 1241410 / usable)", function()
+test("Hammer of Wrath is withheld outside Wings, shown during Wings (buff 1241410)", function()
     ret(0)
-    -- Not castable (target >20%, no Wings): usable flag off AND the castable buff down
-    -- -> HoW never shown, a builder carries instead.
+    -- Outside Avenging Wrath: no castable buff, no Wings buff, usable off -> HoW not shown.
     H.S.usable[HOW] = false
     H.S.tracked[DIVCAST] = true; H.S.auras[DIVCAST] = false
     local r = H.Engine:Evaluate()
-    falsy(has(r, HOW), "HoW withheld when not castable")
+    falsy(has(r, HOW), "HoW withheld outside Wings")
 
-    -- Castable (execute range / Wings): usable flag on and the 'can be cast' buff up.
+    -- During Avenging Wrath: the 'Hammer of Wrath can be cast' buff (1241410) is up ->
+    -- HoW is suggested (engine's off-cooldown gate covers 'a charge is available').
     H.S.usable[HOW] = true
     H.S.auras[DIVCAST] = true
     r = H.Engine:Evaluate()
-    truthy(has(r, HOW), "HoW shown when castable (buff 1241410 up)")
+    truthy(has(r, HOW), "HoW shown during Wings (buff 1241410 up)")
 end)
 
 test("cooldownTrack: Divine Toll base 60s, -30s with Quickened Invocation", function()
@@ -118,4 +118,9 @@ test("cooldownTrack: Divine Toll base 60s, -30s with Quickened Invocation", func
     H.reset(); H.S.specID = 70; H.rebind(); H.S.now = 1000
     H.fire("UNIT_SPELLCAST_SUCCEEDED", "player", nil, WOA)
     eq(H.Engine.P.cdExpire[WOA], 1030, "Wake of Ashes 30s cooldown")
+
+    -- Avenging Wrath fixed 60s.
+    H.reset(); H.S.specID = 70; H.rebind(); H.S.now = 1000
+    H.fire("UNIT_SPELLCAST_SUCCEEDED", "player", nil, AW)
+    eq(H.Engine.P.cdExpire[AW], 1060, "Avenging Wrath 60s cooldown")
 end)
