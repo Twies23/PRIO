@@ -1,5 +1,25 @@
 # PRIO Changelog
 
+## 0.10.0
+Second stable release — everything from the 0.9 line, promoted. Three big things since 0.8:
+
+**New spec: Retribution Paladin (Herald of the Sun).** Single-target and AoE priorities built from the guide and cross-checked against top logs.
+- Holy Power is read directly, so the "5 Holy Power" dumps and 3-HP spends are exact.
+- Divine Arbiter (empowered Divine Storm / Final Verdict), Art of War, and Empyrean Legacy are tracked from your Cooldown Manager with a proc-glow fallback, and surfaced as named editor conditions.
+- Hammer of Wrath is handled as what it is in Herald — Judgment empowered during Avenging Wrath — reading its cooldown/charges through the active spell so it correctly goes on cooldown, while showing the Hammer of Wrath icon and Judgment's keybind.
+- Fixed (non-haste) cooldowns tracked: Avenging Wrath, Execution Sentence, Divine Toll, Wake of Ashes — with Divine Toll's Quickened Invocation talent accounted for.
+
+**Raid cooldown planner (new "Encounters" tab).** Assign your cooldowns to fight timings, boss casts, or phases; PRIO pulls those out of your normal rotation and jumps them to the primary slot when their trigger fires.
+- Triggers: a time from the pull (no addon needed), or a boss cast / phase via **BigWigs** (with an occurrence count for "the 2nd cast").
+- Pick a raid and PRIO force-loads its BigWigs modules so boss names and full ability lists show with no pull required.
+- Import an MRT / lorrgs note and PRIO extracts just *your* cooldowns. A lorrgs-style timeline lets you drag cooldowns to set their pull time, and a master toggle turns the whole planner on/off (your plans are kept).
+
+**Outlaw Rogue: exact Keep It Rolling prompt.** When you roll a Triple Threat or Jackpot and Keep It Rolling is ready, a prompt masks the primary so you extend the good roll — read from the real roll, not a guess, so it no longer over-nudges on weaker rolls.
+
+**Across all specs.** Queued abilities that aren't castable yet (on cooldown or unaffordable) are drawn slightly dimmed, so the thing to press right now stands out. Options UI facelift: bundled fonts (Saira Condensed / Barlow), redesigned sidebar, and the new Raid section.
+
+If you've customized any lists, hit "Reset to default" to pick up the tuned defaults.
+
 ## 0.9.15 (alpha)
 Hammer of Wrath now correctly goes on cooldown (Retribution), and stays a separate entry:
 - The game tracks Hammer of Wrath's cooldown on the **empowered spell itself** (its own 2 charges / ~6.7s recharge), not on the base Judgment — so PRIO now reads the cooldown/charges through the **currently-active spell**. It dims and stops recommending Hammer of Wrath the moment it's actually down, instead of suggesting it every global.

@@ -11,6 +11,13 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.10.0", {
+        "Second stable release -- the whole 0.9 line promoted. Three big things since 0.8:",
+        "New spec: Retribution Paladin (Herald of the Sun) -- ST + AoE, exact Holy Power gates, Divine Arbiter / Art of War / Empyrean Legacy tracking, correct Hammer of Wrath (Judgment-during-Wings) handling, and fixed-cooldown tracking (Avenging Wrath / Execution Sentence / Divine Toll / Wake of Ashes).",
+        "Raid cooldown planner (new Encounters tab): assign cooldowns to fight timings, boss casts, or phases (BigWigs for casts/phases), force-load a raid's boss + ability lists with no pull, import MRT/lorrgs notes, drag cooldowns on a pull-clock timeline, and a master on/off toggle.",
+        "Outlaw Rogue: exact Keep It Rolling prompt on a real Triple Threat / Jackpot roll (no longer over-nudges).",
+        "All specs: queued abilities that aren't castable yet are dimmed. Options UI facelift (bundled fonts, redesigned sidebar, Raid section). If you customized lists, Reset to default to pick up the tuned defaults.",
+    } },
     { "0.9.15", {
         "Retribution: Hammer of Wrath now correctly goes on cooldown. The game tracks its cooldown on the empowered spell (its own 2 charges / ~6.7s recharge), not the base Judgment, so PRIO reads cooldown/charges through the currently-active spell -- it dims and stops suggesting HoW when it's actually down instead of every global.",
         "Retribution: Hammer of Wrath stays its own editor row (not merged into Judgment), shows the HoW icon during Avenging Wrath, and uses Judgment's keybind. Hit 'Reset to default' on the Retribution lists to pick these up.",
