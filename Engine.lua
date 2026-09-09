@@ -1477,10 +1477,20 @@ Entry = function(spellID)
     if (kb == nil or kb == "") and PRIO.db.showKeybinds and spec and spec.keybindAlias and spec.keybindAlias[spellID] then
         kb = API.Keybind(spec.keybindAlias[spellID]) or ""
     end
+    -- Override DISPLAY: some abilities are re-skinned by a game spell override in certain
+    -- windows (e.g. Ret's Judgment -> Hammer of Wrath during Avenging Wrath). When the spec
+    -- opts in, resolve the currently-active override for the ICON + NAME only, so the shown
+    -- ability matches the action bar -- while id stays the base spell so cooldown/charge/
+    -- cast/flash logic all read the real ability.
+    local dispID = spellID
+    if spec and spec.overrideDisplay and C_Spell and C_Spell.GetOverrideSpell then
+        local ok, ovr = pcall(C_Spell.GetOverrideSpell, spellID)
+        if ok and ovr and ovr ~= spellID then dispID = ovr end
+    end
     return {
         id      = spellID,
-        texture = API.SpellTexture(spellID),
-        name    = API.SpellName(spellID),
+        texture = API.SpellTexture(dispID),
+        name    = API.SpellName(dispID),
         keybind = kb,
     }
 end

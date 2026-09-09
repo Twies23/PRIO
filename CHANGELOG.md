@@ -1,5 +1,13 @@
 # PRIO Changelog
 
+## 0.9.14 (alpha)
+Fixes the Retribution Hammer of Wrath spam (it was recommended over and over and never seen as on cooldown):
+- **Hammer of Wrath is now driven by Judgment**, because in Herald they're one and the same ability — Hammer of Wrath is just Judgment empowered during Avenging Wrath (same cooldown, same 2 charges, same button). The previous version keyed it off a passive spell that never reports a cooldown, so PRIO thought it was always ready. Now the real cooldown/charges are read, so it stops as soon as it's actually down.
+- **The icon still shows as Hammer of Wrath during Avenging Wrath** (it resolves the game's spell override), and its keybind is Judgment's — matching your action bar.
+- **No more free-repeating fillers on Retribution.** Every ability has a cooldown or a Holy Power cost, so nothing repeats in the queue just because it "could."
+
+Hit "Reset to default" on the Retribution lists to pick these up.
+
 ## 0.9.13 (alpha)
 - **Hammer of Wrath shows its keybind again.** It's Judgment empowered during Avenging Wrath, so it has no button of its own — PRIO now shows Judgment's keybind on the Hammer of Wrath icon (Retribution).
 - **Queued abilities that aren't castable yet are now dimmed.** Any recommendation that's still on cooldown or that you can't afford yet is drawn slightly desaturated, so the thing to press *right now* stands out from what's coming up next. (Applies to every spec.)

@@ -11,6 +11,10 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.9.14", {
+        "Retribution: fixed Hammer of Wrath being recommended over and over / never seen as on cooldown. HoW is now driven by Judgment (in Herald they're one ability -- HoW is Judgment empowered during Avenging Wrath), so the real cooldown/charges are read. The icon still shows as Hammer of Wrath during Wings and uses Judgment's keybind.",
+        "Retribution: removed free-repeating fillers -- every ability has a cooldown or a cost, so nothing repeats in the queue just because it could. Hit 'Reset to default' on the Retribution lists to pick these up.",
+    } },
     { "0.9.13", {
         "Retribution: Hammer of Wrath shows Judgment's keybind (it's the empowered Judgment during Avenging Wrath, so it has no button of its own).",
         "All specs: queued abilities that aren't castable yet -- still on cooldown or unaffordable -- are now drawn slightly desaturated, so the ability to press right now stands out from what's coming up.",

@@ -3,9 +3,9 @@
 -- the Divine Arbiter proc line ordering, and finishers withheld below 3 HP.
 --------------------------------------------------------------------------------
 
-local AW, ES, DS, FV, WOA, TOLL, BOJ, HOW, JUDG = 31884, 343527, 53385, 383328, 255937, 375576, 184575, 1241288, 20271
+local AW, ES, DS, FV, WOA, TOLL, BOJ, JUDG = 31884, 343527, 53385, 383328, 255937, 375576, 184575, 20271
 local DIVARBITER = 1306161
-local DIVCAST = 1241410   -- "Hammer of Wrath can be cast" buff
+-- Hammer of Wrath is not a separate spell: it's Judgment (20271) empowered during Wings.
 
 -- Set up Ret in ST with all COOLDOWNS on cooldown so the Holy-Power lines are what
 -- the walk reaches (Avenging Wrath / Execution Sentence / Wake of Ashes / Divine Toll
@@ -43,9 +43,17 @@ test("Ret default lists match the tuned shape (13 ST rows, 14 AoE rows)", functi
     eq(#H.retSpec.priority.aoe, 14, "AoE has 14 rows")
 end)
 
-test("Hammer of Wrath uses Judgment's keybind (it's the empowered Judgment)", function()
-    eq(H.retSpec.keybindAlias and H.retSpec.keybindAlias[1241288], 20271,
-        "HoW (1241288) aliases Judgment (20271) for its keybind")
+test("Retribution has no fillers (everything has a cooldown or a cost)", function()
+    local n = 0
+    for _ in pairs(H.retSpec.fillers or {}) do n = n + 1 end
+    eq(n, 0, "fillers table is empty")
+end)
+
+test("Hammer of Wrath rows are Judgment (1-for-1) and overrideDisplay is on", function()
+    truthy(H.retSpec.overrideDisplay, "overrideDisplay set so the icon shows HoW during Wings")
+    -- The HoW spell key is gone -- it's just Judgment now.
+    falsy(H.retSpec.spells.HammerOfWrath, "no separate HammerOfWrath spell key")
+    truthy(H.retSpec.spells.Judgment, "Judgment is the spell")
 end)
 
 test("every Ret priority row names a spell that exists in spec.spells", function()
@@ -59,15 +67,13 @@ end)
 
 test("ST: at 5 Holy Power with no Divine Arbiter proc, Final Verdict is the primary", function()
     ret(5)
-    -- HoW held (not usable outside execute/Wings), no Art of War, no Divine Arbiter.
-    H.S.usable[HOW] = false
+    -- No Wings (HoW/Judgment-Wings rows off), no Art of War, no Divine Arbiter.
     local r = H.Engine:Evaluate()
     eq(r.primary and r.primary.id, FV, "Final Verdict dumps at 5 HP")
 end)
 
 test("ST: Divine Arbiter proc (glow) at 5 HP takes Divine Storm over Final Verdict", function()
     ret(5)
-    H.S.usable[HOW] = false
     H.S.glows[DS] = true          -- Divine Arbiter empowers the next Divine Storm (proc glow)
     local r = H.Engine:Evaluate()
     eq(r.primary and r.primary.id, DS, "empowered Divine Storm beats Final Verdict at 5 HP")
@@ -78,7 +84,6 @@ test("ST: below 3 Holy Power, the PRIMARY is a builder, not a finisher", functio
     -- simulated building enough Holy Power -- that's the look-ahead working. Only the
     -- primary, the thing to press right now, must be a builder.)
     ret(2)
-    H.S.usable[HOW] = false        -- Hammer of Wrath not usable this beat
     local r = H.Engine:Evaluate()
     truthy(r.primary, "a primary is suggested")
     truthy(r.primary.id ~= FV and r.primary.id ~= DS, "primary is not a finisher below 3 HP")
@@ -91,23 +96,28 @@ test("AoE: at 5 HP with no proc, Divine Storm is the AoE dump", function()
     H.S.enemies = 4
     H.rebind()
     H.Engine.openerActive = false
-    H.S.usable[HOW] = false
     local r = H.Engine:Evaluate()
     eq(r.primary and r.primary.id, DS, "Divine Storm dumps at 5 HP in AoE")
 end)
 
-test("Hammer of Wrath is withheld outside Wings, shown during Wings (Avenging Wrath buff)", function()
+test("Judgment/HoW is withheld when on cooldown (the reported spam bug)", function()
     ret(0)
-    -- Outside Avenging Wrath: the HoW lines gate on the Avenging Wrath buff -> not shown.
-    H.S.tracked[AW] = true; H.S.auras[AW] = false
+    -- On cooldown / no charge: the clean off-cooldown read is false -> must NOT be
+    -- recommended (before the fix, HoW keyed off a passive that never reported a cooldown,
+    -- so it was suggested every GCD).
+    H.S.ready[JUDG] = false; H.S.ready[BOJ] = false
+    H.S.chargeState[JUDG] = { max = 2, cur = 0, cleanCur = 0, belowMax = true }
+    H.S.tracked[AW] = true; H.S.auras[AW] = true   -- even during Wings
     local r = H.Engine:Evaluate()
-    falsy(has(r, HOW), "HoW withheld outside Wings")
+    falsy(has(r, JUDG), "Judgment/HoW not recommended while on cooldown")
+end)
 
-    -- During Avenging Wrath (buff up) + Hammer of Wrath ready -> HoW is suggested (line 11).
-    H.S.auras[AW] = true
-    H.S.ready[HOW] = true
-    r = H.Engine:Evaluate()
-    truthy(has(r, HOW), "HoW shown during Wings")
+test("Judgment/HoW is shown when a charge is up during Wings", function()
+    ret(0)
+    H.S.ready[JUDG] = true
+    H.S.tracked[AW] = true; H.S.auras[AW] = true
+    local r = H.Engine:Evaluate()
+    truthy(has(r, JUDG), "Judgment/HoW shown when a charge is available")
 end)
 
 test("cooldownTrack: Divine Toll base 60s, -30s with Quickened Invocation", function()
