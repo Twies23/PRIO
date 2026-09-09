@@ -23,12 +23,10 @@
 --     via the Cooldown-Manager tracked read AND the button proc-glow (surfaced as named
 --     presets). Art of War's 2-STACK count is not readable -> approximated to "proc up".
 --   * HAMMER OF WRATH is NOT an execute in this build -- it's what Judgment is EMPOWERED
---     into DURING AVENGING WRATH (passive "Hammer of Wrath", generates 1 Holy Power). It
---     shares Judgment's 2 charges, but those are HASTE-scaled and get refilled by Avenging
---     Wrath, so a predicted charge counter would drift -- instead we rely on the clean
---     "off cooldown?" read (for a charge spell that's "a charge is available") and gate
---     the line on Avenging Wrath being active (readable via the "Hammer of Wrath can be
---     cast" buff 1241410 / the Avenging Wrath buff).
+--     into DURING AVENGING WRATH (spell 1241288, granted free, generates 1 Holy Power; the
+--     old #24275 read as not-known). It shares Judgment's 2 charges (haste-scaled, refilled
+--     by Avenging Wrath), so the predicted count is approximate -- the Avenging Wrath buff
+--     gate is the reliable half of the HoW lines.
 -- Verify IDs with /prio spells and /prio tracked.
 --------------------------------------------------------------------------------
 
@@ -48,7 +46,7 @@ local ID_WAKEOFASHES      = 255937
 local ID_DIVINETOLL       = 375576
 local ID_BLADEOFJUSTICE   = 184575
 local ID_ARTOFWAR         = 406064    -- proc buff (free/empowered Blade of Justice)
-local ID_HAMMEROFWRATH    = 24275     -- what Judgment is empowered into during Avenging Wrath (shares Judgment's 2 charges)
+local ID_HAMMEROFWRATH    = 1241288   -- Herald's "Judgment is empowered into Hammer of Wrath during Avenging Wrath" (granted free, so IsKnown is true; #24275 read as not-known). Shares Judgment's 2 charges.
 local ID_HOW_CASTABLE     = 1241410   -- "Hammer of Wrath can be cast" -- READABLE buff, up during Avenging Wrath in this build
 local ID_JUDGMENT         = 20271
 local ID_QUICKENEDINVOCATION = 379391 -- talent: Divine Toll cooldown -30s (the only talent that shifts these three CDs)
@@ -64,6 +62,7 @@ local function buffDown(id)  return { type = "buffMissing", spell = id } end
 local function cdReady(id)   return { type = "cdReady",     spell = id } end
 local function glow(id)      return { type = "glowing",     spell = id } end
 local function hpMin(n)      return { type = "resourceMin", v = n } end   -- Holy Power >= n
+local function chargesEq(n)  return { type = "chargesEq",   v = n } end   -- self charges == n
 local function usable(id)    return { type = "usable",      spell = id } end
 local function preset(key)   return { type = "preset:" .. key } end
 
@@ -73,19 +72,19 @@ local function preset(key)   return { type = "preset:" .. key } end
 -- additions that keep Holy Power flowing.
 --------------------------------------------------------------------------------
 local st = {
-    { spell = "AvengingWrath" },                                                        -- 1: on cooldown
-    { spell = "ExecutionSentence" },                                                    -- 2: on cooldown
+    { spell = "AvengingWrath" },                                                        -- 1: always
+    { spell = "ExecutionSentence" },                                                    -- 2: always
     { spell = "DivineStorm",  cond = AND(preset("divineArbiter"), hpMin(5)) },          -- 3: Divine Arbiter proc + 5 HP
     { spell = "FinalVerdict", cond = hpMin(5) },                                        -- 4: dump at 5 HP
-    { spell = "WakeOfAshes" },                                                          -- 5: on cooldown
-    { spell = "DivineToll" },                                                           -- 6: on cooldown
+    { spell = "WakeOfAshes" },                                                          -- 5: always
+    { spell = "DivineToll" },                                                           -- 6: always
     { spell = "BladeOfJustice", cond = AND(preset("artOfWar"), buffDown(ID_AVENGINGWRATH)) }, -- 7: Art of War proc, no Wings
-    { spell = "HammerOfWrath", cond = preset("hammerReady") },                          -- 8: during Wings, whenever a charge is up
-    { spell = "DivineStorm",  cond = AND(preset("divineArbiter"), hpMin(3)) },          -- 9: Divine Arbiter proc spend
+    { spell = "HammerOfWrath", cond = AND(buffUp(ID_AVENGINGWRATH), chargesEq(2)) },    -- 8: Wings + 2 charges
+    { spell = "DivineStorm",  cond = AND(buffUp(ID_DIVINEARBITER), hpMin(3)) },         -- 9: Divine Arbiter buff + 3 HP
     { spell = "FinalVerdict", cond = hpMin(3) },                                        -- 10: normal spend
-    -- Log-derived builders (keep Holy Power flowing; the source list omits these):
-    { spell = "Judgment" },                                                             -- builder / debuff, on cooldown (becomes HoW during Wings, handled above)
-    { spell = "BladeOfJustice" },                                                       -- main Holy-Power builder, on cooldown
+    { spell = "HammerOfWrath", cond = AND(cdReady(ID_HAMMEROFWRATH), buffUp(ID_AVENGINGWRATH)) }, -- 11: Wings, whenever ready
+    { spell = "BladeOfJustice", cond = cdReady(ID_BLADEOFJUSTICE) },                    -- 12: builder, on cooldown
+    { spell = "Judgment", cond = cdReady(ID_JUDGMENT) },                                -- 13: builder / debuff (becomes HoW during Wings)
 }
 
 --------------------------------------------------------------------------------
@@ -93,19 +92,20 @@ local st = {
 -- procs from Divine Storm here and empowers Final Verdict (same buff, either spender).
 --------------------------------------------------------------------------------
 local aoe = {
-    { spell = "AvengingWrath" },                                                        -- 1: on cooldown
-    { spell = "ExecutionSentence" },                                                    -- 2: on cooldown
-    { spell = "FinalVerdict", cond = AND(preset("divineArbiter"), hpMin(5)) },          -- 3: Divine Arbiter proc + 5 HP
-    { spell = "DivineStorm",  cond = hpMin(5) },                                        -- 4: dump at 5 HP
-    { spell = "WakeOfAshes" },                                                          -- 5: on cooldown
-    { spell = "DivineToll" },                                                           -- 6: on cooldown
-    { spell = "HammerOfWrath", cond = preset("hammerReady") },                          -- 7: during Wings, whenever a charge is up
-    { spell = "BladeOfJustice", cond = AND(preset("artOfWar"), buffDown(ID_AVENGINGWRATH)) }, -- 8: Art of War proc, no Wings
-    { spell = "FinalVerdict", cond = AND(preset("divineArbiter"), hpMin(3)) },          -- 9: Divine Arbiter proc spend
-    { spell = "DivineStorm",  cond = hpMin(3) },                                        -- 10: normal AoE spend
-    { spell = "BladeOfJustice" },                                                       -- 11: builder, on cooldown
-    -- Log-derived builder:
-    { spell = "Judgment" },                                                             -- builder / debuff, on cooldown (becomes HoW during Wings, handled above)
+    { spell = "AvengingWrath" },                                                        -- 1: always
+    { spell = "ExecutionSentence" },                                                    -- 2: always
+    { spell = "FinalVerdict", cond = AND(buffUp(ID_DIVINEARBITER), hpMin(5)) },         -- 3: Divine Arbiter buff + 5 HP
+    { spell = "FinalVerdict", cond = buffUp(ID_EMPYREANLEGACY) },                       -- 4: Empyrean Legacy (free Divine Storm armed)
+    { spell = "DivineStorm",  cond = hpMin(5) },                                        -- 5: dump at 5 HP
+    { spell = "WakeOfAshes" },                                                          -- 6: always
+    { spell = "DivineToll" },                                                           -- 7: always
+    { spell = "HammerOfWrath", cond = AND(chargesEq(2), cdReady(ID_HAMMEROFWRATH)) },   -- 8: 2 charges + ready
+    { spell = "BladeOfJustice", cond = AND(buffUp(ID_ARTOFWAR), buffDown(ID_AVENGINGWRATH)) }, -- 9: Art of War buff, no Wings
+    { spell = "DivineStorm",  cond = buffUp(ID_DIVINEARBITER) },                        -- 10: Divine Arbiter buff
+    { spell = "DivineStorm",  cond = hpMin(3) },                                        -- 11: normal AoE spend
+    { spell = "HammerOfWrath", cond = AND(cdReady(ID_HAMMEROFWRATH), buffUp(ID_AVENGINGWRATH)) }, -- 12: Wings, whenever ready
+    { spell = "BladeOfJustice", cond = cdReady(ID_BLADEOFJUSTICE) },                    -- 13: builder, on cooldown
+    { spell = "Judgment", cond = cdReady(ID_JUDGMENT) },                                -- 14: builder / debuff (becomes HoW during Wings)
 }
 
 local spec = {
@@ -207,6 +207,14 @@ local spec = {
         FinalVerdict   = { type = "buffActive", spell = ID_DIVINEARBITER },   -- empowered (AoE)
         BladeOfJustice = { type = "buffActive", spell = ID_ARTOFWAR },        -- Art of War proc
         HammerOfWrath  = { type = "buffActive", spell = ID_HOW_CASTABLE },    -- castable (execute / Wings)
+    },
+
+    -- Hammer of Wrath (= empowered Judgment during Wings) runs on 2 charges. The count is
+    -- secret in combat AND haste-scaled / refilled by Avenging Wrath, so it's PREDICTED
+    -- (synced OOC, decremented on cast, clamped by the castable flag) to feed the "2 chg"
+    -- gate. Treat it as approximate -- the Wings buff gate is the reliable half.
+    chargeTrack = {
+        HammerOfWrath = { max = 2, recharge = 6 },
     },
 
     -- Cooldown prediction: remaining cooldown is secret in combat, so we seed a timer on

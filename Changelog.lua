@@ -11,6 +11,10 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.9.12", {
+        "Retribution: Hammer of Wrath now uses spell 1241288 (the Herald 'Judgment -> Hammer of Wrath during Avenging Wrath', granted free) instead of #24275 which read as not-known -- so the HoW lines are live again (Wings + 2 charges, and Wings + ready; charge count predicted/approximate).",
+        "Retribution: ST + AoE default lists rebuilt to the tuned versions (builders carry explicit 'ready' gates; AoE includes the Empyrean Legacy Final Verdict line). Hit 'Reset to default' on the Retribution lists to pick these up.",
+    } },
     { "0.9.11", {
         "Retribution: Empyrean Legacy (387170) is now tracked -- while it's up during Avenging Wrath your next Final Verdict auto-casts Divine Storm (+25%). Shown as a tracked buff, a named editor condition, and a debug row. Track buff 387170 in your Cooldown Manager (only if you run the talent).",
     } },

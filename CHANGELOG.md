@@ -1,5 +1,12 @@
 # PRIO Changelog
 
+## 0.9.12 (alpha)
+Retribution default lists rebuilt to the user's tuned ST + AoE (with the Empyrean Legacy Final Verdict line in AoE), and the Hammer of Wrath spell ID fixed.
+- **Hammer of Wrath now uses spell 1241288** (the Herald "Judgment → Hammer of Wrath during Avenging Wrath", granted for free) instead of #24275, which read as *not known* — so the Hammer of Wrath lines are live again. It's back to two lines (Wings + 2 charges, and Wings + ready), with the 2-charge count predicted (approximate; the Avenging Wrath gate is the reliable half).
+- **ST + AoE default priorities** rebuilt to match the tuned lists; builders now carry explicit "ready" gates and the AoE list includes the Empyrean Legacy Final Verdict line.
+
+Hit "Reset to default" on the Retribution lists to pick these up.
+
 ## 0.9.11 (alpha)
 - **Retribution: Empyrean Legacy is now tracked.** While it's up during Avenging Wrath, your next Final Verdict automatically casts Divine Storm (+25%). PRIO surfaces it as a tracked buff, a named editor condition ("Empyrean Legacy (free Divine Storm armed)"), and a row in the debug windows — so you can see it and keep spending Final Verdict while it's up. (Track buff 387170 in your Cooldown Manager; only relevant if you run the talent.)
 

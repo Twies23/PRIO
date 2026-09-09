@@ -3,7 +3,7 @@
 -- the Divine Arbiter proc line ordering, and finishers withheld below 3 HP.
 --------------------------------------------------------------------------------
 
-local AW, ES, DS, FV, WOA, TOLL, BOJ, HOW, JUDG = 31884, 343527, 53385, 383328, 255937, 375576, 184575, 24275, 20271
+local AW, ES, DS, FV, WOA, TOLL, BOJ, HOW, JUDG = 31884, 343527, 53385, 383328, 255937, 375576, 184575, 1241288, 20271
 local DIVARBITER = 1306161
 local DIVCAST = 1241410   -- "Hammer of Wrath can be cast" buff
 
@@ -86,20 +86,18 @@ test("AoE: at 5 HP with no proc, Divine Storm is the AoE dump", function()
     eq(r.primary and r.primary.id, DS, "Divine Storm dumps at 5 HP in AoE")
 end)
 
-test("Hammer of Wrath is withheld outside Wings, shown during Wings (buff 1241410)", function()
+test("Hammer of Wrath is withheld outside Wings, shown during Wings (Avenging Wrath buff)", function()
     ret(0)
-    -- Outside Avenging Wrath: no castable buff, no Wings buff, usable off -> HoW not shown.
-    H.S.usable[HOW] = false
-    H.S.tracked[DIVCAST] = true; H.S.auras[DIVCAST] = false
+    -- Outside Avenging Wrath: the HoW lines gate on the Avenging Wrath buff -> not shown.
+    H.S.tracked[AW] = true; H.S.auras[AW] = false
     local r = H.Engine:Evaluate()
     falsy(has(r, HOW), "HoW withheld outside Wings")
 
-    -- During Avenging Wrath: the 'Hammer of Wrath can be cast' buff (1241410) is up ->
-    -- HoW is suggested (engine's off-cooldown gate covers 'a charge is available').
-    H.S.usable[HOW] = true
-    H.S.auras[DIVCAST] = true
+    -- During Avenging Wrath (buff up) + Hammer of Wrath ready -> HoW is suggested (line 11).
+    H.S.auras[AW] = true
+    H.S.ready[HOW] = true
     r = H.Engine:Evaluate()
-    truthy(has(r, HOW), "HoW shown during Wings (buff 1241410 up)")
+    truthy(has(r, HOW), "HoW shown during Wings")
 end)
 
 test("cooldownTrack: Divine Toll base 60s, -30s with Quickened Invocation", function()
