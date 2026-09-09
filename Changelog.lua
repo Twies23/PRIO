@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.9.11", {
+        "Retribution: Empyrean Legacy (387170) is now tracked -- while it's up during Avenging Wrath your next Final Verdict auto-casts Divine Storm (+25%). Shown as a tracked buff, a named editor condition, and a debug row. Track buff 387170 in your Cooldown Manager (only if you run the talent).",
+    } },
     { "0.9.10", {
         "Retribution: Hammer of Wrath is now modeled as the empowered Judgment during Avenging Wrath (not a health execute) -- suggested only while Wings are up, using the clean off-cooldown read for 'a charge is available' instead of a drifting charge prediction. Reset lists to default to pick it up.",
         "Retribution: Avenging Wrath cooldown now tracked (fixed 60s), alongside Execution Sentence / Divine Toll / Wake of Ashes. /prio debug shows all four timers.",

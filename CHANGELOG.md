@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.9.11 (alpha)
+- **Retribution: Empyrean Legacy is now tracked.** While it's up during Avenging Wrath, your next Final Verdict automatically casts Divine Storm (+25%). PRIO surfaces it as a tracked buff, a named editor condition ("Empyrean Legacy (free Divine Storm armed)"), and a row in the debug windows — so you can see it and keep spending Final Verdict while it's up. (Track buff 387170 in your Cooldown Manager; only relevant if you run the talent.)
+
 ## 0.9.10 (alpha)
 Retribution Hammer of Wrath fix + more cooldown tracking (from live testing):
 - **Hammer of Wrath is now modeled correctly** for Herald of the Sun: it's the empowered **Judgment during Avenging Wrath**, not a health-based execute. PRIO now suggests it only while Wings are up (read from the "Hammer of Wrath can be cast" buff / the Avenging Wrath buff), and relies on the clean off-cooldown read for "a charge is available" instead of predicting the charge count — the count is haste-scaled and refilled by Avenging Wrath, so predicting it just drifted. The old 2-charge prediction is gone.

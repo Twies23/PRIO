@@ -52,6 +52,7 @@ local ID_HAMMEROFWRATH    = 24275     -- what Judgment is empowered into during 
 local ID_HOW_CASTABLE     = 1241410   -- "Hammer of Wrath can be cast" -- READABLE buff, up during Avenging Wrath in this build
 local ID_JUDGMENT         = 20271
 local ID_QUICKENEDINVOCATION = 379391 -- talent: Divine Toll cooldown -30s (the only talent that shifts these three CDs)
+local ID_EMPYREANLEGACY   = 387170    -- buff: during Avenging Wrath, next ST Holy Power spender auto-fires Divine Storm (+25%)
 -- Reference only (passive auto-attack replacement, not pressed):
 -- local ID_CRUSADINGSTRIKES = 408385
 
@@ -143,6 +144,10 @@ local spec = {
         -- handles "a charge is up" -- we don't predict the (hasted, AW-reset) charge count.
         { key = "hammerReady", label = "Hammer of Wrath ready (during Wings)",
           clause = OR(buffUp(ID_HOW_CASTABLE), buffUp(ID_AVENGINGWRATH), usable(ID_HAMMEROFWRATH)) },
+        -- Empyrean Legacy: next ST Holy Power spender auto-casts Divine Storm (+25%). Use it
+        -- to prefer Final Verdict so the free Divine Storm isn't wasted.
+        { key = "empyreanLegacy", label = "Empyrean Legacy (free Divine Storm armed)",
+          clause = buffUp(ID_EMPYREANLEGACY) },
     },
 
     spells = {
@@ -162,6 +167,7 @@ local spec = {
         ArtOfWar         = ID_ARTOFWAR,
         AvengingWrath    = ID_AVENGINGWRATH,
         HammerOfWrathReady = ID_HOW_CASTABLE,
+        EmpyreanLegacy   = ID_EMPYREANLEGACY,
     },
 
     setup = {
@@ -175,6 +181,8 @@ local spec = {
           hint = "Track Avenging Wrath so the Wings-gated lines read -- including Hammer of Wrath, which is the empowered Judgment during Avenging Wrath." },
         { kind = "trackedAura", label = "Hammer of Wrath castable tracked", spell = ID_HOW_CASTABLE,
           hint = "Track the \"Hammer of Wrath can be cast\" buff (1241410) so PRIO reads the Judgment->Hammer of Wrath window cleanly. Its charges are hasted and refill on Avenging Wrath, so PRIO doesn't predict the count -- it just uses the clean off-cooldown read. Falls back to the Avenging Wrath buff / usable flag if untracked." },
+        { kind = "trackedAura", label = "Empyrean Legacy tracked", spell = ID_EMPYREANLEGACY, optional = true,
+          hint = "Track Empyrean Legacy (387170) so the \"free Divine Storm armed\" condition reads. While it's up during Avenging Wrath, your next Final Verdict auto-casts Divine Storm (+25%) -- keep spending Final Verdict so it isn't wasted. Only relevant if you run the Empyrean Legacy talent." },
     },
 
     -- Opener (screenshot / log-validated): Blade of Justice -> Avenging Wrath (+ potion &
@@ -240,6 +248,7 @@ local spec = {
         { label = "Art of War",      kind = "buff", spell = ID_ARTOFWAR },
         { label = "Avenging Wrath",  kind = "buff", spell = ID_AVENGINGWRATH },
         { label = "Hammer of Wrath castable", kind = "buff", spell = ID_HOW_CASTABLE },
+        { label = "Empyrean Legacy",  kind = "buff", spell = ID_EMPYREANLEGACY },
         { label = "Avenging Wrath CD", kind = "cdRemain", spell = ID_AVENGINGWRATH },
         { label = "Execution Sentence CD", kind = "cdRemain", spell = ID_EXECUTIONSENTENCE },
         { label = "Wake of Ashes CD", kind = "cdRemain", spell = ID_WAKEOFASHES },
@@ -266,6 +275,7 @@ local spec = {
             { label = "Art of War",     spell = ID_ARTOFWAR },
             { label = "Avenging Wrath", spell = ID_AVENGINGWRATH },
             { label = "Hammer of Wrath castable", spell = ID_HOW_CASTABLE },
+            { label = "Empyrean Legacy (free DS armed)", spell = ID_EMPYREANLEGACY },
         },
         glows = {
             { label = "Divine Storm glow (Divine Arbiter)",  spell = ID_DIVINESTORM },
