@@ -217,6 +217,12 @@ local spec = {
         HammerOfWrath = { max = 2, recharge = 6 },
     },
 
+    -- Hammer of Wrath has no button of its own -- it's Judgment empowered during Wings, so
+    -- it lives on the Judgment keybind. Show Judgment's bind on the HoW icon.
+    keybindAlias = {
+        [ID_HAMMEROFWRATH] = ID_JUDGMENT,
+    },
+
     -- Cooldown prediction: remaining cooldown is secret in combat, so we seed a timer on
     -- cast and count it down (anchored to the clean off-cooldown flag). These three are
     -- FIXED cooldowns (NOT haste-scaled), so the dead-reckoned timer stays accurate. The

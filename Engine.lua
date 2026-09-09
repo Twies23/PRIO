@@ -2027,6 +2027,11 @@ function Engine:Evaluate()
         -- when the resource bar is secret (Focus/Maelstrom). Flag it so the display can
         -- desaturate the icon -- shown but dimmed until you have the resource.
         picks[slot].noResource = (API.InsufficientPower(pick.sid) == true)
+        -- Not castable RIGHT NOW? Queue look-ahead can surface an ability that's still on
+        -- cooldown (it becomes ready after the earlier picks). Flag it (real cooldown read,
+        -- not the sim) so the display can dim it -- "coming up, not up yet". The primary is
+        -- hard-gated castable, so this is only ever true on the queued slots.
+        picks[slot].notReady = (API.IsReady(pick.sid) == false)
         ApplyEffects(sim, fkey)                             -- advance the look-ahead
         ApplyResourceDelta(sim, fkey, pick.sid, S)
         ApplyEnergy(sim, fkey)                              -- spend the Energy floor

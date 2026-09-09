@@ -425,9 +425,11 @@ local function FillIcon(f, data, isPrimary)
     f.kb:SetText(PRIO.db.showKeybinds and data.keybind or "")
     f.name:SetText(PRIO.db.showNames and data.name or "")
 
-    -- Slight desaturation when you can't yet afford this spell (Focus/Maelstrom): a
-    -- greyscale copy over the colored icon at half alpha reads as ~50% desaturated.
-    if data.noResource then
+    -- Slight desaturation when you can't cast this yet -- either you can't afford it
+    -- (Focus/Maelstrom/Holy Power) or it's still on cooldown (a queued ability that comes
+    -- up after the earlier picks). A greyscale copy over the colored icon at half alpha
+    -- reads as ~50% desaturated.
+    if data.noResource or data.notReady then
         f.desat:SetTexture(data.texture)
         f.desat:SetDesaturated(true)
         f.desat:SetAlpha(0.5)

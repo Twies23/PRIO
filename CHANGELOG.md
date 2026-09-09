@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.9.13 (alpha)
+- **Hammer of Wrath shows its keybind again.** It's Judgment empowered during Avenging Wrath, so it has no button of its own — PRIO now shows Judgment's keybind on the Hammer of Wrath icon (Retribution).
+- **Queued abilities that aren't castable yet are now dimmed.** Any recommendation that's still on cooldown or that you can't afford yet is drawn slightly desaturated, so the thing to press *right now* stands out from what's coming up next. (Applies to every spec.)
+
 ## 0.9.12 (alpha)
 Retribution default lists rebuilt to the user's tuned ST + AoE (with the Empyrean Legacy Final Verdict line in AoE), and the Hammer of Wrath spell ID fixed.
 - **Hammer of Wrath now uses spell 1241288** (the Herald "Judgment → Hammer of Wrath during Avenging Wrath", granted for free) instead of #24275, which read as *not known* — so the Hammer of Wrath lines are live again. It's back to two lines (Wings + 2 charges, and Wings + ready), with the 2-charge count predicted (approximate; the Avenging Wrath gate is the reliable half).

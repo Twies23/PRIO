@@ -38,6 +38,16 @@ test("Ret spec registered under 70", function()
     truthy(H.retSpec.priority.aoe and H.retSpec.priority.aoe[1], "AoE list resolves")
 end)
 
+test("Ret default lists match the tuned shape (13 ST rows, 14 AoE rows)", function()
+    eq(#H.retSpec.priority.st, 13, "ST has 13 rows")
+    eq(#H.retSpec.priority.aoe, 14, "AoE has 14 rows")
+end)
+
+test("Hammer of Wrath uses Judgment's keybind (it's the empowered Judgment)", function()
+    eq(H.retSpec.keybindAlias and H.retSpec.keybindAlias[1241288], 20271,
+        "HoW (1241288) aliases Judgment (20271) for its keybind")
+end)
+
 test("every Ret priority row names a spell that exists in spec.spells", function()
     for _, mode in ipairs({ "st", "aoe" }) do
         for i, row in ipairs(H.retSpec.priority[mode]) do

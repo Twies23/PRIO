@@ -11,6 +11,10 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.9.13", {
+        "Retribution: Hammer of Wrath shows Judgment's keybind (it's the empowered Judgment during Avenging Wrath, so it has no button of its own).",
+        "All specs: queued abilities that aren't castable yet -- still on cooldown or unaffordable -- are now drawn slightly desaturated, so the ability to press right now stands out from what's coming up.",
+    } },
     { "0.9.12", {
         "Retribution: Hammer of Wrath now uses spell 1241288 (the Herald 'Judgment -> Hammer of Wrath during Avenging Wrath', granted free) instead of #24275 which read as not-known -- so the HoW lines are live again (Wings + 2 charges, and Wings + ready; charge count predicted/approximate).",
         "Retribution: ST + AoE default lists rebuilt to the tuned versions (builders carry explicit 'ready' gates; AoE includes the Empyrean Legacy Final Verdict line). Hit 'Reset to default' on the Retribution lists to pick these up.",
