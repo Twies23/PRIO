@@ -22,13 +22,15 @@
 --   * PROC BUFFS are secret by ID in combat, so Divine Arbiter and Art of War are read
 --     via the Cooldown-Manager tracked read AND the button proc-glow (surfaced as named
 --     presets). Art of War's 2-STACK count is not readable -> approximated to "proc up".
---   * HAMMER OF WRATH is NOT a separate spell in this build -- it's JUDGMENT (20271)
---     empowered into Hammer of Wrath DURING AVENGING WRATH (1-for-1: same cooldown, same
---     2 charges, same button). So the "Hammer of Wrath" rows ARE Judgment rows gated on the
---     Avenging Wrath buff; readiness/charges/casts all read the real Judgment, and the
---     display resolves the game override so the icon shows as Hammer of Wrath while Wings
---     are up (spec.overrideDisplay). Keying it off the passive 1241288 was wrong -- that ID
---     never reports a cooldown, so it got recommended every GCD.
+--   * HAMMER OF WRATH is 1-for-1 with JUDGMENT (shared 2 charges / cooldown / button): it's
+--     Judgment empowered into Hammer of Wrath (24275) DURING AVENGING WRATH. The game tracks
+--     the live cooldown on whichever spell is ACTIVE -- 24275 in Wings, Judgment (20271) out
+--     -- so querying the inactive base reads "ready". We keep Hammer of Wrath as its own
+--     editor rows (spell 24275) and turn on `overrideReads` (cooldown/charges/usable read
+--     through the active override) + `overrideDisplay` (icon/name follow it), so the HoW
+--     rows AND the Judgment builder all reflect the real shared cooldown and dim when it's
+--     down. 24275 reads IsKnown=false out of Wings, so knownAlias/keybindAlias -> Judgment.
+--     (Keying it off the passive 1241288 was wrong -- that never reports a cooldown.)
 --   * NO FILLERS: every Retribution ability has a cooldown or a Holy Power cost, so nothing
 --     repeats freely in the queue (spec.fillers = {}).
 -- Verify IDs with /prio spells and /prio tracked.
@@ -50,7 +52,8 @@ local ID_WAKEOFASHES      = 255937
 local ID_DIVINETOLL       = 375576
 local ID_BLADEOFJUSTICE   = 184575
 local ID_ARTOFWAR         = 406064    -- proc buff (free/empowered Blade of Justice)
-local ID_HOW_CASTABLE     = 1241410   -- "Hammer of Wrath can be cast" -- READABLE buff, up during Avenging Wrath (Hammer of Wrath = Judgment empowered; no separate spell)
+local ID_HAMMEROFWRATH    = 24275     -- the ACTIVE Hammer of Wrath during Wings: its own 2-charge / ~6.7s recharge cooldown lives here (the base Judgment 20271 reads "ready"). IsKnown reads false outside Wings -> knownAlias to Judgment.
+local ID_HOW_CASTABLE     = 1241410   -- "Hammer of Wrath can be cast" -- READABLE buff, up during Avenging Wrath
 local ID_JUDGMENT         = 20271
 local ID_QUICKENEDINVOCATION = 379391 -- talent: Divine Toll cooldown -30s (the only talent that shifts these three CDs)
 local ID_EMPYREANLEGACY   = 387170    -- buff: during Avenging Wrath, next ST Holy Power spender auto-fires Divine Storm (+25%)
@@ -81,10 +84,10 @@ local st = {
     { spell = "WakeOfAshes" },                                                          -- 5: always
     { spell = "DivineToll" },                                                           -- 6: always
     { spell = "BladeOfJustice", cond = AND(preset("artOfWar"), buffDown(ID_AVENGINGWRATH)) }, -- 7: Art of War proc, no Wings
-    { spell = "Judgment", cond = AND(buffUp(ID_AVENGINGWRATH), chargesEq(2)) },         -- 8: HoW (= Judgment during Wings), 2 charges
+    { spell = "HammerOfWrath", cond = AND(buffUp(ID_AVENGINGWRATH), chargesEq(2)) },    -- 8: Wings + 2 charges
     { spell = "DivineStorm",  cond = AND(buffUp(ID_DIVINEARBITER), hpMin(3)) },         -- 9: Divine Arbiter buff + 3 HP
     { spell = "FinalVerdict", cond = hpMin(3) },                                        -- 10: normal spend
-    { spell = "Judgment", cond = AND(cdReady(ID_JUDGMENT), buffUp(ID_AVENGINGWRATH)) }, -- 11: HoW during Wings, whenever ready
+    { spell = "HammerOfWrath", cond = AND(cdReady(ID_HAMMEROFWRATH), buffUp(ID_AVENGINGWRATH)) }, -- 11: Wings, whenever a charge is up
     { spell = "BladeOfJustice", cond = cdReady(ID_BLADEOFJUSTICE) },                    -- 12: builder, on cooldown
     { spell = "Judgment", cond = cdReady(ID_JUDGMENT) },                                -- 13: builder / debuff (becomes HoW during Wings)
 }
@@ -101,11 +104,11 @@ local aoe = {
     { spell = "DivineStorm",  cond = hpMin(5) },                                        -- 5: dump at 5 HP
     { spell = "WakeOfAshes" },                                                          -- 6: always
     { spell = "DivineToll" },                                                           -- 7: always
-    { spell = "Judgment", cond = AND(chargesEq(2), cdReady(ID_JUDGMENT)) },             -- 8: HoW (= Judgment during Wings), 2 charges
+    { spell = "HammerOfWrath", cond = AND(chargesEq(2), cdReady(ID_HAMMEROFWRATH)) },   -- 8: 2 charges + ready
     { spell = "BladeOfJustice", cond = AND(buffUp(ID_ARTOFWAR), buffDown(ID_AVENGINGWRATH)) }, -- 9: Art of War buff, no Wings
     { spell = "DivineStorm",  cond = buffUp(ID_DIVINEARBITER) },                        -- 10: Divine Arbiter buff
     { spell = "DivineStorm",  cond = hpMin(3) },                                        -- 11: normal AoE spend
-    { spell = "Judgment", cond = AND(cdReady(ID_JUDGMENT), buffUp(ID_AVENGINGWRATH)) }, -- 12: HoW during Wings, whenever ready
+    { spell = "HammerOfWrath", cond = AND(cdReady(ID_HAMMEROFWRATH), buffUp(ID_AVENGINGWRATH)) }, -- 12: Wings, whenever a charge is up
     { spell = "BladeOfJustice", cond = cdReady(ID_BLADEOFJUSTICE) },                    -- 13: builder, on cooldown
     { spell = "Judgment", cond = cdReady(ID_JUDGMENT) },                                -- 14: builder / debuff (becomes HoW during Wings)
 }
@@ -154,7 +157,8 @@ local spec = {
         WakeOfAshes       = ID_WAKEOFASHES,
         DivineToll        = ID_DIVINETOLL,
         BladeOfJustice    = ID_BLADEOFJUSTICE,
-        Judgment          = ID_JUDGMENT,   -- becomes Hammer of Wrath during Avenging Wrath (override display)
+        HammerOfWrath     = ID_HAMMEROFWRATH,   -- distinct editor entry; 1-for-1 with Judgment (shared cooldown/charges), only castable during Wings
+        Judgment          = ID_JUDGMENT,
     },
 
     auras = {
@@ -192,7 +196,7 @@ local spec = {
 
     pickable = {
         "AvengingWrath", "ExecutionSentence", "DivineStorm", "FinalVerdict", "WakeOfAshes",
-        "DivineToll", "BladeOfJustice", "Judgment",
+        "DivineToll", "BladeOfJustice", "HammerOfWrath", "Judgment",
     },
 
     fillers = {},   -- Retribution has NO spammable fillers: every ability has a cooldown or a Holy Power cost, so nothing repeats freely in the queue.
@@ -201,26 +205,27 @@ local spec = {
         DivineStorm    = { type = "buffActive", spell = ID_DIVINEARBITER },   -- empowered (ST)
         FinalVerdict   = { type = "buffActive", spell = ID_DIVINEARBITER },   -- empowered (AoE)
         BladeOfJustice = { type = "buffActive", spell = ID_ARTOFWAR },        -- Art of War proc
-        Judgment       = { type = "buffActive", spell = ID_HOW_CASTABLE },    -- flashes as Hammer of Wrath during Wings
+        HammerOfWrath  = { type = "buffActive", spell = ID_HOW_CASTABLE },    -- castable during Wings
     },
 
     -- Hammer of Wrath (= empowered Judgment during Wings) runs on 2 charges. The count is
     -- secret in combat AND haste-scaled / refilled by Avenging Wrath, so it's PREDICTED
     -- (synced OOC, decremented on cast, clamped by the castable flag) to feed the "2 chg"
     -- gate. Treat it as approximate -- the Wings buff gate is the reliable half.
-    -- Judgment carries 2 charges (haste-scaled, refilled by Avenging Wrath); the count is
-    -- secret in combat so it's predicted, feeding the "2 charges" line + queue multiplicity.
-    -- The PRIMARY is always gated on the clean real off-cooldown read, so over-prediction
-    -- can only ever add a (dimmed) extra to the queue, never a wrong press.
-    chargeTrack = {
-        Judgment = { max = 2, recharge = 6 },
-    },
-
-    -- During Avenging Wrath, Judgment's icon/name is empowered into Hammer of Wrath (a game
-    -- spell override). This tells the display to resolve the active override for the icon +
-    -- name, so a Judgment row shows as Hammer of Wrath while Wings are up -- matching the
-    -- action bar -- while all the cooldown/charge/cast logic still reads the real Judgment.
+    -- Hammer of Wrath and Judgment are 1-for-1 (shared 2 charges / cooldown), but the game
+    -- tracks the LIVE cooldown on whichever spell is currently active -- Hammer of Wrath
+    -- (24275) during Wings, Judgment (20271) otherwise. Querying the inactive base reads
+    -- "ready", so both `overrideReads` (read cooldown/charges/usable through the active
+    -- override) and `overrideDisplay` (show the active override's icon/name) are on. Result:
+    -- the Hammer of Wrath rows AND the Judgment builder all reflect the real shared cooldown
+    -- and dim/stop when it's down, and each shows the right face on the action bar.
+    overrideReads   = true,
     overrideDisplay = true,
+
+    -- 24275 (the active Hammer of Wrath) reads IsKnown=false outside Wings; alias its
+    -- known-check + keybind to Judgment (always known, and the button they share).
+    knownAlias   = { [ID_HAMMEROFWRATH] = ID_JUDGMENT },
+    keybindAlias = { [ID_HAMMEROFWRATH] = ID_JUDGMENT },
 
     -- Cooldown prediction: remaining cooldown is secret in combat, so we seed a timer on
     -- cast and count it down (anchored to the clean off-cooldown flag). These three are
@@ -248,7 +253,8 @@ local spec = {
         elseif key == "BladeOfJustice" then return 2
         elseif key == "WakeOfAshes"    then return 3
         elseif key == "DivineToll"     then return 3
-        elseif key == "Judgment"       then return 1   -- also HoW during Wings (same ability)
+        elseif key == "Judgment"       then return 1
+        elseif key == "HammerOfWrath"  then return 1   -- HoW = Judgment during Wings, also generates 1 HP
         end
         return 0
     end,
@@ -280,7 +286,7 @@ local spec = {
         title = "Retribution Rotation Debug",
         abilities = {
             "AvengingWrath", "ExecutionSentence", "WakeOfAshes", "DivineToll",
-            "BladeOfJustice", "Judgment", "DivineStorm", "FinalVerdict",
+            "HammerOfWrath", "BladeOfJustice", "Judgment", "DivineStorm", "FinalVerdict",
         },
         buffs = {
             { label = "Divine Arbiter", spell = ID_DIVINEARBITER },

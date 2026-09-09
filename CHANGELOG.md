@@ -1,5 +1,12 @@
 # PRIO Changelog
 
+## 0.9.15 (alpha)
+Hammer of Wrath now correctly goes on cooldown (Retribution), and stays a separate entry:
+- The game tracks Hammer of Wrath's cooldown on the **empowered spell itself** (its own 2 charges / ~6.7s recharge), not on the base Judgment — so PRIO now reads the cooldown/charges through the **currently-active spell**. It dims and stops recommending Hammer of Wrath the moment it's actually down, instead of suggesting it every global.
+- **Hammer of Wrath stays its own row** in the editor (not merged into Judgment), shows the Hammer of Wrath icon during Avenging Wrath, and uses Judgment's keybind — the button you actually press.
+
+Hit "Reset to default" on the Retribution lists to pick these up.
+
 ## 0.9.14 (alpha)
 Fixes the Retribution Hammer of Wrath spam (it was recommended over and over and never seen as on cooldown):
 - **Hammer of Wrath is now driven by Judgment**, because in Herald they're one and the same ability — Hammer of Wrath is just Judgment empowered during Avenging Wrath (same cooldown, same 2 charges, same button). The previous version keyed it off a passive spell that never reports a cooldown, so PRIO thought it was always ready. Now the real cooldown/charges are read, so it stops as soon as it's actually down.

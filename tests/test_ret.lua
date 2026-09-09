@@ -3,9 +3,9 @@
 -- the Divine Arbiter proc line ordering, and finishers withheld below 3 HP.
 --------------------------------------------------------------------------------
 
-local AW, ES, DS, FV, WOA, TOLL, BOJ, JUDG = 31884, 343527, 53385, 383328, 255937, 375576, 184575, 20271
+local AW, ES, DS, FV, WOA, TOLL, BOJ, JUDG, HOW = 31884, 343527, 53385, 383328, 255937, 375576, 184575, 20271, 24275
 local DIVARBITER = 1306161
--- Hammer of Wrath is not a separate spell: it's Judgment (20271) empowered during Wings.
+-- HoW (24275) is 1-for-1 with Judgment; readiness is read through the active override.
 
 -- Set up Ret in ST with all COOLDOWNS on cooldown so the Holy-Power lines are what
 -- the walk reaches (Avenging Wrath / Execution Sentence / Wake of Ashes / Divine Toll
@@ -49,11 +49,13 @@ test("Retribution has no fillers (everything has a cooldown or a cost)", functio
     eq(n, 0, "fillers table is empty")
 end)
 
-test("Hammer of Wrath rows are Judgment (1-for-1) and overrideDisplay is on", function()
-    truthy(H.retSpec.overrideDisplay, "overrideDisplay set so the icon shows HoW during Wings")
-    -- The HoW spell key is gone -- it's just Judgment now.
-    falsy(H.retSpec.spells.HammerOfWrath, "no separate HammerOfWrath spell key")
-    truthy(H.retSpec.spells.Judgment, "Judgment is the spell")
+test("Hammer of Wrath is a distinct 24275 entry, read through the active override", function()
+    eq(H.retSpec.spells.HammerOfWrath, 24275, "HoW is its own editor entry on 24275")
+    truthy(H.retSpec.spells.Judgment, "Judgment stays a distinct entry")
+    truthy(H.retSpec.overrideReads, "overrideReads on -> cooldown/charges read the active override")
+    truthy(H.retSpec.overrideDisplay, "overrideDisplay on -> icon follows the override")
+    eq(H.retSpec.knownAlias and H.retSpec.knownAlias[24275], 20271, "HoW known-check aliases Judgment")
+    eq(H.retSpec.keybindAlias and H.retSpec.keybindAlias[24275], 20271, "HoW keybind aliases Judgment")
 end)
 
 test("every Ret priority row names a spell that exists in spec.spells", function()
@@ -100,24 +102,23 @@ test("AoE: at 5 HP with no proc, Divine Storm is the AoE dump", function()
     eq(r.primary and r.primary.id, DS, "Divine Storm dumps at 5 HP in AoE")
 end)
 
-test("Judgment/HoW is withheld when on cooldown (the reported spam bug)", function()
+test("Hammer of Wrath is withheld when on cooldown (the reported spam bug)", function()
     ret(0)
-    -- On cooldown / no charge: the clean off-cooldown read is false -> must NOT be
-    -- recommended (before the fix, HoW keyed off a passive that never reported a cooldown,
-    -- so it was suggested every GCD).
-    H.S.ready[JUDG] = false; H.S.ready[BOJ] = false
-    H.S.chargeState[JUDG] = { max = 2, cur = 0, cleanCur = 0, belowMax = true }
-    H.S.tracked[AW] = true; H.S.auras[AW] = true   -- even during Wings
+    -- On cooldown / no charge: the real off-cooldown read (on 24275) is false -> HoW must
+    -- NOT be recommended. Before the fix it keyed off a passive that never reported a
+    -- cooldown, so it was suggested every GCD. Judgment builder also on CD to isolate HoW.
+    H.S.ready[HOW] = false; H.S.ready[JUDG] = false; H.S.ready[BOJ] = false
+    H.S.tracked[AW] = true; H.S.auras[AW] = true   -- during Wings
     local r = H.Engine:Evaluate()
-    falsy(has(r, JUDG), "Judgment/HoW not recommended while on cooldown")
+    falsy(has(r, HOW), "Hammer of Wrath not recommended while on cooldown")
 end)
 
-test("Judgment/HoW is shown when a charge is up during Wings", function()
+test("Hammer of Wrath is shown during Wings when a charge is up", function()
     ret(0)
-    H.S.ready[JUDG] = true
+    H.S.ready[HOW] = true; H.S.ready[JUDG] = false
     H.S.tracked[AW] = true; H.S.auras[AW] = true
     local r = H.Engine:Evaluate()
-    truthy(has(r, JUDG), "Judgment/HoW shown when a charge is available")
+    truthy(has(r, HOW), "Hammer of Wrath shown when a charge is available during Wings")
 end)
 
 test("cooldownTrack: Divine Toll base 60s, -30s with Quickened Invocation", function()

@@ -11,6 +11,10 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.9.15", {
+        "Retribution: Hammer of Wrath now correctly goes on cooldown. The game tracks its cooldown on the empowered spell (its own 2 charges / ~6.7s recharge), not the base Judgment, so PRIO reads cooldown/charges through the currently-active spell -- it dims and stops suggesting HoW when it's actually down instead of every global.",
+        "Retribution: Hammer of Wrath stays its own editor row (not merged into Judgment), shows the HoW icon during Avenging Wrath, and uses Judgment's keybind. Hit 'Reset to default' on the Retribution lists to pick these up.",
+    } },
     { "0.9.14", {
         "Retribution: fixed Hammer of Wrath being recommended over and over / never seen as on cooldown. HoW is now driven by Judgment (in Herald they're one ability -- HoW is Judgment empowered during Avenging Wrath), so the real cooldown/charges are read. The icon still shows as Hammer of Wrath during Wings and uses Judgment's keybind.",
         "Retribution: removed free-repeating fillers -- every ability has a cooldown or a cost, so nothing repeats in the queue just because it could. Hit 'Reset to default' on the Retribution lists to pick these up.",

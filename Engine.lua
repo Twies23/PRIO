@@ -1495,6 +1495,19 @@ Entry = function(spellID)
     }
 end
 
+-- Read the currently-ACTIVE spell id for a base id. Some abilities are re-skinned by a
+-- game spell override in certain windows (Ret's Judgment -> Hammer of Wrath during Avenging
+-- Wrath), and the game tracks the live cooldown/charges on the OVERRIDE id, not the base --
+-- so reads (IsReady/Charges/usable) must follow the override or they read the inactive
+-- spell as "ready" forever. Gated by spec.overrideReads so only opted-in specs pay for it.
+local function ReadSid(sid)
+    if sid and spec and spec.overrideReads and C_Spell and C_Spell.GetOverrideSpell then
+        local ok, ovr = pcall(C_Spell.GetOverrideSpell, sid)
+        if ok and ovr and ovr ~= sid then return ovr end
+    end
+    return sid
+end
+
 -- An ACTION node (spec.actions[key]) is a spell-less instruction (e.g. "Switch Targets"):
 -- always available, gated only on its condition, rendered as a texture + label overlay.
 local function ActionEntry(actionKey)
@@ -1912,11 +1925,16 @@ function Engine:Evaluate()
             return { action = e.action, i = i }
         end
         local sid = self:EntrySpellID(e)
-        if not (sid and not e.off and API.IsKnown(sid)) then return nil end
+        -- Known-check may follow a spec alias: an override spell (Ret's Hammer of Wrath 24275)
+        -- can read not-known outside its window, so check the aliased base (Judgment) instead.
+        local knownSid = (spec and spec.knownAlias and spec.knownAlias[sid]) or sid
+        if not (sid and not e.off and API.IsKnown(knownSid)) then return nil end
+        -- Reads (cooldown/charges/usable) follow the active override when the spec opts in.
+        local readSid = ReadSid(sid)
         -- Boss-plan suppression: a cooldown the active encounter plan owns is removed from
         -- the normal walk entirely -- it only returns via the plan's scheduled injection.
         if S.bossManaged and S.bossManaged[sid] then return nil end
-        local rep, maxC = Repeatable(sid)
+        local rep, maxC = Repeatable(readSid)
         if maxC and (usedCharges[sid] or 0) >= maxC then return nil end   -- charges spent
         if usedSpell[sid] and not rep and not maxC then return nil end    -- single-use, already picked
         -- Combo Strikes (Windwalker mastery): never cast the same ability twice in a row.
@@ -1924,7 +1942,7 @@ function Engine:Evaluate()
             return nil
         end
 
-        local ready = e.ignoreCD or simReady[sid] or API.IsReady(sid)
+        local ready = e.ignoreCD or simReady[sid] or API.IsReady(readSid)
         -- Primary-resource affordability gate.
         if ready and spec.affordGate and spec.affordGate[idToKey[sid]] then
             -- Preferred: the game's own insufficient-power flag. It reads CLEAN in combat
@@ -1979,7 +1997,7 @@ function Engine:Evaluate()
         -- spec keeps the strict check, so a spender that needs a BUILT resource (Maelstrom,
         -- Holy Power, ...) is correctly withheld until you can afford it.
         local usableFn = spec.softPowerUsable and API.UsableOrNoPower or API.IsUsable
-        if not castingNow and not usableFn(sid) then return nil end
+        if not castingNow and not usableFn(readSid) then return nil end
         if not PRIO.Cond.Eval(e.cond, S, sid) then return nil end
         return { sid = sid, i = i, rep = rep, maxC = maxC }
     end
@@ -2041,7 +2059,7 @@ function Engine:Evaluate()
         -- cooldown (it becomes ready after the earlier picks). Flag it (real cooldown read,
         -- not the sim) so the display can dim it -- "coming up, not up yet". The primary is
         -- hard-gated castable, so this is only ever true on the queued slots.
-        picks[slot].notReady = (API.IsReady(pick.sid) == false)
+        picks[slot].notReady = (API.IsReady(ReadSid(pick.sid)) == false)
         ApplyEffects(sim, fkey)                             -- advance the look-ahead
         ApplyResourceDelta(sim, fkey, pick.sid, S)
         ApplyEnergy(sim, fkey)                              -- spend the Energy floor
