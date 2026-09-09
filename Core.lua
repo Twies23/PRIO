@@ -17,7 +17,7 @@ PRIO.defaultsRevision = 51
 PRIO.PROFILE_KEYS = {
     "enabled", "locked", "showOOC", "scale", "numQueue", "primarySize", "queueSize",
     "spacing", "growth", "showKeybinds", "showNames", "showGlow", "showTitle",
-    "showCooldown", "showFlash", "mode", "useOpener", "showPrecombat",
+    "showCooldown", "showFlash", "showRollKeeper", "mode", "useOpener", "showPrecombat",
     "advanceWhileCasting", "enemyDetect", "manageNameplates", "cleaveAt", "aoeAt",
     "combatRate", "idleRate", "minimapShow", "classColor",
     "font", "titleSize", "keybindSize", "nameSize", "showModeButtons",
@@ -52,6 +52,9 @@ PRIO.defaults = {
     showTitle     = true,
     showCooldown  = true,
     showFlash     = true,
+    showRollKeeper = true,      -- Outlaw: mask the primary icon with a Keep It Rolling
+                                -- prompt when a Triple Threat / Jackpot roll is up (native
+                                -- AuraContainer, Blizzard-driven -- exact, no secret read)
     debug         = false,
     mode          = "auto",     -- auto | st | cleave | aoe
     showModeButtons = false,    -- clickable Auto/ST/AoE buttons under the display

@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.9.9", {
+        "Outlaw: a Keep It Rolling prompt now masks the primary icon exactly when you roll a Triple Threat or Jackpot and Keep It Rolling is ready -- it reads the real roll (not a guess) and no longer nudges on weaker rolls. Replaces the old '2+ roll detected' banner. Toggle: Roll-keeper prompt.",
+    } },
     { "0.9.8", {
         "Enable/disable the whole encounter planner with one toggle at the top of the Encounters tab -- when off, the engine ignores all plans (your plans are kept).",
         "Boss abilities now show on the timeline right away as a reference row instead of an empty 'pull first' message; exact positions still snap in after a BigWigs pull.",

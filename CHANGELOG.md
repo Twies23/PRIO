@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.9.9 (alpha)
+- **Outlaw: exact Keep It Rolling prompt.** When you roll a **Triple Threat or Jackpot** and Keep It Rolling is off cooldown, a KiR icon (primary-sized, with its keybind) now masks the primary recommendation — so you press it, then it clears itself. It reads the *real* roll via a self-owned native `AuraContainer` (Blizzard drives its visibility; PRIO never reads the secret tier), so it's exact instead of inferred and no longer over-nudges on Double Trouble. Replaces the old "2+ roll detected" advisory banner. Self-owned, so it works with or without a Cooldown Manager setup. Toggle: **Roll-keeper prompt** (`showRollKeeper`, on by default).
+
 ## 0.9.8 (alpha)
 - **Enable/disable the whole encounter planner** with one toggle at the top of the Encounters tab. When off, the engine ignores all plans (normal rotation everywhere); your plans are kept.
 - **Boss abilities now show on the timeline right away** as a reference row, instead of an empty "pull first" message. Exact positions still snap in once you've pulled the boss with BigWigs (Blizzard only exposes real timings during a pull).

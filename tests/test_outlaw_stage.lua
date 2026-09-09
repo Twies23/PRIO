@@ -79,18 +79,16 @@ test("outlaw stage: Roll the Bones resets the stage to unknown", function()
     eq(H.Engine.P.predFlags.rtbStage2, nil, "re-roll -> unknown until next builder")
 end)
 
-test("outlaw alert: Keep It Rolling advisory only on a confirmed good roll", function()
+test("outlaw: no KiR advisory alert (replaced by the Display roll-keeper mask)", function()
+    -- The old stage-2+ banner was retired in favour of the native-AuraContainer mask
+    -- (exact Triple Threat / Jackpot, gated on KiR cooldown). The stage inference itself
+    -- still runs (asserted above) -- it just no longer drives an alert.
     setOutlaw()
     H.S.auras[ROLLBONES] = true
     sinisterStrike(0, 2, 0)                        -- confirm stage 2+
-    eq(H.Engine.P.predFlags.rtbStage2, true)
+    eq(H.Engine.P.predFlags.rtbStage2, true, "stage still inferred")
     local r = H.Engine:Evaluate()
-    truthy(r and r.alerts and #r.alerts >= 1, "KiR alert on a good roll")
-
-    setOutlaw(); H.S.auras[ROLLBONES] = true
-    sinisterStrike(0, 1, 0)                        -- stage 1
-    local r2 = H.Engine:Evaluate()
-    falsy(r2 and r2.alerts, "no KiR alert on a stage-1 roll")
+    falsy(r and r.alerts and #r.alerts >= 1, "no advisory alert fires")
 end)
 
 test("outlaw: an Energy-cost ability (Roll the Bones) is not blocked by combo points", function()

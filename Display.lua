@@ -207,6 +207,9 @@ function Display:Layout()
 
     icons.primary:SetSize(ps, ps)
     container:SetSize(ps, ps)
+    -- (Roll-keeper mask button size is baked in its initializeFrame -- it's a
+    -- forbidden object we must not touch post-setup; it re-reads size on the next
+    -- roll if primarySize changed.)
 
     local prev = icons.primary
     for i = 1, MAX_ICONS - 1 do
@@ -286,6 +289,116 @@ function Display:ShowAlert(al)
 end
 
 --------------------------------------------------------------------------------
+-- Roll-keeper mask (Outlaw) -----------------------------------------------------
+-- The RtB outcome tier is UNREADABLE by addon Lua in combat (query APIs blocked,
+-- event payload withheld, container IsShown is a secret boolean -- proven three
+-- ways, incl. RollTheBonesSlots). But Blizzard will DISPLAY it: a self-owned
+-- AuraContainer filtered to the keep-worthy outcomes (Triple Threat 1214935,
+-- Jackpot 1214937) is populated by Blizzard when one is up. We anchor that
+-- container OVER the primary icon at a higher frame level, so a Keep It Rolling
+-- icon masks the primary exactly when you roll a keeper -- then clears itself.
+-- We never read whether it's showing (that's the secret part); we only gate our
+-- own host frame on a CLEAN Keep It Rolling cooldown read, so the mask can only
+-- appear when acting is possible. Self-owned => no Cooldown-Manager dependency.
+--------------------------------------------------------------------------------
+local KIR_SPELL = 381989
+local KEEPER_IDS = { [1214935] = true, [1214937] = true }  -- Triple Threat, Jackpot
+
+function Display:EnsureRollMask()
+    if self._rollMask or self._rollMaskFailed then return end
+    if not icons.primary then return end
+    if not API.IsKnown(KIR_SPELL) then return end          -- Outlaw only
+    -- Container setup touches native aura frames -> must be done out of combat and
+    -- while auras aren't secret (mirrors RollTheBonesSlots' CanConfigure gate).
+    if InCombatLockdown() then return end
+    if C_Secrets and C_Secrets.ShouldAurasBeSecret and C_Secrets.ShouldAurasBeSecret() then return end
+
+    local host = CreateFrame("Frame", "PRIORollMask", icons.primary)
+    host:SetAllPoints(icons.primary)
+    host:SetFrameLevel((icons.primary:GetFrameLevel() or 1) + 10)
+    host:Hide()   -- UpdateRollMask decides visibility
+
+    local ok, cont = pcall(CreateFrame, "AuraContainer", nil, host, "CustomAuraContainerTemplate")
+    if not ok or not cont then self._rollMaskFailed = true; host:Hide(); return end
+    cont:SetAllPoints(host)
+    pcall(cont.SetUnit, cont, "player")
+
+    local ps = PRIO.db.primarySize or 50
+    local added = pcall(cont.AddAuraSlot, cont, "keeper", "HELPFUL", {
+        candidateFilters = { includeSpellIDs = KEEPER_IDS },
+        -- Tell the native flow layout the element is primary-icon sized (otherwise
+        -- it renders the button at a small default).
+        layout = { elementWidth = ps, elementHeight = ps, elementSpacing = 0,
+                   lineSpacing = 0, groupSpacing = 0 },
+        initializeFrame = function(button)
+            -- Blizzard's ONE sanctioned window to touch this button (it's a
+            -- forbidden object afterwards -- reading/mutating it in combat taints).
+            -- So set EVERYTHING here, once, and never retain it for later mutation:
+            -- size, art, glow, and the keybind text (captured now; refreshes on the
+            -- next roll if you rebind).
+            local ps = PRIO.db.primarySize or 50
+            pcall(button.EnableMouse, button, false)
+            pcall(button.SetHideTooltipInCombat, button, true)
+            pcall(button.SetSize, button, ps, ps)
+            pcall(button.ClearAllPoints, button)
+            pcall(button.SetPoint, button, "CENTER", host, "CENTER", 0, 0)
+            if not button.__prioArt then
+                local g = button:CreateTexture(nil, "BACKGROUND")
+                g:SetPoint("TOPLEFT", -5, 5); g:SetPoint("BOTTOMRIGHT", 5, -5)
+                g:SetColorTexture(gold[1], gold[2], gold[3], 0.9)
+                g:SetBlendMode("ADD")
+                local t = button:CreateTexture(nil, "ARTWORK")
+                t:SetPoint("TOPLEFT", 1, -1); t:SetPoint("BOTTOMRIGHT", -1, 1)
+                t:SetTexture(API.SpellTexture(KIR_SPELL))
+                t:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+                button.__prioArt = t
+                button.__prioKB = button:CreateFontString(nil, "OVERLAY")
+                button.__prioKB:SetPoint("TOPRIGHT", button, "TOPRIGHT", 2, 2)
+                button.__prioKB:SetTextColor(gold[1], gold[2], gold[3])
+            end
+            pcall(button.__prioKB.SetFont, button.__prioKB,
+                  PRIO.db.font or "Fonts\\FRIZQT__.TTF", PRIO.db.keybindSize or 15, "OUTLINE")
+            button.__prioKB:SetText(PRIO.db.showKeybinds and Display:KirKeybind() or "")
+        end,
+    })
+    if not added then self._rollMaskFailed = true; host:Hide(); return end
+    pcall(cont.SetEnabled, cont, true)
+    self._rollMask = host
+    self._rollMaskContainer = cont
+end
+
+-- Keep It Rolling's keybind, honouring a spec alias (mirrors Binds' bindFor).
+function Display:KirKeybind()
+    local kb = API.Keybind(KIR_SPELL)
+    if (kb == nil or kb == "") then
+        local specID = API.GetSpecID()
+        local spec = specID and PRIO.specs and PRIO.specs[specID]
+        if spec and spec.keybindAlias and spec.keybindAlias[KIR_SPELL] then
+            kb = API.Keybind(spec.keybindAlias[KIR_SPELL])
+        end
+    end
+    return kb or ""
+end
+
+function Display:UpdateRollMask()
+    if PRIO.db.showRollKeeper == false then
+        if self._rollMask then self._rollMask:Hide() end
+        return
+    end
+    if not self._rollMask then
+        self:EnsureRollMask()          -- lazy, self-guards to OOC + Outlaw
+        if not self._rollMask then return end
+    end
+    -- The masked button is a forbidden Blizzard object post-setup, so we NEVER
+    -- touch it here (keybind/art/size are all baked in initializeFrame). We only
+    -- show/hide OUR OWN host frame -- safe in combat.
+    -- Gate purely on a clean Keep It Rolling readiness read. When shown, Blizzard
+    -- reveals the masked icon ONLY if a keeper roll is actually up; otherwise the
+    -- host is an empty invisible frame. Nothing here reads a secret.
+    if API.IsReady(KIR_SPELL) then self._rollMask:Show() else self._rollMask:Hide() end
+end
+
+--------------------------------------------------------------------------------
 -- Render one evaluation result
 --------------------------------------------------------------------------------
 local function FillIcon(f, data, isPrimary)
@@ -349,6 +462,7 @@ function Display:Render(result)
     end
     container:Show()
     FillIcon(icons.primary, result.primary, true)
+    self:UpdateRollMask()
 
     local q = result.queue or {}
     for i = 1, MAX_ICONS - 1 do

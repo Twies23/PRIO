@@ -210,16 +210,12 @@ local spec = {
         gainBase = 1, spendBase = 1, capBase = 1,   -- without it (single charge)
     },
 
-    -- ALERTS: advisory nudges, not auto-suggestions. Keep It Rolling's value depends on
-    -- the exact stage (2 vs 3 vs Jackpot) -- which PRIO can't read but YOU can see on the
-    -- buff -- so when it's ready on a confirmed good roll, PRIO prompts you to check and
-    -- extend rather than pressing it for you.
-    alerts = {
-        { key = "keepItRolling",
-          when = AND(cdReady(ID_KEEPROLLING), buffUp(ID_ROLLBONES), predStage2True()),
-          text = "2+ roll detected \226\128\148 extend if it's a 3 or Jackpot",
-          spell = "KeepItRolling" },
-    },
+    -- ALERTS: none. The old "2+ roll detected" banner (combo-point inference, stage 2+)
+    -- is REPLACED by the roll-keeper MASK in Display -- a native AuraContainer that lays a
+    -- Keep It Rolling icon over the primary EXACTLY on Triple Threat / Jackpot (the real
+    -- keep-worthy rolls), gated on a clean KiR-cooldown read. Exact instead of inferred,
+    -- and it no longer over-nudges on Double Trouble. See Display:EnsureRollMask.
+    alerts = {},
 
     -- Blade Flurry at 2+; no distinct cleave tier, so AoE mode covers 2+.
     cleaveAt = 2,
