@@ -1,5 +1,12 @@
 # PRIO Changelog
 
+## 0.10.1 (alpha)
+- **Shado-Pan Windwalker tuning from a top-log comparison.** Two changes, both matching how strong Shado-Pan players actually play (validated against multiple Kings' Rest logs):
+  - **Spinning Crane Kick is now the primary single-target spender** instead of Blackout Kick. On Shado-Pan, Spinning Crane Kick drives Chi Explosion, so it's higher value even on one target — the old list only cast it off a Dance of Chi-Ji proc, which is why it was under-used. Blackout Kick drops to proc / low-Chi / filler.
+  - **Fists of Fury now fires immediately after Zenith** in the burst window (ST + AoE), instead of letting Rising Sun Kick cut in front of it.
+  - Reset lists to default to pick it up.
+
+
 ## 0.10.0
 Second stable release — everything from the 0.9 line, promoted. Three big things since 0.8:
 

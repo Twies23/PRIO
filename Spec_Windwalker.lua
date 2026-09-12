@@ -165,25 +165,27 @@ local function chiEq(n)    return { type = "resourceEq", v = n } end        -- C
 
 local shadopan_st = {
     { spell = "Zenith",           cond = OR(chargesMin(2), { type = "preset:zenithLit" }) },       -- 1: 2 charges / lit up (20 Tigereye stacks)
-    { spell = "WhirlingDragonPunch" },                                                             -- 2: always
-    { spell = "ZenithStomp",      cond = OR(chiMax(2), auraRemainMax(ID_ZENITH, 7)) },             -- 3: low Chi or Zenith ending
-    { spell = "TigerPalm",        cond = AND(energyNearCap, buffDown(ID_ZENITH), chiMax(4), notLast(ID_TIGERPALM)) }, -- 4: energy dump / build, no Zenith
-    { spell = "FistsOfFury" },                                                                     -- 5: always
-    { spell = "RushingWindKick",  cond = buffUp(ID_RUSHINGWIND) },                                 -- 6: proc
-    { spell = "SpinningCraneKick", cond = AND({ type = "preset:danceProc" }, buffUp(ID_UNBROKEN)) }, -- 7: Dance proc + Unbroken Rhythm
-    { spell = "RisingSunKick" },                                                                   -- 8: always
+    { spell = "FistsOfFury",      cond = lastCast(ID_ZENITH) },                                    -- 2: burst -- Fists right after Zenith (top-log pattern)
+    { spell = "WhirlingDragonPunch" },                                                             -- 3: always
+    { spell = "ZenithStomp",      cond = OR(chiMax(2), auraRemainMax(ID_ZENITH, 7)) },             -- 4: low Chi or Zenith ending
+    { spell = "TigerPalm",        cond = AND(energyNearCap, buffDown(ID_ZENITH), chiMax(4), notLast(ID_TIGERPALM)) }, -- 5: energy dump / build, no Zenith
+    { spell = "FistsOfFury" },                                                                     -- 6: on cooldown
+    { spell = "RushingWindKick",  cond = buffUp(ID_RUSHINGWIND) },                                 -- 7: proc
+    { spell = "SpinningCraneKick", cond = AND({ type = "preset:danceProc" }, buffUp(ID_UNBROKEN)) }, -- 8: Dance proc + Unbroken Rhythm
     { spell = "BlackoutKick",     cond = AND({ type = "preset:bokProc" }, notLast(ID_BLACKOUTKICK), chiMax(5)) }, -- 9: Blackout Kick! / Combo Breaker proc
-    { spell = "TouchOfDeath" },                                                                    -- 10: always (per your list)
-    { spell = "TigerPalm",        cond = AND(chiMax(2), notLast(ID_TIGERPALM)) },                  -- 11: build at low Chi
-    { spell = "SpinningCraneKick", cond = AND(buffUp(ID_DANCECHIJI), notLast(ID_SPINNINGCK)) },    -- 12: free Dance proc
-    { spell = "SlicingWinds",     cond = slicingWindsTalent },                                     -- 13: on CD (talent)
-    { spell = "TigerPalm",        cond = AND(chiMax(4), notLast(ID_TIGERPALM)) },                  -- 14: filler / avoid cap
-    { spell = "BlackoutKick",     cond = notLast(ID_BLACKOUTKICK) },                               -- 15: filler
+    { spell = "SpinningCraneKick", cond = notLast(ID_SPINNINGCK) },                                -- 10: PRIMARY spender -- drives Chi Explosion (Shado-Pan); log-validated over BoK
+    { spell = "RisingSunKick" },                                                                   -- 11: on cooldown
+    { spell = "TouchOfDeath" },                                                                    -- 12: on cooldown
+    { spell = "TigerPalm",        cond = AND(chiMax(2), notLast(ID_TIGERPALM)) },                  -- 13: build at low Chi
+    { spell = "SlicingWinds",     cond = slicingWindsTalent },                                     -- 14: on CD (talent)
+    { spell = "TigerPalm",        cond = AND(chiMax(4), notLast(ID_TIGERPALM)) },                  -- 15: filler / avoid cap
+    { spell = "BlackoutKick",     cond = notLast(ID_BLACKOUTKICK) },                               -- 16: filler (BoK now secondary to SCK)
 }
 
 local shadopan_aoe = {
     { spell = "Zenith",           cond = OR(chargesMin(2), { type = "preset:zenithLit" }) },       -- 1: 2 charges / lit up
-    { spell = "WhirlingDragonPunch" },                                                             -- 2: always
+    { spell = "FistsOfFury",      cond = lastCast(ID_ZENITH) },                                    -- 2: burst -- Fists right after Zenith
+    { spell = "WhirlingDragonPunch" },                                                             -- 3: always
     { spell = "ZenithStomp",      cond = OR(chiMax(2), auraRemainMax(ID_ZENITH, 7)) },             -- 3: low Chi or Zenith ending
     { spell = "BlackoutKick",     cond = AND(cdReady(ID_FISTSOFFURY), chiEq(2), { type = "preset:bokProc" }, talentYes(ID_ENERGYBURST)) }, -- 4: free BoK! (glow) to refund energy while pooling for Fists (Energy Burst)
     { spell = "TigerPalm",        cond = AND(cdReady(ID_FISTSOFFURY), chiMax(2)) },                -- 5: build Chi for Fists

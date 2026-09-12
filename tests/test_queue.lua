@@ -171,6 +171,35 @@ test("conduit: Blackout Kick! also spent on the readable Combo Breaker buff", fu
     truthy(has(H.Engine:Evaluate(), BOK), "Blackout Kick should be recommended on Combo Breaker")
 end)
 
+local SCK_ID, BOK_ID, ZEN_ID, FOF_ID = 101546, 100784, 1249625, 113656
+
+test("shadopan ST: Spinning Crane Kick is the primary spender over Blackout Kick", function()
+    shadopan("st")
+    H.db.numQueue = 3
+    H.S.power[12] = 6                                   -- plenty of Chi
+    H.S.ready[FOF_ID] = false                            -- Fists on CD so it doesn't eat the Chi/slots
+    H.Engine:UpdateEnergy(H.S.now)
+    local r = H.Engine:Evaluate()
+    local seq = ids(r)
+    local sck, bok = false, false
+    for _, id in ipairs(seq) do
+        if id == SCK_ID then sck = true end
+        if id == BOK_ID then bok = true end
+    end
+    truthy(sck, "SCK should appear in the ST queue as the primary spender")
+    falsy(bok, "Blackout Kick should not out-rank Spinning Crane Kick on ST")
+end)
+
+test("shadopan: Fists of Fury follows immediately after Zenith (burst)", function()
+    shadopan("st")
+    H.Engine.P.lastCast = ZEN_ID                         -- just cast Zenith (engine reads P, not S)
+    H.Engine.P.lastCastKey = "Zenith"
+    H.S.ready[FOF_ID] = true
+    local r = H.Engine:Evaluate()
+    truthy(r and r.primary and r.primary.id == FOF_ID,
+        "Fists of Fury should be the pick right after Zenith")
+end)
+
 test("opener: resolves per hero (Conduit vs Shado-Pan)", function()
     H.reset(); H.S.knownStrict[XUEN] = true; H.rebind()   -- Conduit
     local c = H.Engine:ActiveOpener("st")

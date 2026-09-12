@@ -11,6 +11,10 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.10.1", {
+        "Shado-Pan Windwalker: Spinning Crane Kick is now the primary single-target spender (it drives Chi Explosion) instead of Blackout Kick, which drops to proc/low-Chi/filler. Matches top Shado-Pan logs. Reset lists to default to pick it up.",
+        "Shado-Pan Windwalker: Fists of Fury now fires right after Zenith in the burst window (ST + AoE) instead of Rising Sun Kick cutting in.",
+    } },
     { "0.10.0", {
         "Second stable release -- the whole 0.9 line promoted. Three big things since 0.8:",
         "New spec: Retribution Paladin (Herald of the Sun) -- ST + AoE, exact Holy Power gates, Divine Arbiter / Art of War / Empyrean Legacy tracking, correct Hammer of Wrath (Judgment-during-Wings) handling, and fixed-cooldown tracking (Avenging Wrath / Execution Sentence / Divine Toll / Wake of Ashes).",
