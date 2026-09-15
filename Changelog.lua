@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.10.6", {
+        "Conduit AoE: Rising Sun Kick is cast to enable Whirling Dragon Punch (WDP's cooldown up, Fists down) instead of on cooldown -- the extra RSKs were eating Spinning Crane Kick / Fists GCDs (user capture 6.5/min vs pros 3.5; sim +3.4% AoE). ST untouched. Reset the Conduit lists to default to pick this up.",
+    } },
     { "0.10.5", {
         "Conduit: Zenith's 2nd charge is spent as soon as it's back -- no longer waits for the Tigereye glow (pros cast on every returning charge, ~80s cadence; the wait capped Tigereye at 30 for 30s+). Shado-Pan unchanged. Reset the Conduit lists to default to pick this up.",
         "Fixes 0.10.4: the Spiritual Focus / Efficient Training reduction to Zenith's predicted recharge is now actually applied.",

@@ -316,3 +316,19 @@ test("Zenith recharge prediction honors Spiritual Focus / Efficient Training", f
     c = H.Engine.P.charges.Zenith
     eq(math.floor(c.rechargeEnd - H.S.now + 0.5), 60, "-20 -10 -> 60s")
 end)
+
+test("conduit AoE: Rising Sun Kick main line only as the WDP enabler (WDP CD up, Fists down)", function()
+    conduit("aoe")
+    H.S.ready[XUEN] = true; H.S.ready[443028] = false                -- burst lines off (CC not ready -> Xuen line off)
+    H.S.tracked[443294] = true; H.S.auras[443294] = false           -- HoJS DOWN (its own RSK line stays inert)
+    H.S.chargeState[1249625] = { max = 2, cur = 1, belowMax = true }
+    H.S.ready[1272696] = false; H.S.ready[113656] = false           -- ZS + Fists on cooldown
+    H.S.power[12] = 2; H.S.power[3] = 50; H.Engine:UpdateEnergy(H.S.now)
+    H.db.numQueue = 0
+    H.S.ready[152175] = false                                       -- WDP on its own cooldown -> RSK line off, SCK leads
+    local r = H.Engine:Evaluate()
+    truthy(r and r.primary and r.primary.id ~= 107428, "RSK should not lead while WDP is on cooldown")
+    H.S.ready[152175] = true; H.S.usable[152175] = false            -- WDP CD up but not castable yet (needs RSK) -> RSK enables it
+    r = H.Engine:Evaluate()
+    eq(r and r.primary and r.primary.id, 107428, "RSK leads as the WDP enabler")
+end)

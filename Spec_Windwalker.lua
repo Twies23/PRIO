@@ -48,6 +48,8 @@ local ID_SLICINGWINDS = 1217413 -- Slicing Winds (talent)
 local ID_DRINKINGHORN = 391370  -- Drinking Horn Cover (talent: Zenith lasts +5s)
 local ID_INNERPEACE   = 397768  -- Inner Peace (talent: Tiger Palm energy cost -5)
 local ID_ASCENSION    = 115396  -- Ascension (talent: +1 Chi, +20 Energy, +10% Energy regen)
+local ID_WHIRLINGDP_  = 152175
+local ID_FISTSOFFURY_ = 113656
 local ID_HARMONIC     = 1250041 -- Harmonic Combo (talent: Fists of Fury costs 1 less Chi, -10% damage)
 local ID_SPIRITFOCUS  = 280197  -- Spiritual Focus (talent: Zenith cooldown -20s)
 local ID_EFFTRAINING  = 450989  -- Efficient Training (talent: Zenith cooldown -10s, +40% Energy spender damage)
@@ -150,7 +152,7 @@ local conduit_aoe = {
     { spell = "TigerPalm",        cond = tpGate },                                      -- 6c: Chi <= 4 AND (Energy near cap OR Chi <= 1)
     { spell = "SpinningCraneKick", cond = buffUp(ID_UNBROKEN) },                        -- 7: 4pc / Unbroken Rhythm
     { spell = "TigerPalm",        cond = AND(energyNearCap, buffDown(ID_ZENITH), chiMax(4)) }, -- 8: avoid cap outside Zenith, never at 5-6 Chi (log)
-    { spell = "RisingSunKick" },                                                        -- 9: on cooldown, enables WDP
+    { spell = "RisingSunKick",    cond = AND(cdReady(ID_WHIRLINGDP_), cdNotReady(ID_FISTSOFFURY_)) }, -- 9: as the WDP enabler (WDP's own CD up, Fists down) -- pros RSK 3.5/min in AoE, mostly to light WDP; unconditional RSK cost SCK/Fists GCDs (sim +3.4% AoE)
     { spell = "RushingWindKick",  cond = AND(buffUp(ID_RUSHINGWIND), buffDown(ID_UNBROKEN)) }, -- 10: proc, without 4pc
     { spell = "RisingSunKick",    cond = AND(buffUp(ID_HEARTJADE), buffDown(ID_UNBROKEN)) }, -- 11: HoJS, no 4pc
     { spell = "SpinningCraneKick", cond = AND(buffUp(ID_ZENITH), enemiesMin(5)) },      -- 12: Zenith, 5+ targets

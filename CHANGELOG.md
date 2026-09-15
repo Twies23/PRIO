@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.10.6 (alpha)
+- **Conduit AoE: Rising Sun Kick is now cast to enable Whirling Dragon Punch, not on cooldown.** Your AoE capture had RSK at 6.5/min vs the pros' 3.5, with the extra GCDs coming out of Spinning Crane Kick and Fists. The main AoE RSK line now fires when WDP's own cooldown is up and Fists is down (the same gate Shado-Pan AoE uses); the HoJS / Zenith RSK lines and the end-of-list filler are unchanged. Sim: +3.4% AoE, RSK 5.3 → 4.0/min, SCK up; single-target untouched. Reset the Conduit lists to default to pick this up.
+
 ## 0.10.5 (alpha)
 - **Conduit: Zenith's 2nd charge is spent as soon as it's back.** The 2-charge line no longer waits for the Tigereye Brew glow — top players cast Zenith on every returning charge (~80s cadence, plus the one after Invoke Xuen) and never sit on two; the glow wait left your Tigereye capped at 30 stacks for 30+ seconds. Shado-Pan lists unchanged. Reset the Conduit lists to default to pick this up.
 - Fixes 0.10.4: the Spiritual Focus / Efficient Training reduction to Zenith's predicted recharge wasn't actually applied (the prediction kept the un-talented base). Now it is; covered by a test.
