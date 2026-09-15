@@ -86,6 +86,9 @@ local tpBelowCap = AND(chiMax(4), buffDown(ID_ZENITH))
 -- with Chi headroom, and almost never at 5-6 -- so: Chi <= 4 AND (Energy near cap OR Chi <= 1).
 -- It sits BELOW Fists / the free procs / Rising Sun Kick, which the old chiMax(2) line outranked.
 local tpGate = AND(chiMax(4), OR(energyNearCap, chiMax(1)))
+-- "Just pressed Invoke Xuen": last cast was Xuen, OR its (90s with Xuen's Bond) cooldown still has
+-- >= 80s left, i.e. within ~10s of the press -- so one intervening pick can't drop the Zenith.
+local zenithAfterXuen = OR(lastCast(ID_INVOKEXUEN), cdRemainMin(ID_INVOKEXUEN, 80))
 local comboBreaker2 = stacksMin(ID_COMBOBREAK, 2)
 local bokZenith = AND(buffUp(ID_ZENITH), OR(buffUp(ID_COMBOBREAK), talentYes(ID_OBSIDIAN)))
 local touchOfDeathUp = buffUp(ID_TOUCHOFDEATH)
@@ -100,7 +103,7 @@ local slicingWindsTalent = talentYes(ID_SLICINGWINDS)
 -- decision-point replay in the sim): Zenith is the GCD after Invoke Xuen (52/52 windows),
 -- and Fists / free procs / Rising Sun Kick all outrank Tiger Palm.
 local conduit_st = {
-    { spell = "Zenith",           cond = lastCast(ID_INVOKEXUEN) },                    -- (log) the GCD right after Invoke Xuen opens the window
+    { spell = "Zenith",           cond = zenithAfterXuen },                             -- (log) the GCD right after Invoke Xuen opens the window (robust: any pick within ~10s of the press)
     { spell = "WhirlingDragonPunch", cond = xuenAway },                                 -- 1: hold unless Xuen >10s away
     { spell = "StrikeOfTheWindlord", cond = xuenAway },                                 -- 2: hold unless Xuen >10s away
     { spell = "ZenithStomp",      cond = OR(chiMax(2), auraRemainMax(ID_ZENITH, 5)) },  -- 3: low Chi / Zenith ending
@@ -131,7 +134,7 @@ local conduit_st = {
 -- (same log-validated shape). 4pc -> Unbroken Rhythm; Bloodlust (undetectable) dropped
 -- from the RSK line, leaving its Zenith/no-4pc gate.
 local conduit_aoe = {
-    { spell = "Zenith",           cond = lastCast(ID_INVOKEXUEN) },                    -- (log) the GCD right after Invoke Xuen opens the window
+    { spell = "Zenith",           cond = zenithAfterXuen },                             -- (log) the GCD right after Invoke Xuen opens the window (robust: any pick within ~10s of the press)
     { spell = "FistsOfFury",      cond = auraRemainMax(ID_HEARTJADE, 1) },              -- 1: HoJS about to end
     { spell = "WhirlingDragonPunch", cond = xuenAway },                                 -- 2: Xuen >10s away
     { spell = "ZenithStomp",      cond = OR(chiMax(2), auraRemainMax(ID_ZENITH, 5)) },  -- 3: low Chi / Zenith ending
@@ -144,7 +147,7 @@ local conduit_aoe = {
     { spell = "SpinningCraneKick", cond = { type = "preset:danceProc" } }, -- 6b: Dance of Chi-Ji proc
     { spell = "TigerPalm",        cond = tpGate },                                      -- 6c: Chi <= 4 AND (Energy near cap OR Chi <= 1)
     { spell = "SpinningCraneKick", cond = buffUp(ID_UNBROKEN) },                        -- 7: 4pc / Unbroken Rhythm
-    { spell = "TigerPalm",        cond = AND(energyNearCap, buffDown(ID_ZENITH)) },     -- 8: avoid cap outside Zenith
+    { spell = "TigerPalm",        cond = AND(energyNearCap, buffDown(ID_ZENITH), chiMax(4)) }, -- 8: avoid cap outside Zenith, never at 5-6 Chi (log)
     { spell = "RisingSunKick" },                                                        -- 9: on cooldown, enables WDP
     { spell = "RushingWindKick",  cond = AND(buffUp(ID_RUSHINGWIND), buffDown(ID_UNBROKEN)) }, -- 10: proc, without 4pc
     { spell = "RisingSunKick",    cond = AND(buffUp(ID_HEARTJADE), buffDown(ID_UNBROKEN)) }, -- 11: HoJS, no 4pc
@@ -499,7 +502,7 @@ local spec = {
     -- on cast, recharged on a timer, clamped by the readable castable state. `recharge`
     -- is a seed; the engine learns the real (haste'd) value out of combat.
     chargeTrack = {
-        Zenith = { max = 2, recharge = 60 },
+        Zenith = { max = 2, recharge = 90 },   -- observed ~80-95s (pros / user log); was 60
     },
 
     ResourceCost = function(_, key, sid, S)

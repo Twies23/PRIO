@@ -11,6 +11,10 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.10.3", {
+        "Conduit: Zenith after Invoke Xuen now sticks -- it fires on any pick within ~10s of the Xuen press, not only when Xuen was the very last cast (a slipped-in cast used to drop it, and at 1 charge it was never offered again).",
+        "Conduit AoE: the Energy-near-cap Tiger Palm line is capped at 4 Chi (it fired at 5-6 Chi). Zenith's predicted recharge corrected to 90s. Reset the Conduit lists to default to pick this up.",
+    } },
     { "0.10.2", {
         "Conduit Windwalker re-tuned from three top-player logs replayed through PRIO's engine: Tiger Palm no longer outranks Fists of Fury, Rising Sun Kick, or the free Dance of Chi-Ji / Blackout Kick! procs, and only fires at Chi <= 4 when Energy is near cap or Chi <= 1 (the old list recommended it over a castable spender ~490 times per three dungeons; now ~80).",
         "Conduit: Zenith is the very next press after Invoke Xuen (52/52 pro burst windows) instead of waiting on Celestial Conduit. Harmonic Combo is accounted for (Fists costs 2 Chi), so the queue stops pushing Tiger Palm at 2 Chi.",

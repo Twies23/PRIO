@@ -115,6 +115,17 @@ test("conduit: Zenith is the very next pick after Invoke Xuen, even at 1 charge 
     truthy(r and r.primary and r.primary.id == ZENITH, "Zenith should be the primary right after Invoke Xuen")
 end)
 
+test("conduit: Zenith still fires if another pick slipped in right after Invoke Xuen (cooldown-based gate)", function()
+    conduit("st")
+    H.S.talents[392986] = true                                   -- Xuen's Bond -> 90s cooldown
+    H.fire("UNIT_SPELLCAST_SUCCEEDED", "player", nil, XUEN)      -- press Xuen (seeds its 90s predicted cooldown)
+    H.Engine.P.lastCast = 107428; H.Engine.P.lastCastKey = "RisingSunKick"   -- ...then an RSK got pressed
+    H.S.ready[XUEN] = false
+    H.S.chargeState[ZENITH] = { max = 2, cur = 1, belowMax = true }
+    local r = H.Engine:Evaluate()
+    truthy(r and r.primary and r.primary.id == ZENITH, "Zenith should still lead within ~10s of the Xuen press")
+end)
+
 test("conduit: Celestial Conduit still gated on Whirling Dragon Punch being on cooldown", function()
     conduit("st")
     H.S.ready[152175] = false                                    -- WDP on CD -> CC's gate passes
