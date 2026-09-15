@@ -309,11 +309,21 @@ end
 -- behavior (the OOC-learned real duration, else the base). `c` is the P.charges entry.
 local function EffRecharge(cfg, c)
     local base = cfg and cfg.recharge or 0
+    -- Talent reductions on the base (e.g. Zenith: Spiritual Focus -20s, Efficient Training
+    -- -10s). A game-learned duration (c.dur) already includes them, so only the base is adjusted.
+    if cfg and cfg.reduce and base > 0 then
+        for tid, amt in pairs(cfg.reduce) do
+            if API.IsTalentSelected(tid) then base = base - amt end
+        end
+    end
     if cfg and cfg.hasted and base > 0 then
         local h = (API.Haste and API.Haste()) or 0
         return base / (1 + h / 100)
     end
-    return (c and c.dur) or base
+    -- c.dur starts as the raw config base (not learned); only a duration the game actually
+    -- reported (differs from the config) overrides the talent-adjusted base.
+    local learned = c and c.dur and cfg and c.dur ~= cfg.recharge and c.dur or nil
+    return learned or base
 end
 
 -- Talent-adjusted Energy cost from a spec entry ({cost,...} probe or {base,...} spender).

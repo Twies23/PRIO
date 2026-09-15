@@ -218,19 +218,13 @@ test("conduit: Zenith NOT recommended at 1 charge outside the burst", function()
     falsy(has(H.Engine:Evaluate(), ZENITH), "Zenith should not fire at 1 charge outside burst")
 end)
 
-test("conduit: Zenith overcap dump gated on the glow (20 Tigereye stacks)", function()
-    conduit("st")
-    H.S.tracked[HOJS] = true; H.S.auras[HOJS] = true                 -- HoJS up -> no burst path
-    H.S.chargeState[ZENITH] = { max = 2, cur = 2, belowMax = false } -- 2 charges (would overcap)
-    H.S.glows[ZENITH] = true
-    truthy(has(H.Engine:Evaluate(), ZENITH), "dump allowed when Zenith is glowing")
-
+test("conduit: Zenith at 2 charges is cast regardless of the Tigereye glow (0.10.5)", function()
     conduit("st")
     H.S.ready[CC] = false                                        -- no burst path (Invoke Xuen line off)
     H.S.tracked[HOJS] = true; H.S.auras[HOJS] = true
     H.S.chargeState[ZENITH] = { max = 2, cur = 2, belowMax = false }
     H.S.glows[ZENITH] = false
-    falsy(has(H.Engine:Evaluate(), ZENITH), "dump held when Zenith not glowing")
+    truthy(has(H.Engine:Evaluate(), ZENITH), "2nd charge back -> Zenith recommended even without the glow")
 end)
 
 local SCK, BOK, DANCE_GLOW, BOK_GLOW = 101546, 100784, 101546, 100784
@@ -308,4 +302,17 @@ test("opener: resolves per hero (Conduit vs Shado-Pan)", function()
     truthy(s and s[2] == "Zenith", "Shado-Pan opener is Zenith-centric")
     local hasXuen = false; for _, k in ipairs(s) do if k == "InvokeXuen" then hasXuen = true end end
     falsy(hasXuen, "Shado-Pan opener has no Invoke Xuen")
+end)
+
+test("Zenith recharge prediction honors Spiritual Focus / Efficient Training", function()
+    conduit("st")
+    H.S.known[280197] = false; H.S.known[450989] = false            -- neither talent
+    H.fire("UNIT_SPELLCAST_SUCCEEDED", "player", nil, ZENITH)
+    local c = H.Engine.P.charges.Zenith
+    eq(math.floor(c.rechargeEnd - H.S.now + 0.5), 90, "base 90s")
+    conduit("st")
+    H.S.talents[280197] = true; H.S.talents[450989] = true          -- both talents
+    H.fire("UNIT_SPELLCAST_SUCCEEDED", "player", nil, ZENITH)
+    c = H.Engine.P.charges.Zenith
+    eq(math.floor(c.rechargeEnd - H.S.now + 0.5), 60, "-20 -10 -> 60s")
 end)

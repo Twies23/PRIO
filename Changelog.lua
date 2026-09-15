@@ -11,6 +11,13 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.10.5", {
+        "Conduit: Zenith's 2nd charge is spent as soon as it's back -- no longer waits for the Tigereye glow (pros cast on every returning charge, ~80s cadence; the wait capped Tigereye at 30 for 30s+). Shado-Pan unchanged. Reset the Conduit lists to default to pick this up.",
+        "Fixes 0.10.4: the Spiritual Focus / Efficient Training reduction to Zenith's predicted recharge is now actually applied.",
+    } },
+    { "0.10.4", {
+        "Zenith's predicted recharge accounts for Spiritual Focus (-20s) and Efficient Training (-10s) on top of the 90s base, so the 2-charge Zenith line lands on time with either talent.",
+    } },
     { "0.10.3", {
         "Conduit: Zenith after Invoke Xuen now sticks -- it fires on any pick within ~10s of the Xuen press, not only when Xuen was the very last cast (a slipped-in cast used to drop it, and at 1 charge it was never offered again).",
         "Conduit AoE: the Energy-near-cap Tiger Palm line is capped at 4 Chi (it fired at 5-6 Chi). Zenith's predicted recharge corrected to 90s. Reset the Conduit lists to default to pick this up.",

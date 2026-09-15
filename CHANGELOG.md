@@ -1,5 +1,12 @@
 # PRIO Changelog
 
+## 0.10.5 (alpha)
+- **Conduit: Zenith's 2nd charge is spent as soon as it's back.** The 2-charge line no longer waits for the Tigereye Brew glow — top players cast Zenith on every returning charge (~80s cadence, plus the one after Invoke Xuen) and never sit on two; the glow wait left your Tigereye capped at 30 stacks for 30+ seconds. Shado-Pan lists unchanged. Reset the Conduit lists to default to pick this up.
+- Fixes 0.10.4: the Spiritual Focus / Efficient Training reduction to Zenith's predicted recharge wasn't actually applied (the prediction kept the un-talented base). Now it is; covered by a test.
+
+## 0.10.4 (alpha)
+- **Zenith's predicted recharge now accounts for Spiritual Focus (−20s) and Efficient Training (−10s)** on top of the 90s base, so the 2-charge Zenith line lands on time whichever of those you run. (Engine: charge-tracked spells can now declare talent reductions.)
+
 ## 0.10.3 (alpha)
 - **Conduit fixes from the first live capture (your dummy log, followed to the letter):**
   - **Zenith after Invoke Xuen now sticks.** The "Zenith on the GCD after Xuen" line only checked that Xuen was the *very last* press; if anything slipped in, Zenith was skipped and, at 1 charge, never offered again (your 2nd window went 13.6s without it). It now fires on any pick within ~10s of the Xuen press.

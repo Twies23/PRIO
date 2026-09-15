@@ -49,6 +49,8 @@ local ID_DRINKINGHORN = 391370  -- Drinking Horn Cover (talent: Zenith lasts +5s
 local ID_INNERPEACE   = 397768  -- Inner Peace (talent: Tiger Palm energy cost -5)
 local ID_ASCENSION    = 115396  -- Ascension (talent: +1 Chi, +20 Energy, +10% Energy regen)
 local ID_HARMONIC     = 1250041 -- Harmonic Combo (talent: Fists of Fury costs 1 less Chi, -10% damage)
+local ID_SPIRITFOCUS  = 280197  -- Spiritual Focus (talent: Zenith cooldown -20s)
+local ID_EFFTRAINING  = 450989  -- Efficient Training (talent: Zenith cooldown -10s, +40% Energy spender damage)
 
 -- Condition builders -----------------------------------------------------------
 local function buffUp(id)   return { type = "buffActive",  spell = id } end
@@ -109,7 +111,7 @@ local conduit_st = {
     { spell = "ZenithStomp",      cond = OR(chiMax(2), auraRemainMax(ID_ZENITH, 5)) },  -- 3: low Chi / Zenith ending
     { spell = "InvokeXuen",       cond = cdReady(ID_CELESTIAL) },                       -- (Midnight) press Xuen to open the Celestial Conduit window
     { spell = "CelestialConduit", cond = AND(buffDown(ID_HEARTJADE), cdNotReady(152175)) }, -- 4: only while Whirling Dragon Punch is on cooldown (matched pros 80%)
-    { spell = "Zenith",           cond = AND(chargesMin(2), { type = "preset:zenithLit" }) }, -- dump 2nd charge only when Zenith is glowing (20 Tigereye Brew stacks ready)
+    { spell = "Zenith",           cond = chargesMin(2) },                                 -- 2nd charge back -> cast it (pros: ~80s cadence, never sit at 2; waiting for the Tigereye glow capped stacks for 30s+ in the user log)
     { spell = "FistsOfFury",      cond = auraRemainMax(ID_HEARTJADE, 1) },              -- 5: dump before HoJS falls off
     { spell = "FistsOfFury" },                                                          -- 6: on cooldown -- ABOVE Tiger Palm (log)
     -- Free procs are dumped aggressively (we can't read their STACK count, only the
@@ -140,7 +142,7 @@ local conduit_aoe = {
     { spell = "ZenithStomp",      cond = OR(chiMax(2), auraRemainMax(ID_ZENITH, 5)) },  -- 3: low Chi / Zenith ending
     { spell = "InvokeXuen",       cond = cdReady(ID_CELESTIAL) },                       -- (Midnight) press Xuen to open the Celestial Conduit window
     { spell = "CelestialConduit", cond = AND(buffDown(ID_HEARTJADE), cdNotReady(152175)) }, -- 4: only while Whirling Dragon Punch is on cooldown (matched pros 80%)
-    { spell = "Zenith",           cond = AND(chargesMin(2), { type = "preset:zenithLit" }) }, -- dump 2nd charge only when Zenith is glowing (20 Tigereye Brew stacks ready)
+    { spell = "Zenith",           cond = chargesMin(2) },                                 -- 2nd charge back -> cast it (pros: ~80s cadence, never sit at 2; waiting for the Tigereye glow capped stacks for 30s+ in the user log)
     { spell = "FistsOfFury" },                                                          -- 5: on cooldown -- ABOVE Tiger Palm (log)
     -- Aggressive free-proc dumps (glow = the only readable signal, no stack count):
     { spell = "BlackoutKick",     cond = { type = "preset:bokProc" } }, -- 6: Blackout Kick! / Combo Breaker proc
@@ -502,7 +504,7 @@ local spec = {
     -- on cast, recharged on a timer, clamped by the readable castable state. `recharge`
     -- is a seed; the engine learns the real (haste'd) value out of combat.
     chargeTrack = {
-        Zenith = { max = 2, recharge = 90 },   -- observed ~80-95s (pros / user log); was 60
+        Zenith = { max = 2, recharge = 90, reduce = { [ID_SPIRITFOCUS] = 20, [ID_EFFTRAINING] = 10 } },   -- 90s base (user log ~95s, no talents); pros ~80s with one of them
     },
 
     ResourceCost = function(_, key, sid, S)
