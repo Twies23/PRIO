@@ -1,5 +1,14 @@
 # PRIO Changelog
 
+## 0.10.2 (alpha)
+- **Conduit Windwalker re-tuned from three top-player logs (~3,400 real casts, replayed through PRIO's engine).** The old list recommended Tiger Palm over a castable spender or free proc about 490 times per three dungeons; the new one does it ~80 times.
+  - **Tiger Palm no longer outranks Fists of Fury, Rising Sun Kick, or the free Dance of Chi-Ji / Blackout Kick! procs.** It now fires only at Chi ≤ 4 when Energy is near cap or Chi ≤ 1 — how the pros actually use it (an Energy dump with Chi headroom, never at 5-6 Chi).
+  - **Zenith is the very next press after Invoke Xuen** (it was waiting on Celestial Conduit). Every one of 52 pro burst windows does this; Celestial Conduit keeps its "Whirling Dragon Punch on cooldown" timing, which matched the pros 80%.
+  - **Harmonic Combo is accounted for** — Fists of Fury costs 2 Chi with the talent, so the queue no longer thinks Fists is unaffordable at 2 Chi and pushes Tiger Palm instead.
+  - **Steadier 2nd icon.** Tiger Palm is now withheld by the game's own "not enough Energy" flag rather than the drifting Energy estimate — in the sim, the second icon went from castable-next-tick 41% of the time to 100%. And after a Whirling Dragon Punch the queue expects the free Spinning Crane Kick / Blackout Kick it procs most of the time.
+  - A placeholder pick (shown only when nothing at all is castable) is now dimmed like any other not-yet-castable icon instead of lighting up as "Now".
+  - Reset the Conduit lists to default to pick this up. (The unaffordable-Tiger-Palm withholding and the WDP look-ahead also apply on Shado-Pan; its lists are unchanged.)
+
 ## 0.10.1 (alpha)
 - **Shado-Pan Windwalker tuning from a top-log comparison.** Two changes, both matching how strong Shado-Pan players actually play (validated against multiple Kings' Rest logs):
   - **Spinning Crane Kick is now the primary single-target spender** instead of Blackout Kick. On Shado-Pan, Spinning Crane Kick drives Chi Explosion, so it's higher value even on one target — the old list only cast it off a Dance of Chi-Ji proc, which is why it was under-used. Blackout Kick drops to proc / low-Chi / filler.

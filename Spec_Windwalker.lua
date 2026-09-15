@@ -48,6 +48,7 @@ local ID_SLICINGWINDS = 1217413 -- Slicing Winds (talent)
 local ID_DRINKINGHORN = 391370  -- Drinking Horn Cover (talent: Zenith lasts +5s)
 local ID_INNERPEACE   = 397768  -- Inner Peace (talent: Tiger Palm energy cost -5)
 local ID_ASCENSION    = 115396  -- Ascension (talent: +1 Chi, +20 Energy, +10% Energy regen)
+local ID_HARMONIC     = 1250041 -- Harmonic Combo (talent: Fists of Fury costs 1 less Chi, -10% damage)
 
 -- Condition builders -----------------------------------------------------------
 local function buffUp(id)   return { type = "buffActive",  spell = id } end
@@ -81,6 +82,10 @@ local bokProc  = OR(buffUp(ID_COMBOBREAK), AND(buffUp(ID_ZENITH), talentYes(ID_O
 local sckZenith = AND(buffUp(ID_ZENITH), OR(chiMin(5), buffUp(ID_DANCECHIJI)))
 -- Tiger Palm pool-to-avoid-cap filler (energy is secret; below 5 Chi, no Zenith).
 local tpBelowCap = AND(chiMax(4), buffDown(ID_ZENITH))
+-- Conduit Tiger Palm gate (log-validated): pros press it at Chi 0-2 or as an Energy dump
+-- with Chi headroom, and almost never at 5-6 -- so: Chi <= 4 AND (Energy near cap OR Chi <= 1).
+-- It sits BELOW Fists / the free procs / Rising Sun Kick, which the old chiMax(2) line outranked.
+local tpGate = AND(chiMax(4), OR(energyNearCap, chiMax(1)))
 local comboBreaker2 = stacksMin(ID_COMBOBREAK, 2)
 local bokZenith = AND(buffUp(ID_ZENITH), OR(buffUp(ID_COMBOBREAK), talentYes(ID_OBSIDIAN)))
 local touchOfDeathUp = buffUp(ID_TOUCHOFDEATH)
@@ -91,26 +96,29 @@ local slicingWindsTalent = talentYes(ID_SLICINGWINDS)
 -- against three top-player logs (Xaehyun, Axofa). Undetectable gates are approximated:
 -- "channeling Celestial Conduit" is dropped; the tier-set 4pc collapses to Unbroken
 -- Rhythm (which it grants).
+-- 0.10.2: burst + Tiger Palm ordering re-derived from three top Conduit logs (see the
+-- decision-point replay in the sim): Zenith is the GCD after Invoke Xuen (52/52 windows),
+-- and Fists / free procs / Rising Sun Kick all outrank Tiger Palm.
 local conduit_st = {
+    { spell = "Zenith",           cond = lastCast(ID_INVOKEXUEN) },                    -- (log) the GCD right after Invoke Xuen opens the window
     { spell = "WhirlingDragonPunch", cond = xuenAway },                                 -- 1: hold unless Xuen >10s away
     { spell = "StrikeOfTheWindlord", cond = xuenAway },                                 -- 2: hold unless Xuen >10s away
     { spell = "ZenithStomp",      cond = OR(chiMax(2), auraRemainMax(ID_ZENITH, 5)) },  -- 3: low Chi / Zenith ending
     { spell = "InvokeXuen",       cond = cdReady(ID_CELESTIAL) },                       -- (Midnight) press Xuen to open the Celestial Conduit window
-    { spell = "CelestialConduit", cond = AND(buffDown(ID_HEARTJADE), cdNotReady(152175)) }, -- 4: build HoJS, only while Whirling Dragon Punch is on cooldown
-    { spell = "Zenith",           cond = lastCast(ID_CELESTIAL) },                     -- (log) burst cast right after Celestial Conduit
+    { spell = "CelestialConduit", cond = AND(buffDown(ID_HEARTJADE), cdNotReady(152175)) }, -- 4: only while Whirling Dragon Punch is on cooldown (matched pros 80%)
     { spell = "Zenith",           cond = AND(chargesMin(2), { type = "preset:zenithLit" }) }, -- dump 2nd charge only when Zenith is glowing (20 Tigereye Brew stacks ready)
     { spell = "FistsOfFury",      cond = auraRemainMax(ID_HEARTJADE, 1) },              -- 5: dump before HoJS falls off
-    { spell = "TigerPalm",        cond = OR(AND(energyNearCap, buffDown(ID_ZENITH)), chiMax(2)) }, -- 6: energy cap / build for FoF
-    { spell = "FistsOfFury" },                                                          -- 7
+    { spell = "FistsOfFury" },                                                          -- 6: on cooldown -- ABOVE Tiger Palm (log)
     -- Free procs are dumped aggressively (we can't read their STACK count, only the
     -- glow/buff): Dance of Chi-Ji glows Spinning Crane Kick, Blackout Kick! / Combo
     -- Breaker glows Blackout Kick. Spend before they overcap.
-    { spell = "SpinningCraneKick", cond = { type = "preset:danceProc" } }, -- 8: Dance of Chi-Ji proc
-    { spell = "BlackoutKick",     cond = { type = "preset:bokProc" } }, -- 9: Blackout Kick! / Combo Breaker proc
-    { spell = "RushingWindKick",  cond = buffUp(ID_RUSHINGWIND) },                      -- 10: proc
-    { spell = "SpinningCraneKick", cond = buffUp(ID_UNBROKEN) },                        -- 11: Unbroken Rhythm
-    { spell = "RisingSunKick" },                                                        -- 12: on cooldown (HoJS spams it)
-    { spell = "BlackoutKick",     cond = OR(buffUp(ID_COMBOBREAK), buffUp(ID_BOKPROC), AND(buffUp(ID_ZENITH), talentYes(ID_OBSIDIAN))) }, -- 11: proc / Zenith+Obsidian
+    { spell = "SpinningCraneKick", cond = { type = "preset:danceProc" } }, -- 7: Dance of Chi-Ji proc
+    { spell = "BlackoutKick",     cond = { type = "preset:bokProc" } }, -- 8: Blackout Kick! / Combo Breaker proc
+    { spell = "RushingWindKick",  cond = buffUp(ID_RUSHINGWIND) },                      -- 9: proc
+    { spell = "RisingSunKick" },                                                        -- 10: on cooldown -- ABOVE Tiger Palm (log)
+    { spell = "TigerPalm",        cond = tpGate },                                      -- 11: Chi <= 4 AND (Energy near cap OR Chi <= 1)
+    { spell = "SpinningCraneKick", cond = buffUp(ID_UNBROKEN) },                        -- 12: Unbroken Rhythm
+    { spell = "BlackoutKick",     cond = OR(buffUp(ID_COMBOBREAK), buffUp(ID_BOKPROC), AND(buffUp(ID_ZENITH), talentYes(ID_OBSIDIAN))) }, -- 13: proc / Zenith+Obsidian
     { spell = "SpinningCraneKick", cond = sckZenith },                                  -- 12: Zenith spend (>4 Chi or Dance)
     { spell = "TigerPalm",        cond = chiMax(1) },                                   -- 13: less than 2 Chi
     { spell = "SpinningCraneKick", cond = buffUp(ID_DANCECHIJI) },                      -- 14: free Dance proc
@@ -123,18 +131,18 @@ local conduit_st = {
 -- (same log-validated shape). 4pc -> Unbroken Rhythm; Bloodlust (undetectable) dropped
 -- from the RSK line, leaving its Zenith/no-4pc gate.
 local conduit_aoe = {
+    { spell = "Zenith",           cond = lastCast(ID_INVOKEXUEN) },                    -- (log) the GCD right after Invoke Xuen opens the window
     { spell = "FistsOfFury",      cond = auraRemainMax(ID_HEARTJADE, 1) },              -- 1: HoJS about to end
     { spell = "WhirlingDragonPunch", cond = xuenAway },                                 -- 2: Xuen >10s away
     { spell = "ZenithStomp",      cond = OR(chiMax(2), auraRemainMax(ID_ZENITH, 5)) },  -- 3: low Chi / Zenith ending
     { spell = "InvokeXuen",       cond = cdReady(ID_CELESTIAL) },                       -- (Midnight) press Xuen to open the Celestial Conduit window
-    { spell = "CelestialConduit", cond = AND(buffDown(ID_HEARTJADE), cdNotReady(152175)) }, -- 4: build HoJS, only while Whirling Dragon Punch is on cooldown
-    { spell = "Zenith",           cond = lastCast(ID_CELESTIAL) },                     -- (log) burst cast right after Celestial Conduit
+    { spell = "CelestialConduit", cond = AND(buffDown(ID_HEARTJADE), cdNotReady(152175)) }, -- 4: only while Whirling Dragon Punch is on cooldown (matched pros 80%)
     { spell = "Zenith",           cond = AND(chargesMin(2), { type = "preset:zenithLit" }) }, -- dump 2nd charge only when Zenith is glowing (20 Tigereye Brew stacks ready)
-    { spell = "TigerPalm",        cond = chiMax(2) },                                   -- 5: missing Chi for FoF
-    { spell = "FistsOfFury" },                                                          -- 6
+    { spell = "FistsOfFury" },                                                          -- 5: on cooldown -- ABOVE Tiger Palm (log)
     -- Aggressive free-proc dumps (glow = the only readable signal, no stack count):
-    { spell = "BlackoutKick",     cond = { type = "preset:bokProc" } }, -- 6b: Blackout Kick! / Combo Breaker proc
-    { spell = "SpinningCraneKick", cond = { type = "preset:danceProc" } }, -- 6c: Dance of Chi-Ji proc
+    { spell = "BlackoutKick",     cond = { type = "preset:bokProc" } }, -- 6: Blackout Kick! / Combo Breaker proc
+    { spell = "SpinningCraneKick", cond = { type = "preset:danceProc" } }, -- 6b: Dance of Chi-Ji proc
+    { spell = "TigerPalm",        cond = tpGate },                                      -- 6c: Chi <= 4 AND (Energy near cap OR Chi <= 1)
     { spell = "SpinningCraneKick", cond = buffUp(ID_UNBROKEN) },                        -- 7: 4pc / Unbroken Rhythm
     { spell = "TigerPalm",        cond = AND(energyNearCap, buffDown(ID_ZENITH)) },     -- 8: avoid cap outside Zenith
     { spell = "RisingSunKick" },                                                        -- 9: on cooldown, enables WDP
@@ -243,6 +251,9 @@ local function chiCost(key, S)
     -- Obsidian Spiral: Blackout Kick GENERATES a Chi instead of consuming one, so it
     -- never costs Chi (always castable). Gated on the talent -> inert unless specced.
     if key == "BlackoutKick" and talentSelected(ID_OBSIDIAN) then return 0 end
+    -- Harmonic Combo: Fists of Fury costs 1 less Chi (base 3 -> 2). Log-validated: the
+    -- reference Conduit players run it, and the look-ahead was over-charging Fists by 1.
+    if key == "FistsOfFury" and talentSelected(ID_HARMONIC) then cost = cost - 1 end
     if key == "BlackoutKick" and (auraUp(S, ID_COMBOBREAK) or auraUp(S, ID_ZENITH)) then
         cost = 0
     elseif key == "SpinningCraneKick" and auraUp(S, ID_DANCECHIJI) then
@@ -468,8 +479,16 @@ local spec = {
         ZenithStomp = { grant = { ID_ZENITH } },
         CelestialConduit = { grant = { ID_HEARTJADE } },
         StrikeOfTheWindlord = { grant = { ID_HEARTJADE } },
-        WhirlingDragonPunch = { grant = { ID_HEARTJADE } },
+        -- WDP procs Dance of Chi-Ji on 52-90% and Blackout Kick! on 20-65% of casts (3 top
+        -- logs), so the look-ahead assumes the free Spinning Crane Kick / Blackout Kick
+        -- follow it -- icon 2 after WDP matches what pros actually press.
+        WhirlingDragonPunch = { grant = { ID_HEARTJADE, ID_DANCECHIJI, ID_COMBOBREAK, ID_BOKPROC } },
     },
+    -- Tiger Palm is withheld via the game's clean insufficient-power flag (reads in combat
+    -- even though the Energy bar is secret) instead of the dead-reckoned Energy estimate,
+    -- which runs high. Sim: icon 2 castable-on-next-tick 41% -> 100%, icon 2 -> next primary
+    -- 38% -> 62%, and ~1,100 fewer unaffordable Tiger Palm recommendations per 30 minutes.
+    affordGate = { TigerPalm = true },
 
     maelstromMax = 6,   -- Chi cap (generic "resource" fields)
     maelstromGen = { TigerPalm = 2 },   -- Tiger Palm builds Chi

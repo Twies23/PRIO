@@ -11,6 +11,11 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.10.2", {
+        "Conduit Windwalker re-tuned from three top-player logs replayed through PRIO's engine: Tiger Palm no longer outranks Fists of Fury, Rising Sun Kick, or the free Dance of Chi-Ji / Blackout Kick! procs, and only fires at Chi <= 4 when Energy is near cap or Chi <= 1 (the old list recommended it over a castable spender ~490 times per three dungeons; now ~80).",
+        "Conduit: Zenith is the very next press after Invoke Xuen (52/52 pro burst windows) instead of waiting on Celestial Conduit. Harmonic Combo is accounted for (Fists costs 2 Chi), so the queue stops pushing Tiger Palm at 2 Chi.",
+        "Steadier 2nd icon: Tiger Palm is withheld by the game's own not-enough-Energy flag instead of the drifting Energy estimate (sim: icon 2 castable next tick 41% -> 100%), and the queue expects the free Spinning Crane Kick / Blackout Kick that Whirling Dragon Punch procs. A placeholder pick (nothing castable at all) now shows dimmed instead of as 'Now'. Reset the Conduit lists to default to pick this up (Shado-Pan lists unchanged).",
+    } },
     { "0.10.1", {
         "Shado-Pan Windwalker: Spinning Crane Kick is now the primary single-target spender (it drives Chi Explosion) instead of Blackout Kick, which drops to proc/low-Chi/filler. Matches top Shado-Pan logs. Reset lists to default to pick it up.",
         "Shado-Pan Windwalker: Fists of Fury now fires right after Zenith in the burst window (ST + AoE) instead of Rising Sun Kick cutting in.",

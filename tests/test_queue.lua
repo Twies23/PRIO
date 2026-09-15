@@ -78,6 +78,7 @@ test("conduit AoE: Rushing Wind Kick appears when its proc is up", function()
     -- Suppress everything ranked ABOVE Rushing Wind Kick so it's reached:
     H.S.power[3] = 50                                  -- readable low Energy -> not near cap
     H.S.ready[123904] = true                           -- Xuen ready -> WDP "Xuen >10s" fails
+    H.S.ready[443028] = false                          -- Celestial Conduit not ready -> Invoke Xuen line off (else Xuen+Zenith fill the queue)
     H.S.tracked[443294] = true; H.S.auras[443294] = true  -- HoJS active -> Celestial Conduit fails
     H.S.ready[113656] = false                          -- Fists of Fury on cooldown
     H.S.chargeState[1249625] = { max = 2, cur = 1, belowMax = true }  -- Zenith <2 charges -> its line fails
@@ -106,16 +107,101 @@ test("conduit: Zenith recommended at 2 charges (overcap dump) when glowing", fun
     truthy(has(H.Engine:Evaluate(), ZENITH), "Zenith at 2 charges + glowing should be recommended")
 end)
 
-test("conduit: Zenith fires right after Celestial Conduit even at 1 charge (burst)", function()
-    conduit("st")                                                -- HoJS down -> CC castable -> CC then Zenith
-    H.S.ready[152175] = false                                    -- Whirling Dragon Punch on CD -> CC's new gate passes
+test("conduit: Zenith is the very next pick after Invoke Xuen, even at 1 charge (burst)", function()
+    conduit("st")
+    H.Engine.P.lastCast = XUEN; H.Engine.P.lastCastKey = "InvokeXuen"   -- just pressed Xuen
     H.S.chargeState[ZENITH] = { max = 2, cur = 1, belowMax = true }
     local r = H.Engine:Evaluate()
-    truthy(has(r, CC) and has(r, ZENITH), "Celestial Conduit then Zenith should both appear in the burst")
+    truthy(r and r.primary and r.primary.id == ZENITH, "Zenith should be the primary right after Invoke Xuen")
+end)
+
+test("conduit: Celestial Conduit still gated on Whirling Dragon Punch being on cooldown", function()
+    conduit("st")
+    H.S.ready[152175] = false                                    -- WDP on CD -> CC's gate passes
+    H.S.chargeState[ZENITH] = { max = 2, cur = 1, belowMax = true }
+    truthy(has(H.Engine:Evaluate(), CC), "Celestial Conduit should appear while WDP is on cooldown")
+end)
+
+-- 0.10.2: Tiger Palm no longer outranks a castable Fists / free proc / Rising Sun Kick
+-- (decision-point replay of 3 top logs). Suppress the cooldown lines so the spender tier decides.
+local TP_ID, RSK_ID, FOF, DANCE_GLOW2 = 100780, 107428, 113656, 101546
+local function conduit_spenders()
+    conduit("st")
+    H.S.ready[XUEN] = true                                          -- xuenAway false -> WDP/Strike hold
+    H.S.ready[443028] = false                                       -- Celestial Conduit not ready -> Xuen line off
+    H.S.tracked[443294] = true; H.S.auras[443294] = true           -- HoJS up -> CC line off
+    H.S.chargeState[1249625] = { max = 2, cur = 1, belowMax = true } -- Zenith lines off
+    H.S.ready[1272696] = false                                      -- Zenith Stomp on cooldown (it correctly outranks TP at Chi <= 2)
+    H.S.power[3] = 150                                              -- readable Energy at cap -> TP's gate is TRUE
+    H.Engine:UpdateEnergy(H.S.now)
+end
+
+test("conduit ST: Fists of Fury beats Tiger Palm at 2 Chi (old chiMax(2) line used to win)", function()
+    conduit_spenders(); H.S.power[12] = 2; H.S.ready[FOF] = true
+    H.S.talents[1250041] = true                                     -- Harmonic Combo: Fists costs 2
+    local r = H.Engine:Evaluate()
+    eq(r and r.primary and r.primary.id, FOF, "Fists should be the pick at 2 Chi, not Tiger Palm")
+end)
+
+test("conduit ST: a Dance of Chi-Ji proc beats Tiger Palm at 1 Chi", function()
+    conduit_spenders(); H.S.power[12] = 1; H.S.ready[FOF] = false; H.S.ready[RSK_ID] = false
+    H.S.glows[DANCE_GLOW2] = true
+    H.S.tracked[325202] = true; H.S.auras[325202] = true            -- Dance buff tracked (as in-game) -> SCK costs 0
+    local r = H.Engine:Evaluate()
+    eq(r and r.primary and r.primary.id, 101546, "free Spinning Crane Kick should out-rank Tiger Palm")
+end)
+
+test("conduit ST: Rising Sun Kick beats Tiger Palm at 2 Chi", function()
+    conduit_spenders(); H.S.power[12] = 2; H.S.ready[FOF] = false; H.S.ready[RSK_ID] = true
+    local r = H.Engine:Evaluate()
+    eq(r and r.primary and r.primary.id, RSK_ID, "RSK should be the pick over Tiger Palm")
+end)
+
+test("conduit ST: Tiger Palm is not recommended at 5 Chi even at Energy cap", function()
+    conduit_spenders(); H.S.power[12] = 5; H.S.ready[FOF] = false; H.S.ready[RSK_ID] = false
+    H.db.numQueue = 0
+    local r = H.Engine:Evaluate()
+    truthy(not (r and r.primary and r.primary.id == TP_ID), "no Tiger Palm at 5 Chi")
+end)
+
+test("affordGate: an unaffordable Tiger Palm is withheld via the clean insufficient-power flag", function()
+    -- Chi 1, Fists/RSK down: Tiger Palm (Energy at cap, Chi <= 1) normally outranks the paid
+    -- Blackout Kick. With the game saying TP is unaffordable, Blackout Kick must lead instead.
+    conduit_spenders(); H.S.power[12] = 1; H.S.ready[FOF] = false; H.S.ready[RSK_ID] = false
+    H.db.numQueue = 0
+    H.S.insufficientPower[TP_ID] = true
+    local r = H.Engine:Evaluate()
+    eq(r and r.primary and r.primary.id, 100784, "Blackout Kick leads while Tiger Palm is unaffordable")
+    H.S.insufficientPower[TP_ID] = false
+    r = H.Engine:Evaluate()
+    eq(r and r.primary and r.primary.id, TP_ID, "Tiger Palm returns once affordable")
+end)
+
+test("safety net: a placeholder pick carries the dim flags (unaffordable / on cooldown)", function()
+    conduit_spenders(); H.S.power[12] = 0; H.S.ready[FOF] = false; H.S.ready[RSK_ID] = false
+    H.S.insufficientPower[TP_ID] = true                             -- nothing castable at all
+    local r = H.Engine:Evaluate()
+    truthy(r and r.primary, "still shows something (never blank)")
+    truthy(r.primary.noResource or r.primary.notReady, "but flagged so the display dims it")
+end)
+
+test("Harmonic Combo: Fists of Fury costs 2 Chi with the talent, 3 without", function()
+    H.reset(); H.S.knownStrict[XUEN] = true; H.rebind()
+    eq(H.spec:ResourceCost("FistsOfFury", FOF, {}), 3, "base cost 3")
+    H.S.talents[1250041] = true
+    eq(H.spec:ResourceCost("FistsOfFury", FOF, {}), 2, "Harmonic Combo -> 2")
+end)
+
+test("look-ahead: Whirling Dragon Punch grants Dance of Chi-Ji / Blackout Kick! in the queue sim", function()
+    local g = H.spec.spellEffects.WhirlingDragonPunch.grant
+    local dance, combo = false, false
+    for _, a in ipairs(g) do if a == 325202 then dance = true end; if a == 137284 then combo = true end end
+    truthy(dance and combo, "WDP look-ahead should assume its Dance / Combo Breaker procs")
 end)
 
 test("conduit: Zenith NOT recommended at 1 charge outside the burst", function()
     conduit("st")
+    H.S.ready[CC] = false                                        -- Celestial Conduit not ready -> Invoke Xuen line off (no burst)
     H.S.tracked[HOJS] = true; H.S.auras[HOJS] = true             -- HoJS up -> CC suppressed, no lastCast trigger
     H.S.chargeState[ZENITH] = { max = 2, cur = 1, belowMax = true }
     falsy(has(H.Engine:Evaluate(), ZENITH), "Zenith should not fire at 1 charge outside burst")
@@ -129,6 +215,7 @@ test("conduit: Zenith overcap dump gated on the glow (20 Tigereye stacks)", func
     truthy(has(H.Engine:Evaluate(), ZENITH), "dump allowed when Zenith is glowing")
 
     conduit("st")
+    H.S.ready[CC] = false                                        -- no burst path (Invoke Xuen line off)
     H.S.tracked[HOJS] = true; H.S.auras[HOJS] = true
     H.S.chargeState[ZENITH] = { max = 2, cur = 2, belowMax = false }
     H.S.glows[ZENITH] = false

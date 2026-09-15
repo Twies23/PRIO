@@ -2107,7 +2107,13 @@ function Engine:Evaluate()
                 end
             end
         end
-        if fb then picks[1] = Entry(fb) end
+        if fb then
+            picks[1] = Entry(fb)
+            -- It's a placeholder, not a castable pick: carry the same dim flags the walk
+            -- sets, so an unaffordable/cooling-down filler shows desaturated, not as "Now".
+            picks[1].noResource = (API.InsufficientPower(fb) == true)
+            picks[1].notReady   = (API.IsReady(ReadSid(fb)) == false)
+        end
     end
 
     if #picks == 0 then return nil end
