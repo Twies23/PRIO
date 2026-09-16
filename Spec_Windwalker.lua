@@ -49,6 +49,7 @@ local ID_DRINKINGHORN = 391370  -- Drinking Horn Cover (talent: Zenith lasts +5s
 local ID_INNERPEACE   = 397768  -- Inner Peace (talent: Tiger Palm energy cost -5)
 local ID_ASCENSION    = 115396  -- Ascension (talent: +1 Chi, +20 Energy, +10% Energy regen)
 local ID_WHIRLINGDP_  = 152175
+local ID_RISINGSUNKICK_ = 107428
 local ID_FISTSOFFURY_ = 113656
 local ID_HARMONIC     = 1250041 -- Harmonic Combo (talent: Fists of Fury costs 1 less Chi, -10% damage)
 local ID_SPIRITFOCUS  = 280197  -- Spiritual Focus (talent: Zenith cooldown -20s)
@@ -94,10 +95,14 @@ local tpGate = AND(chiMax(4), OR(energyNearCap, chiMax(1)))
 -- >= 80s left, i.e. within ~10s of the press -- so one intervening pick can't drop the Zenith.
 -- cdRemainMax(119): an UNSEEDED on-cooldown Xuen (pressed before /reload) reads as its raw 120s
 -- base, which would otherwise satisfy the 'just pressed' window on the first pull.
-local zenithAfterXuen = OR(lastCast(ID_INVOKEXUEN), AND(cdRemainMin(ID_INVOKEXUEN, 80), cdRemainMax(ID_INVOKEXUEN, 119)))
+local zenithAfterXuen = AND(buffDown(ID_ZENITH), OR(lastCast(ID_INVOKEXUEN), AND(cdRemainMin(ID_INVOKEXUEN, 80), cdRemainMax(ID_INVOKEXUEN, 119))))
 -- Chain the 2nd charge inside the Xuen window: the pros re-cast Zenith the moment the first
 -- window ends (min interval 16.7-17.9s, never overlapping) while Xuen was pressed <= 30s ago.
 -- Outside Xuen the last charge is held for the next Xuen.
+-- WDP's real gate (Rising Sun Kick AND Fists on cooldown) as a condition: usability is skipped
+-- while channeling, so WDP used to pivot into the primary during Fists with RSK still up.
+-- 'just cast' keeps RSK > WDP visible in the queue.
+local wdpGate = AND(xuenAway, OR(cdNotReady(ID_RISINGSUNKICK_), lastCast(ID_RISINGSUNKICK_)), OR(cdNotReady(ID_FISTSOFFURY_), lastCast(ID_FISTSOFFURY_)))
 local zenithChain = AND(cdRemainMin(ID_INVOKEXUEN, 60), cdRemainMax(ID_INVOKEXUEN, 119), buffDown(ID_ZENITH))
 local comboBreaker2 = stacksMin(ID_COMBOBREAK, 2)
 local bokZenith = AND(buffUp(ID_ZENITH), OR(buffUp(ID_COMBOBREAK), talentYes(ID_OBSIDIAN)))
@@ -115,12 +120,12 @@ local slicingWindsTalent = talentYes(ID_SLICINGWINDS)
 local conduit_st = {
     { spell = "Zenith",           cond = zenithAfterXuen },                             -- (log) the GCD right after Invoke Xuen opens the window (robust: any pick within ~10s of the press)
     { spell = "Zenith",           cond = zenithChain },                                  -- (log) 2nd charge as the first window ends, inside Xuen (pros chain at ~17s)
-    { spell = "WhirlingDragonPunch", cond = xuenAway },                                 -- 1: hold unless Xuen >10s away
+    { spell = "WhirlingDragonPunch", cond = wdpGate },                                  -- 1: RSK+Fists down (or just cast), Xuen >10s away
     { spell = "StrikeOfTheWindlord", cond = xuenAway },                                 -- 2: hold unless Xuen >10s away
     { spell = "ZenithStomp",      cond = OR(chiMax(2), AND(auraRemainMax(ID_ZENITH, 5), chiMax(3))) }, -- 3: low Chi / Zenith ending (capped at 3 Chi: ZS is +2/+4 and fired at 5-6 in the user log)
     { spell = "InvokeXuen",       cond = cdReady(ID_CELESTIAL) },                       -- (Midnight) press Xuen to open the Celestial Conduit window
     { spell = "CelestialConduit", cond = AND(buffDown(ID_HEARTJADE), cdNotReady(152175)) }, -- 4: only while Whirling Dragon Punch is on cooldown (matched pros 80%)
-    { spell = "Zenith",           cond = chargesMin(2) },                                 -- 2nd charge back -> cast it (pros: ~80s cadence, never sit at 2; waiting for the Tigereye glow capped stacks for 30s+ in the user log)
+    { spell = "Zenith",           cond = AND(chargesMin(2), buffDown(ID_ZENITH)) },     -- 2nd charge back -> cast it (never over its own window) (pros: ~80s cadence, never sit at 2; waiting for the Tigereye glow capped stacks for 30s+ in the user log)
     { spell = "FistsOfFury",      cond = auraRemainMax(ID_HEARTJADE, 1) },              -- 5: dump before HoJS falls off
     { spell = "FistsOfFury" },                                                          -- 6: on cooldown -- ABOVE Tiger Palm (log)
     -- Free procs are dumped aggressively (we can't read their STACK count, only the
@@ -148,11 +153,11 @@ local conduit_aoe = {
     { spell = "Zenith",           cond = zenithAfterXuen },                             -- (log) the GCD right after Invoke Xuen opens the window (robust: any pick within ~10s of the press)
     { spell = "Zenith",           cond = zenithChain },                                  -- (log) 2nd charge as the first window ends, inside Xuen (pros chain at ~17s)
     { spell = "FistsOfFury",      cond = auraRemainMax(ID_HEARTJADE, 1) },              -- 1: HoJS about to end
-    { spell = "WhirlingDragonPunch", cond = xuenAway },                                 -- 2: Xuen >10s away
+    { spell = "WhirlingDragonPunch", cond = wdpGate },                                  -- 2: RSK+Fists down (or just cast), Xuen >10s away
     { spell = "ZenithStomp",      cond = OR(chiMax(2), AND(auraRemainMax(ID_ZENITH, 5), chiMax(3))) }, -- 3: low Chi / Zenith ending (capped at 3 Chi: ZS is +2/+4 and fired at 5-6 in the user log)
     { spell = "InvokeXuen",       cond = cdReady(ID_CELESTIAL) },                       -- (Midnight) press Xuen to open the Celestial Conduit window
     { spell = "CelestialConduit", cond = AND(buffDown(ID_HEARTJADE), cdNotReady(152175)) }, -- 4: only while Whirling Dragon Punch is on cooldown (matched pros 80%)
-    { spell = "Zenith",           cond = chargesMin(2) },                                 -- 2nd charge back -> cast it (pros: ~80s cadence, never sit at 2; waiting for the Tigereye glow capped stacks for 30s+ in the user log)
+    { spell = "Zenith",           cond = AND(chargesMin(2), buffDown(ID_ZENITH)) },     -- 2nd charge back -> cast it (never over its own window) (pros: ~80s cadence, never sit at 2; waiting for the Tigereye glow capped stacks for 30s+ in the user log)
     { spell = "FistsOfFury" },                                                          -- 5: on cooldown -- ABOVE Tiger Palm (log)
     -- Aggressive free-proc dumps (glow = the only readable signal, no stack count):
     { spell = "BlackoutKick",     cond = { type = "preset:bokProc" } }, -- 6: Blackout Kick! / Combo Breaker proc
@@ -491,7 +496,9 @@ local spec = {
         BlackoutKick = { consume = { ID_COMBOBREAK } },
         SpinningCraneKick = { consume = { ID_DANCECHIJI } },
         RushingWindKick = { consume = { ID_RUSHINGWIND } },
-        ZenithStomp = { grant = { ID_ZENITH } },
+        -- Zenith grants its own window (+ Yu'lon's HoJS) in the look-ahead, so the queue never
+        -- shows a second Zenith behind the first (the Q-V-Q bug).
+        Zenith = { grant = { ID_ZENITH, ID_HEARTJADE } },
         CelestialConduit = { grant = { ID_HEARTJADE } },
         StrikeOfTheWindlord = { grant = { ID_HEARTJADE } },
         -- WDP procs Dance of Chi-Ji on 52-90% and Blackout Kick! on 20-65% of casts (3 top

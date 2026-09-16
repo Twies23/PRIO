@@ -128,6 +128,8 @@ end)
 
 test("conduit: Celestial Conduit still gated on Whirling Dragon Punch being on cooldown", function()
     conduit("st")
+    H.S.ready[XUEN] = false                                      -- no Xuen -> no simulated Zenith/HoJS ahead of CC
+    H.S.known[392983] = false                                    -- no Strike of the Windlord (it would grant HoJS in the sim)
     H.S.ready[152175] = false                                    -- WDP on CD -> CC's gate passes
     H.S.chargeState[ZENITH] = { max = 2, cur = 1, belowMax = true }
     truthy(has(H.Engine:Evaluate(), CC), "Celestial Conduit should appear while WDP is on cooldown")
@@ -379,4 +381,37 @@ test("conduit: an unseeded on-cooldown Xuen (pressed before /reload) does not fa
     H.S.chargeState[ZENITH] = { max = 2, cur = 1, belowMax = true }
     local r = H.Engine:Evaluate()
     truthy(not (r and r.primary and r.primary.id == ZENITH), "no Zenith from a fake 'just pressed Xuen'")
+end)
+
+test("look-ahead: Zenith never appears twice in the queue (its window is granted in the sim)", function()
+    conduit("st"); H.db.numQueue = 3
+    H.S.talents[392986] = true
+    H.fire("UNIT_SPELLCAST_SUCCEEDED", "player", nil, XUEN)          -- just pressed Xuen
+    H.S.ready[XUEN] = false
+    H.S.tracked[ZENITH] = true; H.S.auras[ZENITH] = false
+    H.S.chargeState[ZENITH] = { max = 2, cur = 2, belowMax = false } -- 2 charges: both lines would want it
+    local r = H.Engine:Evaluate()
+    local n = 0
+    for _, id in ipairs(ids(r)) do if id == ZENITH then n = n + 1 end end
+    eq(n, 1, "exactly one Zenith in primary+queue")
+    eq(r.primary.id, ZENITH, "and it is the primary")
+end)
+
+test("look-ahead: WDP does not pivot into the primary during a Fists channel while RSK is up", function()
+    conduit("st"); H.db.numQueue = 2
+    H.S.ready[XUEN] = false; H.S.ready[443028] = false
+    H.S.tracked[443294] = true; H.S.auras[443294] = false
+    H.S.chargeState[ZENITH] = { max = 2, cur = 1, belowMax = true }
+    H.Engine.P.lastCast = 113656; H.Engine.P.lastCastKey = "FistsOfFury"
+    H.S.ready[113656] = false                                        -- Fists on cooldown (channeling it)
+    H.S.ready[152175] = true; H.S.usable[152175] = true              -- WDP's own CD up (usability is skipped mid-channel)
+    local oldCh = UnitChannelInfo
+    UnitChannelInfo = function() return "Fists of Fury", nil, nil, nil, 0, 4000 end
+    H.S.ready[107428] = true                                         -- RSK is UP -> WDP not actually castable
+    local r = H.Engine:Evaluate()
+    truthy(not (r and r.primary and r.primary.id == 152175), "no WDP while RSK is up")
+    H.S.ready[107428] = false                                        -- RSK on cooldown -> WDP is real
+    r = H.Engine:Evaluate()
+    eq(r and r.primary and r.primary.id, 152175, "WDP once RSK is down too")
+    UnitChannelInfo = oldCh
 end)

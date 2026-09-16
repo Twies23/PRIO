@@ -1,5 +1,10 @@
 # PRIO Changelog
 
+## 0.10.9 (alpha)
+- **Look-ahead: no more double Zenith.** The queue could show Zenith, something, Zenith — it simulated the first cast without knowing the Zenith window would then be up. Casting Zenith now grants its window (and Yu'lon's Heart of the Jade Serpent) in the look-ahead, and all Conduit Zenith lines require the window to be down (pros never overlap it).
+- **Look-ahead: WDP no longer pivots into the primary mid-Fists while Rising Sun Kick is up.** Castability is skipped while channeling, so WDP looked available. Its real gate — RSK *and* Fists on cooldown — is now a condition (with "just cast" so RSK → WDP still shows in the queue).
+- Cleanup: Zenith Stomp no longer pretends to grant the Zenith window in the look-ahead. Reset the Conduit lists to default to pick this up.
+
 ## 0.10.8 (alpha)
 - **Conduit: the second Zenith charge is chained inside the Xuen window.** Top players re-cast Zenith the moment the first window ends (never overlapping, ~17s apart) while Xuen is up; PRIO had no line for it, so after the Xuen Zenith a remaining charge just sat there. New line: Zenith when its window has ended and Invoke Xuen was pressed within the last ~30s. Outside the Xuen window the last charge is still held for the next Xuen. Sim: +2.4% ST / +1.4% AoE (same number of Zeniths, better timing). Reset the Conduit lists to default to pick this up.
 

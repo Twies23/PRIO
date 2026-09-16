@@ -11,6 +11,10 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.10.9", {
+        "Look-ahead: no more double Zenith in the queue -- casting Zenith grants its window in the simulation and Conduit Zenith lines require the window to be down.",
+        "Look-ahead: Whirling Dragon Punch no longer pivots into the primary mid-Fists while Rising Sun Kick is up -- its real gate (RSK and Fists on cooldown, or just cast) is now a condition. Reset the Conduit lists to default to pick this up.",
+    } },
     { "0.10.8", {
         "Conduit: the second Zenith charge is chained inside the Xuen window -- re-cast when the first window ends and Invoke Xuen was pressed within ~30s (pros chain at ~17s). Outside Xuen the last charge is held. Sim: +2.4% ST / +1.4% AoE. Reset the Conduit lists to default to pick this up.",
     } },
