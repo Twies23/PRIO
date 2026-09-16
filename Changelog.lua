@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.10.8", {
+        "Conduit: the second Zenith charge is chained inside the Xuen window -- re-cast when the first window ends and Invoke Xuen was pressed within ~30s (pros chain at ~17s). Outside Xuen the last charge is held. Sim: +2.4% ST / +1.4% AoE. Reset the Conduit lists to default to pick this up.",
+    } },
     { "0.10.7", {
         "Conduit: Zenith Stomp's 'Zenith is ending' line no longer fires above 3 Chi -- inside Zenith Chi sits at 5-6 and the +2/+4 stomp was wasting it (sim: chi waste roughly halved, +1.4% AoE). Reset the Conduit lists to default to pick this up.",
     } },

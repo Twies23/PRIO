@@ -92,7 +92,13 @@ local tpBelowCap = AND(chiMax(4), buffDown(ID_ZENITH))
 local tpGate = AND(chiMax(4), OR(energyNearCap, chiMax(1)))
 -- "Just pressed Invoke Xuen": last cast was Xuen, OR its (90s with Xuen's Bond) cooldown still has
 -- >= 80s left, i.e. within ~10s of the press -- so one intervening pick can't drop the Zenith.
-local zenithAfterXuen = OR(lastCast(ID_INVOKEXUEN), cdRemainMin(ID_INVOKEXUEN, 80))
+-- cdRemainMax(119): an UNSEEDED on-cooldown Xuen (pressed before /reload) reads as its raw 120s
+-- base, which would otherwise satisfy the 'just pressed' window on the first pull.
+local zenithAfterXuen = OR(lastCast(ID_INVOKEXUEN), AND(cdRemainMin(ID_INVOKEXUEN, 80), cdRemainMax(ID_INVOKEXUEN, 119)))
+-- Chain the 2nd charge inside the Xuen window: the pros re-cast Zenith the moment the first
+-- window ends (min interval 16.7-17.9s, never overlapping) while Xuen was pressed <= 30s ago.
+-- Outside Xuen the last charge is held for the next Xuen.
+local zenithChain = AND(cdRemainMin(ID_INVOKEXUEN, 60), cdRemainMax(ID_INVOKEXUEN, 119), buffDown(ID_ZENITH))
 local comboBreaker2 = stacksMin(ID_COMBOBREAK, 2)
 local bokZenith = AND(buffUp(ID_ZENITH), OR(buffUp(ID_COMBOBREAK), talentYes(ID_OBSIDIAN)))
 local touchOfDeathUp = buffUp(ID_TOUCHOFDEATH)
@@ -108,6 +114,7 @@ local slicingWindsTalent = talentYes(ID_SLICINGWINDS)
 -- and Fists / free procs / Rising Sun Kick all outrank Tiger Palm.
 local conduit_st = {
     { spell = "Zenith",           cond = zenithAfterXuen },                             -- (log) the GCD right after Invoke Xuen opens the window (robust: any pick within ~10s of the press)
+    { spell = "Zenith",           cond = zenithChain },                                  -- (log) 2nd charge as the first window ends, inside Xuen (pros chain at ~17s)
     { spell = "WhirlingDragonPunch", cond = xuenAway },                                 -- 1: hold unless Xuen >10s away
     { spell = "StrikeOfTheWindlord", cond = xuenAway },                                 -- 2: hold unless Xuen >10s away
     { spell = "ZenithStomp",      cond = OR(chiMax(2), AND(auraRemainMax(ID_ZENITH, 5), chiMax(3))) }, -- 3: low Chi / Zenith ending (capped at 3 Chi: ZS is +2/+4 and fired at 5-6 in the user log)
@@ -139,6 +146,7 @@ local conduit_st = {
 -- from the RSK line, leaving its Zenith/no-4pc gate.
 local conduit_aoe = {
     { spell = "Zenith",           cond = zenithAfterXuen },                             -- (log) the GCD right after Invoke Xuen opens the window (robust: any pick within ~10s of the press)
+    { spell = "Zenith",           cond = zenithChain },                                  -- (log) 2nd charge as the first window ends, inside Xuen (pros chain at ~17s)
     { spell = "FistsOfFury",      cond = auraRemainMax(ID_HEARTJADE, 1) },              -- 1: HoJS about to end
     { spell = "WhirlingDragonPunch", cond = xuenAway },                                 -- 2: Xuen >10s away
     { spell = "ZenithStomp",      cond = OR(chiMax(2), AND(auraRemainMax(ID_ZENITH, 5), chiMax(3))) }, -- 3: low Chi / Zenith ending (capped at 3 Chi: ZS is +2/+4 and fired at 5-6 in the user log)

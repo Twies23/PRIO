@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.10.8 (alpha)
+- **Conduit: the second Zenith charge is chained inside the Xuen window.** Top players re-cast Zenith the moment the first window ends (never overlapping, ~17s apart) while Xuen is up; PRIO had no line for it, so after the Xuen Zenith a remaining charge just sat there. New line: Zenith when its window has ended and Invoke Xuen was pressed within the last ~30s. Outside the Xuen window the last charge is still held for the next Xuen. Sim: +2.4% ST / +1.4% AoE (same number of Zeniths, better timing). Reset the Conduit lists to default to pick this up.
+
 ## 0.10.7 (alpha)
 - **Conduit: Zenith Stomp's "Zenith is ending" line no longer fires above 3 Chi.** Inside Zenith every spender costs 1 less, so Chi sits at 5-6 — and Zenith Stomp (+2, +4 in AoE) was landing there and wasting it (a third of the Chi lost in your last capture). Sim: chi waste roughly halved, +1.4% AoE. Reset the Conduit lists to default to pick this up.
 

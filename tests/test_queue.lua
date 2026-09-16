@@ -350,3 +350,33 @@ test("conduit: Zenith Stomp 'Zenith ending' branch does not fire at 5+ Chi", fun
     r = H.Engine:Evaluate()
     eq(r and r.primary and r.primary.id, 1272696, "Zenith Stomp at 3 Chi as Zenith ends")
 end)
+
+test("conduit: 2nd Zenith chains when the window ends inside the Xuen window (not outside it)", function()
+    conduit("st")
+    H.S.talents[392986] = true                                       -- Xuen's Bond -> 90s
+    H.fire("UNIT_SPELLCAST_SUCCEEDED", "player", nil, XUEN)          -- Xuen pressed just now (CD 90 left)
+    H.Engine.P.lastCast = 113656; H.Engine.P.lastCastKey = "FistsOfFury"
+    H.S.now = H.S.now + 16                                           -- 16s later: first Zenith window over
+    H.S.ready[XUEN] = false
+    H.S.tracked[ZENITH] = true; H.S.auras[ZENITH] = false            -- Zenith buff down
+    H.S.chargeState[ZENITH] = { max = 2, cur = 1, belowMax = true }  -- one charge left
+    local r = H.Engine:Evaluate()
+    truthy(r and r.primary and r.primary.id == ZENITH, "chain the 2nd Zenith inside the Xuen window")
+
+    conduit("st")                                                    -- no Xuen pressed recently -> hold the charge
+    H.S.ready[XUEN] = false; H.S.ready[CC] = false
+    H.S.tracked[ZENITH] = true; H.S.auras[ZENITH] = false
+    H.S.chargeState[ZENITH] = { max = 2, cur = 1, belowMax = true }
+    r = H.Engine:Evaluate()
+    truthy(not (r and r.primary and r.primary.id == ZENITH), "outside the Xuen window the last charge is held")
+end)
+
+test("conduit: an unseeded on-cooldown Xuen (pressed before /reload) does not fake the Xuen window", function()
+    conduit("st")
+    H.S.ready[XUEN] = false                                          -- on cooldown, never seen pressed -> reads raw 120s
+    H.S.ready[CC] = false
+    H.S.tracked[ZENITH] = true; H.S.auras[ZENITH] = false
+    H.S.chargeState[ZENITH] = { max = 2, cur = 1, belowMax = true }
+    local r = H.Engine:Evaluate()
+    truthy(not (r and r.primary and r.primary.id == ZENITH), "no Zenith from a fake 'just pressed Xuen'")
+end)
