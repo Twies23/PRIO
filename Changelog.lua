@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.10.14", {
+        "Look-ahead understands 'just cast' enablers: a queued Whirling Dragon Punch right after a simulated Rising Sun Kick / Fists is no longer dropped for reading live-unusable -- RSK > WDP now shows in the strip. Primary picks still require the real usable flag.",
+    } },
     { "0.10.13", {
         "Windwalker: Unbroken Rhythm is now actually tracked (aura 1297033; the old ID was never present in-game), so the empowered Spinning Crane Kick lines and the Rushing-Wind-Kick-without-Unbroken gates are live on both hero trees. No list changes.",
     } },

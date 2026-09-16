@@ -478,3 +478,18 @@ test("conduit ST: Spinning Crane Kick with Unbroken Rhythm out-ranks Rising Sun 
     r = H.Engine:Evaluate()
     eq(r and r.primary and r.primary.id, RSK_ID, "without Unbroken, RSK leads")
 end)
+
+test("look-ahead: WDP follows a simulated Rising Sun Kick in the queue (just-cast enabler)", function()
+    conduit("st"); H.db.numQueue = 2
+    H.S.known[392983] = false; H.S.talents[392986] = true
+    H.S.ready[XUEN] = false; H.S.ready[443028] = false
+    H.S.tracked[443294] = true; H.S.auras[443294] = false
+    H.S.chargeState[ZENITH] = { max = 2, cur = 1, belowMax = true }
+    H.S.ready[113656] = false; H.S.ready[1272696] = false           -- Fists + ZS on cooldown
+    H.S.ready[152175] = true; H.S.usable[152175] = false            -- WDP: own CD up, but RSK is still up -> live unusable
+    H.S.ready[107428] = true; H.S.power[12] = 2
+    H.S.power[3] = 150; H.Engine:UpdateEnergy(H.S.now)
+    local seq = ids(H.Engine:Evaluate())
+    eq(seq[1], 107428, "RSK leads")
+    eq(seq[2], 152175, "WDP is queued right behind it (enabled by the simulated RSK)")
+end)

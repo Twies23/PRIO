@@ -1893,6 +1893,7 @@ function Engine:Evaluate()
     if Engine.P.stacks then for k, v in pairs(Engine.P.stacks) do sim.stacks[k] = v end end
     S._sim = sim.aura
     S._simStacks = sim.stacks
+    local simCastKeys = {}   -- spec keys 'cast' earlier in this look-ahead (in-flight cast + picked slots)
 
     -- If the player is mid-cast, treat that cast as already committed: fold its
     -- effects into the sim (so MotE/aura assumptions carry) and exclude it, so the
@@ -1905,6 +1906,7 @@ function Engine:Evaluate()
         local castKey, castSid = self:InFlightCast()
         if castKey and castSid then
             castingNow = true
+            simCastKeys[castKey] = true
             ApplyEffects(sim, castKey)
             -- A CHANNEL (Fists of Fury, Celestial Conduit) pays its Chi/Energy at channel
             -- START, so the live resource read already reflects it -- re-applying the cost
@@ -2020,7 +2022,17 @@ function Engine:Evaluate()
         -- spec keeps the strict check, so a spender that needs a BUILT resource (Maelstrom,
         -- Holy Power, ...) is correctly withheld until you can afford it.
         local usableFn = spec.softPowerUsable and API.UsableOrNoPower or API.IsUsable
-        if not castingNow and not usableFn(readSid) then return nil end
+        if not castingNow and not usableFn(readSid) then
+            -- "Just cast" awareness: the LIVE usable flag can't know that a pick earlier in this
+            -- queue changes it (Whirling Dragon Punch becomes usable once Rising Sun Kick / Fists
+            -- are on cooldown). spec.usableAfter[key] = { EnablerKey = true, ... } lets a QUEUED
+            -- slot pass when one of its enablers was simulated-cast in this look-ahead; the row's
+            -- own condition still has to hold (e.g. the other enabler really is on cooldown).
+            local ua = curSlot > 1 and spec.usableAfter and spec.usableAfter[idToKey[sid]]
+            local enabled = false
+            if ua then for k in pairs(ua) do if simCastKeys[k] then enabled = true; break end end end
+            if not enabled then return nil end
+        end
         if not PRIO.Cond.Eval(e.cond, S, sid) then return nil end
         return { sid = sid, i = i, rep = rep, maxC = maxC }
     end
@@ -2088,6 +2100,7 @@ function Engine:Evaluate()
         ApplyResourceDelta(sim, fkey, pick.sid, S)
         ApplyEnergy(sim, fkey)                              -- spend the Energy floor
         sim.lastCastKey, sim.lastCastID = fkey, pick.sid    -- "this slot cast" for the next
+        if fkey then simCastKeys[fkey] = true end
         -- Cast-triggered cooldown resets: make each (talent-enabled) target ready for the
         -- rest of the queue and clear its single-use dedup so it can be picked again.
         local resets = spec.cdResets and fkey and spec.cdResets[fkey]

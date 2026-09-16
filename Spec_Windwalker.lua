@@ -513,6 +513,9 @@ local spec = {
     -- which runs high. Sim: icon 2 castable-on-next-tick 41% -> 100%, icon 2 -> next primary
     -- 38% -> 62%, and ~1,100 fewer unaffordable Tiger Palm recommendations per 30 minutes.
     affordGate = { TigerPalm = true },
+    -- Look-ahead "just cast" enablers: WDP reads live-unusable until RSK and Fists are both on
+    -- cooldown, so a queued WDP right after a simulated RSK/Fists would otherwise be dropped.
+    usableAfter = { WhirlingDragonPunch = { RisingSunKick = true, FistsOfFury = true } },
 
     maelstromMax = 6,   -- Chi cap (generic "resource" fields)
     maelstromGen = { TigerPalm = 2 },   -- Tiger Palm builds Chi

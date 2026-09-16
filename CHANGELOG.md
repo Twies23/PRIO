@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.10.14 (alpha)
+- **Look-ahead now understands "just cast" enablers.** Whirling Dragon Punch reads as unusable until Rising Sun Kick and Fists are both on cooldown, so a queued WDP right after a simulated RSK was being dropped from the strip. Specs can now declare which earlier picks enable a spell (Windwalker: RSK / Fists → WDP), and the queue honors it — RSK → WDP now shows the way the pros play it. Primary picks are unaffected (they still require the real usable flag).
+
 ## 0.10.13 (alpha)
 - **Windwalker: Unbroken Rhythm is now actually tracked.** The addon was watching the wrong aura ID (1296624) — in-game the buff is 1297033 — so every line gated on Unbroken Rhythm has been silently inert: the empowered Spinning Crane Kick line on both hero trees, and the "Rushing Wind Kick without Unbroken" gates. Confirmed with the buff visibly up while PRIO reported it gone. No list changes; nothing to reset.
 

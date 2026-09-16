@@ -3,7 +3,7 @@
 -- semantics (buff tracked/untracked, charges, energy near-cap, buff/cooldown timers).
 --------------------------------------------------------------------------------
 
-local ZENITH, UNBROKEN, BOKPROC, HEARTJADE, XUEN = 1249625, 1296624, 116768, 443294, 123904
+local ZENITH, UNBROKEN, BOKPROC, HEARTJADE, XUEN = 1249625, 1297033, 116768, 443294, 123904
 local BOK, TIGERPALM, OBSIDIAN = 100784, 100780, 1249832
 
 -- Chi model: Obsidian Spiral flips Blackout Kick from a 1-Chi spender to a +1 builder,
