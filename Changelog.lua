@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.10.10", {
+        "Look-ahead: no more Tiger Palm spam while channeling -- the channel's Chi cost was being counted twice (live Chi already reflects it), starving every spender in the queue. Fixed; hard casts unchanged.",
+    } },
     { "0.10.9", {
         "Look-ahead: no more double Zenith in the queue -- casting Zenith grants its window in the simulation and Conduit Zenith lines require the window to be down.",
         "Look-ahead: Whirling Dragon Punch no longer pivots into the primary mid-Fists while Rising Sun Kick is up -- its real gate (RSK and Fists on cooldown, or just cast) is now a condition. Reset the Conduit lists to default to pick this up.",

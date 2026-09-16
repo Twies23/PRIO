@@ -415,3 +415,23 @@ test("look-ahead: WDP does not pivot into the primary during a Fists channel whi
     eq(r and r.primary and r.primary.id, 152175, "WDP once RSK is down too")
     UnitChannelInfo = oldCh
 end)
+
+test("look-ahead: a channel's Chi is not double-spent (RSK, not Tiger Palm, mid-Fists at 2 Chi)", function()
+    conduit("st"); H.db.numQueue = 2
+    H.S.ready[XUEN] = false; H.S.ready[443028] = false; H.S.known[392983] = false
+    H.S.tracked[443294] = true; H.S.auras[443294] = false
+    H.S.chargeState[ZENITH] = { max = 2, cur = 1, belowMax = true }
+    H.S.ready[113656] = false; H.S.ready[1272696] = false; H.S.ready[152175] = false
+    H.S.power[12] = 2                                                -- live Chi ALREADY net of the Fists cost
+    H.S.power[3] = 150; H.Engine:UpdateEnergy(H.S.now)
+    local oldCh, oldCast = UnitChannelInfo, UnitCastingInfo
+    UnitChannelInfo = function() return "Fists of Fury", nil, nil, nil, 0, 4000, nil, nil, 113656 end
+    H.Engine.P.lastCast = 113656; H.Engine.P.lastCastKey = "FistsOfFury"
+    local r = H.Engine:Evaluate()
+    local seq = ids(r)
+    eq(seq[1], 107428, "Rising Sun Kick (2 Chi) leads mid-Fists, not Tiger Palm")
+    local tp = 0
+    for _, id in ipairs(seq) do if id == 100780 then tp = tp + 1 end end
+    truthy(tp <= 1, "Tiger Palm at most once in the queue")
+    UnitChannelInfo, UnitCastingInfo = oldCh, oldCast
+end)

@@ -1906,8 +1906,16 @@ function Engine:Evaluate()
         if castKey and castSid then
             castingNow = true
             ApplyEffects(sim, castKey)
-            ApplyResourceDelta(sim, castKey, castSid, S)
-            ApplyEnergy(sim, castKey)
+            -- A CHANNEL (Fists of Fury, Celestial Conduit) pays its Chi/Energy at channel
+            -- START, so the live resource read already reflects it -- re-applying the cost
+            -- here double-spent it, starved every spender in the look-ahead, and left Tiger
+            -- Palm as the only candidate (the "TP, TP, TP" queue). A hard CAST pays on
+            -- completion, so its cost is still folded in.
+            local isChannel = UnitChannelInfo and UnitChannelInfo("player") ~= nil
+            if not isChannel then
+                ApplyResourceDelta(sim, castKey, castSid, S)
+                ApplyEnergy(sim, castKey)
+            end
             sim.lastCastKey, sim.lastCastID = castKey, castSid
             local rep, maxC = Repeatable(castSid)
             if maxC then

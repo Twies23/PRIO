@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.10.10 (alpha)
+- **Look-ahead: no more Tiger Palm spam while channeling.** While Fists of Fury (or Celestial Conduit) channels, the queue was re-charging the channel's Chi cost on top of the live read — Chi already dropped when the channel started — so every spender looked unaffordable and Tiger Palm filled the strip ("TP, TP, TP"). The channel's cost is no longer double-counted; hard casts (which pay on completion) are unchanged. Chi, cooldowns and conditions now drive the mid-channel picks the way they should.
+
 ## 0.10.9 (alpha)
 - **Look-ahead: no more double Zenith.** The queue could show Zenith, something, Zenith — it simulated the first cast without knowing the Zenith window would then be up. Casting Zenith now grants its window (and Yu'lon's Heart of the Jade Serpent) in the look-ahead, and all Conduit Zenith lines require the window to be down (pros never overlap it).
 - **Look-ahead: WDP no longer pivots into the primary mid-Fists while Rising Sun Kick is up.** Castability is skipped while channeling, so WDP looked available. Its real gate — RSK *and* Fists on cooldown — is now a condition (with "just cast" so RSK → WDP still shows in the queue).
