@@ -110,7 +110,7 @@ local conduit_st = {
     { spell = "Zenith",           cond = zenithAfterXuen },                             -- (log) the GCD right after Invoke Xuen opens the window (robust: any pick within ~10s of the press)
     { spell = "WhirlingDragonPunch", cond = xuenAway },                                 -- 1: hold unless Xuen >10s away
     { spell = "StrikeOfTheWindlord", cond = xuenAway },                                 -- 2: hold unless Xuen >10s away
-    { spell = "ZenithStomp",      cond = OR(chiMax(2), auraRemainMax(ID_ZENITH, 5)) },  -- 3: low Chi / Zenith ending
+    { spell = "ZenithStomp",      cond = OR(chiMax(2), AND(auraRemainMax(ID_ZENITH, 5), chiMax(3))) }, -- 3: low Chi / Zenith ending (capped at 3 Chi: ZS is +2/+4 and fired at 5-6 in the user log)
     { spell = "InvokeXuen",       cond = cdReady(ID_CELESTIAL) },                       -- (Midnight) press Xuen to open the Celestial Conduit window
     { spell = "CelestialConduit", cond = AND(buffDown(ID_HEARTJADE), cdNotReady(152175)) }, -- 4: only while Whirling Dragon Punch is on cooldown (matched pros 80%)
     { spell = "Zenith",           cond = chargesMin(2) },                                 -- 2nd charge back -> cast it (pros: ~80s cadence, never sit at 2; waiting for the Tigereye glow capped stacks for 30s+ in the user log)
@@ -141,7 +141,7 @@ local conduit_aoe = {
     { spell = "Zenith",           cond = zenithAfterXuen },                             -- (log) the GCD right after Invoke Xuen opens the window (robust: any pick within ~10s of the press)
     { spell = "FistsOfFury",      cond = auraRemainMax(ID_HEARTJADE, 1) },              -- 1: HoJS about to end
     { spell = "WhirlingDragonPunch", cond = xuenAway },                                 -- 2: Xuen >10s away
-    { spell = "ZenithStomp",      cond = OR(chiMax(2), auraRemainMax(ID_ZENITH, 5)) },  -- 3: low Chi / Zenith ending
+    { spell = "ZenithStomp",      cond = OR(chiMax(2), AND(auraRemainMax(ID_ZENITH, 5), chiMax(3))) }, -- 3: low Chi / Zenith ending (capped at 3 Chi: ZS is +2/+4 and fired at 5-6 in the user log)
     { spell = "InvokeXuen",       cond = cdReady(ID_CELESTIAL) },                       -- (Midnight) press Xuen to open the Celestial Conduit window
     { spell = "CelestialConduit", cond = AND(buffDown(ID_HEARTJADE), cdNotReady(152175)) }, -- 4: only while Whirling Dragon Punch is on cooldown (matched pros 80%)
     { spell = "Zenith",           cond = chargesMin(2) },                                 -- 2nd charge back -> cast it (pros: ~80s cadence, never sit at 2; waiting for the Tigereye glow capped stacks for 30s+ in the user log)

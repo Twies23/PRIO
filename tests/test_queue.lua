@@ -332,3 +332,21 @@ test("conduit AoE: Rising Sun Kick main line only as the WDP enabler (WDP CD up,
     r = H.Engine:Evaluate()
     eq(r and r.primary and r.primary.id, 107428, "RSK leads as the WDP enabler")
 end)
+
+test("conduit: Zenith Stomp 'Zenith ending' branch does not fire at 5+ Chi", function()
+    conduit("st")
+    H.S.ready[XUEN] = true; H.S.ready[443028] = false
+    H.S.tracked[443294] = true; H.S.auras[443294] = false
+    H.S.chargeState[1249625] = { max = 2, cur = 1, belowMax = true }
+    H.S.tracked[1249625] = true; H.S.auras[1249625] = true          -- Zenith up ...
+    H.Engine.P.auraExpire = H.Engine.P.auraExpire or {}
+    H.Engine.P.auraExpire[1249625] = H.S.now + 3                    -- ... and ending in 3s
+    H.S.ready[113656] = false; H.S.ready[107428] = false; H.S.ready[152175] = false
+    H.db.numQueue = 0
+    H.S.power[12] = 5
+    local r = H.Engine:Evaluate()
+    truthy(not (r and r.primary and r.primary.id == 1272696), "no Zenith Stomp at 5 Chi even as Zenith ends")
+    H.S.power[12] = 3
+    r = H.Engine:Evaluate()
+    eq(r and r.primary and r.primary.id, 1272696, "Zenith Stomp at 3 Chi as Zenith ends")
+end)

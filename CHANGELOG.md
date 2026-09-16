@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.10.7 (alpha)
+- **Conduit: Zenith Stomp's "Zenith is ending" line no longer fires above 3 Chi.** Inside Zenith every spender costs 1 less, so Chi sits at 5-6 — and Zenith Stomp (+2, +4 in AoE) was landing there and wasting it (a third of the Chi lost in your last capture). Sim: chi waste roughly halved, +1.4% AoE. Reset the Conduit lists to default to pick this up.
+
 ## 0.10.6 (alpha)
 - **Conduit AoE: Rising Sun Kick is now cast to enable Whirling Dragon Punch, not on cooldown.** Your AoE capture had RSK at 6.5/min vs the pros' 3.5, with the extra GCDs coming out of Spinning Crane Kick and Fists. The main AoE RSK line now fires when WDP's own cooldown is up and Fists is down (the same gate Shado-Pan AoE uses); the HoJS / Zenith RSK lines and the end-of-list filler are unchanged. Sim: +3.4% AoE, RSK 5.3 → 4.0/min, SCK up; single-target untouched. Reset the Conduit lists to default to pick this up.
 

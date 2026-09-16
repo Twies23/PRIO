@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.10.7", {
+        "Conduit: Zenith Stomp's 'Zenith is ending' line no longer fires above 3 Chi -- inside Zenith Chi sits at 5-6 and the +2/+4 stomp was wasting it (sim: chi waste roughly halved, +1.4% AoE). Reset the Conduit lists to default to pick this up.",
+    } },
     { "0.10.6", {
         "Conduit AoE: Rising Sun Kick is cast to enable Whirling Dragon Punch (WDP's cooldown up, Fists down) instead of on cooldown -- the extra RSKs were eating Spinning Crane Kick / Fists GCDs (user capture 6.5/min vs pros 3.5; sim +3.4% AoE). ST untouched. Reset the Conduit lists to default to pick this up.",
     } },
