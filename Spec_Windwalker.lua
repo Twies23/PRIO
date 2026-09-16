@@ -28,7 +28,7 @@ local CHI = (Enum and Enum.PowerType and Enum.PowerType.Chi) or 12
 -- Readable buff IDs (verify with /prio tracked).
 local ID_HEARTJADE   = 443294   -- Heart of the Jade Serpent (from WDP / Strike / Conduit)
 local ID_ZENITH      = 1249625  -- Zenith window
-local ID_UNBROKEN    = 1296624  -- Unbroken Rhythm
+local ID_UNBROKEN    = 1297033  -- Unbroken Rhythm (UnitAuraID confirmed in-game 2026-09-15; 1296624 was never tracked -> every Unbroken line was dead)
 local ID_COMBOBREAK  = 137284   -- Combo Breaker (free Blackout Kick)
 local ID_DANCECHIJI  = 325202   -- Dance of Chi-Ji (free Spinning Crane Kick)
 local ID_RUSHINGWIND = 1250554  -- "Rushing Wind Kick available!" proc buff

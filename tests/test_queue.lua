@@ -4,7 +4,7 @@
 -- without its proc.
 --------------------------------------------------------------------------------
 
-local RWK, RWK_PROC, UNBROKEN, XUEN = 1250566, 1250554, 1296624, 123904
+local RWK, RWK_PROC, UNBROKEN, XUEN = 1250566, 1250554, 1297033, 123904
 
 local function shadopan(mode)
     H.reset()
@@ -470,11 +470,11 @@ end)
 
 test("conduit ST: Spinning Crane Kick with Unbroken Rhythm out-ranks Rising Sun Kick", function()
     conduit_spenders(); H.S.power[12] = 4; H.S.ready[FOF] = false; H.S.ready[RSK_ID] = true
-    H.S.tracked[1296624] = true; H.S.auras[1296624] = true          -- Unbroken Rhythm up
+    H.S.tracked[1297033] = true; H.S.auras[1297033] = true          -- Unbroken Rhythm up
     H.db.numQueue = 0
     local r = H.Engine:Evaluate()
     eq(r and r.primary and r.primary.id, 101546, "SCK (Unbroken) leads over RSK")
-    H.S.auras[1296624] = false
+    H.S.auras[1297033] = false
     r = H.Engine:Evaluate()
     eq(r and r.primary and r.primary.id, RSK_ID, "without Unbroken, RSK leads")
 end)

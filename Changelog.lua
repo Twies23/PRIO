@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.10.13", {
+        "Windwalker: Unbroken Rhythm is now actually tracked (aura 1297033; the old ID was never present in-game), so the empowered Spinning Crane Kick lines and the Rushing-Wind-Kick-without-Unbroken gates are live on both hero trees. No list changes.",
+    } },
     { "0.10.12", {
         "Conduit ST: Spinning Crane Kick with Unbroken Rhythm out-ranks Rising Sun Kick (guide order; pro replay SCK recall 28->35%, sim +3.3% ST). Reset the Conduit lists to default to pick this up.",
     } },

@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.10.13 (alpha)
+- **Windwalker: Unbroken Rhythm is now actually tracked.** The addon was watching the wrong aura ID (1296624) — in-game the buff is 1297033 — so every line gated on Unbroken Rhythm has been silently inert: the empowered Spinning Crane Kick line on both hero trees, and the "Rushing Wind Kick without Unbroken" gates. Confirmed with the buff visibly up while PRIO reported it gone. No list changes; nothing to reset.
+
 ## 0.10.12 (alpha)
 - **Conduit ST: Spinning Crane Kick with Unbroken Rhythm now out-ranks Rising Sun Kick** (the Icy Veins order). Replaying the pros through both orders: SCK recall 28% → 35%, Tiger Palm precision 88% → 91%; free sim +3.3% single-target. Reset the Conduit lists to default to pick this up.
 
