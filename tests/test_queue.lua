@@ -467,3 +467,14 @@ test("conduit: the chained 2nd Zenith waits until Chi is spent down to 3", funct
     r = H.Engine:Evaluate()
     eq(r and r.primary and r.primary.id, ZENITH, "at 3 Chi: chain the 2nd Zenith")
 end)
+
+test("conduit ST: Spinning Crane Kick with Unbroken Rhythm out-ranks Rising Sun Kick", function()
+    conduit_spenders(); H.S.power[12] = 4; H.S.ready[FOF] = false; H.S.ready[RSK_ID] = true
+    H.S.tracked[1296624] = true; H.S.auras[1296624] = true          -- Unbroken Rhythm up
+    H.db.numQueue = 0
+    local r = H.Engine:Evaluate()
+    eq(r and r.primary and r.primary.id, 101546, "SCK (Unbroken) leads over RSK")
+    H.S.auras[1296624] = false
+    r = H.Engine:Evaluate()
+    eq(r and r.primary and r.primary.id, RSK_ID, "without Unbroken, RSK leads")
+end)

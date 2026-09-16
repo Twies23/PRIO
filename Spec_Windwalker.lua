@@ -136,9 +136,9 @@ local conduit_st = {
     { spell = "SpinningCraneKick", cond = { type = "preset:danceProc" } }, -- 7: Dance of Chi-Ji proc
     { spell = "BlackoutKick",     cond = { type = "preset:bokProc" } }, -- 8: Blackout Kick! / Combo Breaker proc
     { spell = "RushingWindKick",  cond = buffUp(ID_RUSHINGWIND) },                      -- 9: proc
-    { spell = "RisingSunKick" },                                                        -- 10: on cooldown -- ABOVE Tiger Palm (log)
-    { spell = "TigerPalm",        cond = tpGate },                                      -- 11: Chi <= 4 AND (Energy near cap OR Chi <= 1)
-    { spell = "SpinningCraneKick", cond = buffUp(ID_UNBROKEN) },                        -- 12: Unbroken Rhythm
+    { spell = "SpinningCraneKick", cond = buffUp(ID_UNBROKEN) },                        -- 10: Unbroken Rhythm -- above RSK (guide order; replay SCK recall 28->35%, sim +3.3% ST)
+    { spell = "RisingSunKick" },                                                        -- 11: on cooldown -- ABOVE Tiger Palm (log)
+    { spell = "TigerPalm",        cond = tpGate },                                      -- 12: Chi <= 4 AND (Energy near cap OR Chi <= 1)
     { spell = "BlackoutKick",     cond = OR(buffUp(ID_COMBOBREAK), buffUp(ID_BOKPROC), AND(buffUp(ID_ZENITH), talentYes(ID_OBSIDIAN))) }, -- 13: proc / Zenith+Obsidian
     { spell = "SpinningCraneKick", cond = sckZenith },                                  -- 12: Zenith spend (>4 Chi or Dance)
     { spell = "TigerPalm",        cond = chiMax(1) },                                   -- 13: less than 2 Chi

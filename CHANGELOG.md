@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.10.12 (alpha)
+- **Conduit ST: Spinning Crane Kick with Unbroken Rhythm now out-ranks Rising Sun Kick** (the Icy Veins order). Replaying the pros through both orders: SCK recall 28% → 35%, Tiger Palm precision 88% → 91%; free sim +3.3% single-target. Reset the Conduit lists to default to pick this up.
+
 ## 0.10.11 (alpha)
 - **Look-ahead: the strip stays filled when you're starved.** When Chi and Energy were both out, the whole queue went blank (or a lone dimmed Tiger Palm) because the "can't afford Tiger Palm right now" flag was applied to every queued slot. It now gates only the primary; the 2nd/3rd icons use the simulated Energy (regen credited per slot), so the strip still names what's next.
 - **Conduit: the chained 2nd Zenith now waits until Chi is spent down to 3** instead of firing the instant the first window ends — spend the −1-cost window first, then open the next. This is how the pros do it (Chi 1-3 at the chain, no wait for Tigereye stacks). Sim-neutral. Reset the Conduit lists to default to pick this up.
