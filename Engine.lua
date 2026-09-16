@@ -1933,6 +1933,7 @@ function Engine:Evaluate()
     -- used when the strict walk can't fill a slot. Combo is a preference and the Energy
     -- gate is a guess, so relaxing them to avoid a blank beats leaving the queue short;
     -- Chi and cooldown are real, so they never relax.
+    local curSlot = 1   -- queue slot being filled (1 = primary); set by the fill loop below
     local function tryCandidate(i, relaxSoft)
         local e   = list[i]
         -- Action node (e.g. "Switch Targets"): no spell, always available (off CD),
@@ -1971,9 +1972,13 @@ function Engine:Evaluate()
             --   nil   -> the game hid the flag: fall back to the predicted-resource gate
             --            (below) so we never spam a spender we can't afford.
             local ip = API.InsufficientPower(sid)
-            if ip == true then
+            if ip == true and curSlot == 1 then
+                -- Live flag = "can I press it NOW": it governs the primary only. A queued slot is
+                -- 1-2 GCDs out, so it defers to the SIMULATED resource below (builders queued ahead
+                -- of it count; Energy regen is credited per slot). Otherwise a starved moment
+                -- (Chi 0, Energy < 55) emptied the whole strip.
                 ready = false
-            elseif ip == nil and (API.HasPowerCost(sid) or spec.ResourceCost) then
+            elseif (ip == nil or ip == true) and (API.HasPowerCost(sid) or spec.ResourceCost) then
                 local cost = ResourceCost(idToKey[sid], sid, S)
                 if cost and S.freeSpend and spec.freeSpendGlow and spec.freeSpendGlow[idToKey[sid]] then
                     cost = 0
@@ -2039,6 +2044,7 @@ function Engine:Evaluate()
     end
 
     for slot = startSlot, want do
+        curSlot = slot
         S.mote        = sim.mote and true or false
         S.skStacks    = sim.sk or 0
         S.maelstrom   = sim.resource or S.maelstrom

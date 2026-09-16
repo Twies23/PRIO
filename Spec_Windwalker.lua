@@ -103,7 +103,9 @@ local zenithAfterXuen = AND(buffDown(ID_ZENITH), OR(lastCast(ID_INVOKEXUEN), AND
 -- while channeling, so WDP used to pivot into the primary during Fists with RSK still up.
 -- 'just cast' keeps RSK > WDP visible in the queue.
 local wdpGate = AND(xuenAway, OR(cdNotReady(ID_RISINGSUNKICK_), lastCast(ID_RISINGSUNKICK_)), OR(cdNotReady(ID_FISTSOFFURY_), lastCast(ID_FISTSOFFURY_)))
-local zenithChain = AND(cdRemainMin(ID_INVOKEXUEN, 60), cdRemainMax(ID_INVOKEXUEN, 119), buffDown(ID_ZENITH))
+-- ...and only once the pooled Chi is spent down (<= 3): pros chain at Chi 1-3 (stacks 0-2,
+-- Energy 114-139) -- spend the -1-cost window first, then open the next. Sim-neutral.
+local zenithChain = AND(cdRemainMin(ID_INVOKEXUEN, 60), cdRemainMax(ID_INVOKEXUEN, 119), buffDown(ID_ZENITH), chiMax(3))
 local comboBreaker2 = stacksMin(ID_COMBOBREAK, 2)
 local bokZenith = AND(buffUp(ID_ZENITH), OR(buffUp(ID_COMBOBREAK), talentYes(ID_OBSIDIAN)))
 local touchOfDeathUp = buffUp(ID_TOUCHOFDEATH)

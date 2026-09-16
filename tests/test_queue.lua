@@ -435,3 +435,35 @@ test("look-ahead: a channel's Chi is not double-spent (RSK, not Tiger Palm, mid-
     truthy(tp <= 1, "Tiger Palm at most once in the queue")
     UnitChannelInfo, UnitCastingInfo = oldCh, oldCast
 end)
+
+test("look-ahead: a starved strip still names what's next (queued TP defers to simulated Energy)", function()
+    conduit("st"); H.db.numQueue = 2
+    H.S.ready[XUEN] = false; H.S.ready[443028] = false; H.S.known[392983] = false
+    H.S.tracked[443294] = true; H.S.auras[443294] = false
+    H.S.chargeState[ZENITH] = { max = 2, cur = 1, belowMax = true }
+    H.S.ready[113656] = false; H.S.ready[107428] = false; H.S.ready[152175] = false; H.S.ready[1272696] = false
+    H.S.power[12] = 1                                                -- one Chi: paid Blackout Kick is the only press
+    H.S.power[3] = 40; H.Engine:UpdateEnergy(H.S.now)                -- Energy 40 (< 55): TP not pressable NOW
+    H.S.insufficientPower[100780] = true
+    local r = H.Engine:Evaluate()
+    local seq = ids(r)
+    eq(seq[1], 100784, "Blackout Kick leads")
+    truthy(seq[2] == 100780, "Tiger Palm is queued next (affordable after a GCD of regen), not blanked")
+end)
+
+test("conduit: the chained 2nd Zenith waits until Chi is spent down to 3", function()
+    conduit("st"); H.db.numQueue = 0
+    H.S.talents[392986] = true
+    H.fire("UNIT_SPELLCAST_SUCCEEDED", "player", nil, XUEN)
+    H.Engine.P.lastCast = 113656; H.Engine.P.lastCastKey = "FistsOfFury"
+    H.S.now = H.S.now + 16; H.S.ready[XUEN] = false
+    H.S.tracked[ZENITH] = true; H.S.auras[ZENITH] = false
+    H.S.chargeState[ZENITH] = { max = 2, cur = 1, belowMax = true }
+    H.S.ready[113656] = false; H.S.ready[152175] = false
+    H.S.power[12] = 6
+    local r = H.Engine:Evaluate()
+    truthy(not (r and r.primary and r.primary.id == ZENITH), "at 6 Chi: spend first, no Zenith yet")
+    H.S.power[12] = 3
+    r = H.Engine:Evaluate()
+    eq(r and r.primary and r.primary.id, ZENITH, "at 3 Chi: chain the 2nd Zenith")
+end)

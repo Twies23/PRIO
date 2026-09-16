@@ -11,6 +11,10 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.10.11", {
+        "Look-ahead: the strip stays filled when Chi and Energy are both out -- the can't-afford-Tiger-Palm flag now gates only the primary; queued icons use the simulated Energy with regen.",
+        "Conduit: the chained 2nd Zenith waits until Chi is spent down to 3 (pros chain at Chi 1-3; no wait for Tigereye stacks). Reset the Conduit lists to default to pick this up.",
+    } },
     { "0.10.10", {
         "Look-ahead: no more Tiger Palm spam while channeling -- the channel's Chi cost was being counted twice (live Chi already reflects it), starving every spender in the queue. Fixed; hard casts unchanged.",
     } },
