@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.10.15 (alpha)
+- **Conduit AoE list rewritten (simpler, 24 rows), adopted from a player rewrite after A/B.** Zenith on cooldown (never over its own window) with the chained 2nd charge, cooldowns, then every spender and proc ahead of Tiger Palm. Versus the previous AoE list: sim +1.4%, Chi waste halved, 3-deep look-ahead consistency 39% → 44%; against the pros' decision points, Tiger Palm is recommended over a castable spender 18 times instead of 85 (96% precision), with better Zenith Stomp / WDP / Rushing Wind Kick / SCK matching. Two rows kept from the validated list because the sim priced them: Invoke Xuen still goes with Celestial Conduit (gating it on Zenith lost a third of Xuen casts), and the Obsidian Spiral Blackout Kick row is the guide's AND. Reset the Conduit AoE list to default to pick this up.
+
 ## 0.10.14 (alpha)
 - **Look-ahead now understands "just cast" enablers.** Whirling Dragon Punch reads as unusable until Rising Sun Kick and Fists are both on cooldown, so a queued WDP right after a simulated RSK was being dropped from the strip. Specs can now declare which earlier picks enable a spell (Windwalker: RSK / Fists → WDP), and the queue honors it — RSK → WDP now shows the way the pros play it. Primary picks are unaffected (they still require the real usable flag).
 

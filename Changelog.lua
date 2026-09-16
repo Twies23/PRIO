@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.10.15", {
+        "Conduit AoE list rewritten (simpler, 24 rows; adopted from a player rewrite after A/B): Zenith on cooldown + chained 2nd charge, cooldowns, then every spender/proc ahead of Tiger Palm. Sim +1.4%, chi waste halved, look-ahead 39->44% consistent; pro replay TP-over-spender 85->18. Reset the Conduit AoE list to default to pick this up.",
+    } },
     { "0.10.14", {
         "Look-ahead understands 'just cast' enablers: a queued Whirling Dragon Punch right after a simulated Rising Sun Kick / Fists is no longer dropped for reading live-unusable -- RSK > WDP now shows in the strip. Primary picks still require the real usable flag.",
     } },

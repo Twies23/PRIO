@@ -323,7 +323,8 @@ test("conduit AoE: Rising Sun Kick main line only as the WDP enabler (WDP CD up,
     conduit("aoe")
     H.S.ready[XUEN] = true; H.S.ready[443028] = false                -- burst lines off (CC not ready -> Xuen line off)
     H.S.tracked[443294] = true; H.S.auras[443294] = false           -- HoJS DOWN (its own RSK line stays inert)
-    H.S.chargeState[1249625] = { max = 2, cur = 1, belowMax = true }
+    H.S.chargeState[1249625] = { max = 2, cur = 0, belowMax = true } -- no Zenith charge (the AoE list casts Zenith on cooldown)
+    H.S.ready[1249625] = false
     H.S.ready[1272696] = false; H.S.ready[113656] = false           -- ZS + Fists on cooldown
     H.S.power[12] = 2; H.S.power[3] = 50; H.Engine:UpdateEnergy(H.S.now)
     H.db.numQueue = 0

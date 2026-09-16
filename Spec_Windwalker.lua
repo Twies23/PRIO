@@ -70,6 +70,7 @@ local function stacksMax(id, n) return { type = "stacksMax", spell = id, v = n }
 local function chargesMin(n) return { type = "chargesMin", v = n } end       -- self charges >= n
 local function cdReady(id)  return { type = "cdReady",  spell = id } end
 local function usable(id)   return { type = "usable",   spell = id } end
+local function notUsable(id) return { type = "notUsable", spell = id } end   -- e.g. Fists unusable = not enough Chi
 local function auraRemainMax(id, s) return { type = "auraRemainMax", spell = id, v = s } end -- buff <= s sec left
 local function lastCast(id)  return { type = "lastCast",  spell = id } end   -- previous cast was this
 local function glowing(id)   return { type = "glowing",   spell = id } end   -- Blizzard proc-glows it (readable)
@@ -151,34 +152,36 @@ local conduit_st = {
 -- Conduit cleave + AoE share one list -- mirrors the Icy Veins Conduit AoE priority
 -- (same log-validated shape). 4pc -> Unbroken Rhythm; Bloodlust (undetectable) dropped
 -- from the RSK line, leaving its Zenith/no-4pc gate.
+-- 0.10.15: the user's 24-row rewrite, adopted as the AoE default after A/B (free sim +1.4%, chi
+-- waste halved, 3-deep look-ahead 39->44%; pro replay: TP-over-spender 85->18 at 96% precision,
+-- Zenith Stomp recall 32->67%, WDP 61->72%, RWK 30->38%). Two rows kept from the validated list:
+-- Invoke Xuen gated on Celestial Conduit (gating it on Zenith cost 1/3 of Xuen casts), and BoK #17
+-- as the guide's AND (the OR version alone was -13%). WDP keeps its RSK+Fists gate (mid-channel).
 local conduit_aoe = {
-    { spell = "Zenith",           cond = zenithAfterXuen },                             -- (log) the GCD right after Invoke Xuen opens the window (robust: any pick within ~10s of the press)
-    { spell = "Zenith",           cond = zenithChain },                                  -- (log) 2nd charge as the first window ends, inside Xuen (pros chain at ~17s)
-    { spell = "FistsOfFury",      cond = auraRemainMax(ID_HEARTJADE, 1) },              -- 1: HoJS about to end
-    { spell = "WhirlingDragonPunch", cond = wdpGate },                                  -- 2: RSK+Fists down (or just cast), Xuen >10s away
-    { spell = "ZenithStomp",      cond = OR(chiMax(2), AND(auraRemainMax(ID_ZENITH, 5), chiMax(3))) }, -- 3: low Chi / Zenith ending (capped at 3 Chi: ZS is +2/+4 and fired at 5-6 in the user log)
-    { spell = "InvokeXuen",       cond = cdReady(ID_CELESTIAL) },                       -- (Midnight) press Xuen to open the Celestial Conduit window
-    { spell = "CelestialConduit", cond = AND(buffDown(ID_HEARTJADE), cdNotReady(152175)) }, -- 4: only while Whirling Dragon Punch is on cooldown (matched pros 80%)
-    { spell = "Zenith",           cond = AND(chargesMin(2), buffDown(ID_ZENITH)) },     -- 2nd charge back -> cast it (never over its own window) (pros: ~80s cadence, never sit at 2; waiting for the Tigereye glow capped stacks for 30s+ in the user log)
-    { spell = "FistsOfFury" },                                                          -- 5: on cooldown -- ABOVE Tiger Palm (log)
-    -- Aggressive free-proc dumps (glow = the only readable signal, no stack count):
-    { spell = "BlackoutKick",     cond = { type = "preset:bokProc" } }, -- 6: Blackout Kick! / Combo Breaker proc
-    { spell = "SpinningCraneKick", cond = { type = "preset:danceProc" } }, -- 6b: Dance of Chi-Ji proc
-    { spell = "TigerPalm",        cond = tpGate },                                      -- 6c: Chi <= 4 AND (Energy near cap OR Chi <= 1)
-    { spell = "SpinningCraneKick", cond = buffUp(ID_UNBROKEN) },                        -- 7: 4pc / Unbroken Rhythm
-    { spell = "TigerPalm",        cond = AND(energyNearCap, buffDown(ID_ZENITH), chiMax(4)) }, -- 8: avoid cap outside Zenith, never at 5-6 Chi (log)
-    { spell = "RisingSunKick",    cond = AND(cdReady(ID_WHIRLINGDP_), cdNotReady(ID_FISTSOFFURY_)) }, -- 9: as the WDP enabler (WDP's own CD up, Fists down) -- pros RSK 3.5/min in AoE, mostly to light WDP; unconditional RSK cost SCK/Fists GCDs (sim +3.4% AoE)
-    { spell = "RushingWindKick",  cond = AND(buffUp(ID_RUSHINGWIND), buffDown(ID_UNBROKEN)) }, -- 10: proc, without 4pc
-    { spell = "RisingSunKick",    cond = AND(buffUp(ID_HEARTJADE), buffDown(ID_UNBROKEN)) }, -- 11: HoJS, no 4pc
-    { spell = "SpinningCraneKick", cond = AND(buffUp(ID_ZENITH), enemiesMin(5)) },      -- 12: Zenith, 5+ targets
-    { spell = "RisingSunKick",    cond = AND(buffUp(ID_ZENITH), buffDown(ID_UNBROKEN)) }, -- 13: Zenith/lust, no 4pc
-    { spell = "BlackoutKick",     cond = AND(talentYes(ID_OBSIDIAN), buffUp(ID_ZENITH), cdNotReady(107428)) }, -- 14
-    { spell = "SpinningCraneKick" },                                                     -- 15: main AoE spender
-    { spell = "BlackoutKick",     cond = buffUp(ID_BOKPROC) },                          -- 16: proc
-    { spell = "TigerPalm",        cond = AND(chiMax(4), buffDown(ID_ZENITH)) },         -- 17: <5 Chi, no Zenith
-    { spell = "BlackoutKick",     cond = talentYes(ID_SHADOWBOX) },                     -- 18: Shadowboxing Treads
-    { spell = "RisingSunKick" },                                                        -- 19: filler
-    { spell = "BlackoutKick" },                                                         -- 20: filler
+    { spell = "Zenith",           cond = buffDown(ID_ZENITH) },                                 -- 1: on cooldown, never over its own window
+    { spell = "Zenith",           cond = zenithChain },                                         -- 2: chained 2nd charge inside Xuen, Chi <= 3
+    { spell = "FistsOfFury",      cond = auraRemainMax(ID_HEARTJADE, 1) },                      -- 3: HoJS about to end
+    { spell = "WhirlingDragonPunch", cond = wdpGate },                                          -- 4: RSK+Fists down (or just cast), Xuen >10s away
+    { spell = "StrikeOfTheWindlord", cond = xuenAway },                                         -- 5: if talented
+    { spell = "InvokeXuen",       cond = cdReady(ID_CELESTIAL) },                               -- 6: with Celestial Conduit
+    { spell = "ZenithStomp",      cond = OR(chiMax(4), buffUp(ID_ZENITH), lastCast(ID_CELESTIAL)) }, -- 7: Chi <= 4, in Zenith, or right after CC
+    { spell = "CelestialConduit", cond = AND(buffDown(ID_HEARTJADE), cdNotReady(152175)) },      -- 8: no HoJS, WDP on cooldown
+    { spell = "Zenith",           cond = AND(chargesMin(2), buffDown(ID_ZENITH)) },             -- 9: 2 charges
+    { spell = "TigerPalm",        cond = AND(notUsable(ID_FISTSOFFURY_), cdReady(ID_FISTSOFFURY_)) }, -- 10: missing Chi for Fists
+    { spell = "FistsOfFury" },                                                                  -- 11
+    { spell = "SpinningCraneKick", cond = buffUp(ID_UNBROKEN) },                                -- 12: Unbroken Rhythm
+    { spell = "RisingSunKick",    cond = AND(cdReady(ID_WHIRLINGDP_), cdNotReady(ID_FISTSOFFURY_)) }, -- 13: to enable WDP
+    { spell = "RushingWindKick",  cond = AND(buffUp(ID_RUSHINGWIND), buffDown(ID_UNBROKEN)) },   -- 14: proc, no Unbroken
+    { spell = "RisingSunKick",    cond = AND(buffUp(ID_HEARTJADE), buffDown(ID_UNBROKEN)) },     -- 15: HoJS, no Unbroken
+    { spell = "SpinningCraneKick", cond = AND(buffUp(ID_ZENITH), enemiesMin(5)) },              -- 16: Zenith, 5+ targets
+    { spell = "BlackoutKick",     cond = AND(talentYes(ID_OBSIDIAN), buffUp(ID_ZENITH), cdNotReady(ID_RISINGSUNKICK_)) }, -- 17: Obsidian + Zenith + RSK on CD
+    { spell = "SpinningCraneKick" },                                                            -- 18: main spender
+    { spell = "BlackoutKick",     cond = { type = "preset:bokProc" } },                         -- 19: Blackout Kick! proc
+    { spell = "TigerPalm",        cond = AND(chiMax(5), buffDown(ID_ZENITH)) },                 -- 20: Chi <= 5, no Zenith
+    { spell = "BlackoutKick",     cond = talentYes(ID_SHADOWBOX) },                             -- 21: Shadowboxing Treads
+    { spell = "RisingSunKick" },                                                                -- 22: filler
+    { spell = "BlackoutKick" },                                                                 -- 23: filler
+    { spell = "TigerPalm",        cond = chiMax(4) },                                           -- 24: filler
 }
 
 -- SHADO-PAN ---------------------------------------------------------------------
