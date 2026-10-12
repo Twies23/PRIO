@@ -261,9 +261,12 @@ end
 
 local spec = {
     key      = "ROGUE_ASSASSINATION",
-    name     = "Assassination",
+    label    = "Assassination",
+    className = "Rogue",
     specID   = 259,
     resource = COMBO,             -- COMBO POINTS: discrete -> readable in combat (exact gates)
+    resourceLabel = "Combo Pts",
+    maelstromMax = 7,             -- CP cap (readable PowerMax overrides; 5-7 with the Stratagem talents)
 
     alerts = {},
 
@@ -303,6 +306,86 @@ local spec = {
     -- window where which Envenom you press actually matters.
     flash = {
         Envenom = { type = "buffActive", spell = ID_DARKNIGHT },
+    },
+
+    -- Look-ahead combo-point simulation. Finishers spend ALL combo points; Mutilate is
+    -- the only 2-CP generator. Crimson Tempest is listed with the GENERATORS on purpose
+    -- -- in 12.1 it builds 1 CP and costs none (see the header).
+    -- Not modelled: Seal Fate's crit-driven extra CP (and Fatebound's Deal Fate chance
+    -- on top of it), which is a large but unpredictable share of real generation.
+    ResourceDelta = function(_, key, sid, S)
+        if key == "Envenom" or key == "Rupture" or key == "SliceandDice" then
+            return -(S.maelstrom or 0)                      -- finisher: spend all combo points
+        elseif key == "Mutilate" then
+            return 2
+        elseif key == "Garrote" or key == "FanOfKnives" or key == "CrimsonTempest"
+            or key == "Shiv" or key == "Kingsbane" then
+            return 1
+        end
+        return 0
+    end,
+
+    condPresets = {
+        { key = "finisherCP",  label = "Finisher combo points (>=5)", clause = cpMin(5) },
+        { key = "lowCP",       label = "Low combo points (<=4)",      clause = cpMax(4) },
+        { key = "darkestNight", label = "Darkest Night up",           clause = buffUp(ID_DARKNIGHT) },
+        { key = "impGarrote",  label = "Improved Garrote window",     clause = buffUp(ID_IMPGARROTE) },
+        { key = "bleedsUp",    label = "Garrote + Rupture both up",   clause = AND(buffUp(ID_GARROTE), buffUp(ID_RUPTURE)) },
+        { key = "burst",       label = "Deathmark window",            clause = buffUp(ID_DEATHMARK) },
+    },
+
+    auras = {
+        Garrote           = ID_GARROTE,
+        Rupture           = ID_RUPTURE,
+        Envenom           = ID_ENVENOM,
+        SliceAndDice      = ID_SND,
+        Deathmark         = ID_DEATHMARK,
+        ImprovedGarrote   = ID_IMPGARROTE,
+        DarkestNight      = ID_DARKNIGHT,
+        DeathstalkersMark = ID_DSMARK,
+        LingeringDarkness = ID_LINGERDARK,
+        Vanish            = ID_VANISH,
+        Stealth           = ID_STEALTH,
+    },
+
+    debug = {
+        { label = "Garrote (t)",          kind = "buff", spell = ID_GARROTE },
+        { label = "Rupture (t)",          kind = "buff", spell = ID_RUPTURE },
+        { label = "Envenom",              kind = "buff", spell = ID_ENVENOM },
+        { label = "Slice and Dice",       kind = "buff", spell = ID_SND },
+        { label = "Deathmark",            kind = "buff", spell = ID_DEATHMARK },
+        { label = "Improved Garrote",     kind = "buff", spell = ID_IMPGARROTE },
+        { label = "Darkest Night",        kind = "buff", spell = ID_DARKNIGHT },
+    },
+    economy = {
+        gen   = { "Mutilate", "Fan of Knives", "Crimson Tempest", "Garrote", "Shiv", "Kingsbane" },
+        spend = { "Envenom", "Rupture", "Slice and Dice" },
+    },
+
+    --------------------------------------------------------------------------------
+    -- Rotation Ability & Buff Debug (/prio rotdebug): the live signals the rotation
+    -- actually reads. Energy is absent on purpose -- it is a secret value in combat,
+    -- so there is nothing to show and nothing the engine gates on.
+    --------------------------------------------------------------------------------
+    rotationDebug = {
+        title = "Rotation Ability & Buff Debug",
+        abilities = {
+            "Deathmark", "Kingsbane", "Vanish", "Shiv", "Garrote", "Rupture",
+            "Envenom", "Mutilate", "FanOfKnives", "CrimsonTempest", "SliceandDice",
+        },
+        buffs = {
+            { label = "Garrote (dot)",       spell = ID_GARROTE },
+            { label = "Rupture (dot)",       spell = ID_RUPTURE },
+            { label = "Envenom",             spell = ID_ENVENOM },
+            { label = "Slice and Dice",      spell = ID_SND },
+            { label = "Deathmark",           spell = ID_DEATHMARK },
+            { label = "Improved Garrote",    spell = ID_IMPGARROTE },
+            { label = "Darkest Night (DS)",  spell = ID_DARKNIGHT },
+            { label = "Deathstalker's Mark", spell = ID_DSMARK },
+        },
+        rangeProbes = {
+            { label = "Combo Points", kind = "resource" },
+        },
     },
 
     setup = {

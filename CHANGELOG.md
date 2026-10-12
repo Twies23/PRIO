@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.10.17 (alpha)
+- **Fix: Assassination didn't register in the UI** — the spec shipped with a `name` field where every other spec uses `label`, so Options showed "No spec profile" and an empty Specialization dropdown. Also filled in the other fields it was missing: class name, the Combo Points resource label and 7-point cap, the look-ahead combo-point simulation (`ResourceDelta`), condition presets, the aura map, and the `/prio rotdebug` rows.
+
 ## 0.10.16 (alpha)
 - **Assassination Rogue (spec 259) added, with both hero trees — Deathstalker and Fatebound.** Priorities built from the 12.1 Icy Veins (per-hero tabs), Wowhead and Maxroll lists, then cross-checked against three live +22 Mythic+ logs (two Fatebound, one Deathstalker). Three 12.1 reworks that break any ported TWW-era list are handled explicitly:
   - **Crimson Tempest is a builder now**, not a finisher (60 Energy, generates 1 CP, spreads your bleeds) — confirmed in the logs, where its casts carry no combo-point spend. It is deliberately *not* cost-clamped as a finisher.

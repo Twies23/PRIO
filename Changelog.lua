@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.10.17", {
+        "Fix: Assassination did not show up in Options (\"No spec profile\", empty Specialization dropdown) -- it shipped with the wrong name field. Also added its missing resource label / combo-point cap, look-ahead combo-point simulation, condition presets and rotation-debug rows.",
+    } },
     { "0.10.16", {
         "Assassination Rogue (spec 259) added, with BOTH hero trees: Deathstalker and Fatebound. Built from the 12.1 Icy Veins/Wowhead/Maxroll priorities and cross-checked against three live +22 Mythic+ logs. Three 12.1 reworks a ported list gets wrong are handled: Crimson Tempest is a BUILDER now (not a finisher), Slice and Dice is cast once and then maintained by Envenom, and Caustic Spatter rides Envenom instead of Shiv. Deathstalker gets the Darkest Night rules (max-combo-point Envenom, Shiv bridge at exactly 6, and holding Rupture while it is up); Fatebound needs no coin decisions and drops Shiv to the bottom.",
     } },
