@@ -122,157 +122,163 @@ local function noPower(id)     return { type = "noPower", spell = id } end
 local function keepUp(id) return OR(buffDown(id), refreshable(id)) end
 
 --------------------------------------------------------------------------------
--- SHARED CORE -- the lines both hero trees run identically, in guide order.
+-- PRIORITY LISTS -- one explicit list per hero tree per mode, written to follow the
+-- Icy Veins 12.1 per-hero lists line for line. The guide numbers are in [brackets] so
+-- every row can be audited against the source. The two trees diverge enough (Darkest
+-- Night, Shiv placement, the Mark) that composing them from a shared "core" hid real
+-- ordering mistakes -- notably that Rupture belongs ABOVE Deathmark in every list.
 --
--- Ordering follows Icy Veins/Wowhead merged: bleeds -> cooldowns -> Vanish/Garrote ->
--- finisher -> builder. Per-hero lines get spliced in by the builders below.
+-- Three deliberate departures from the printed order, all marked inline:
+--   * The Darkest Night 6->7 CP bridge is hoisted ABOVE the plain Envenom row. The
+--     guide lists it last ("you can also..."), but below a 5+ CP Envenom it is
+--     unreachable -- you would simply Envenom at 6 and never arrive at 7.
+--   * Slice and Dice is not in the guide at all (Cut to the Chase maintains it), but
+--     ONE cast is needed to start the chain, so there is a single buffDown row just
+--     above the Envenoms: high enough to win the combo points, low enough that bleeds
+--     and cooldowns still come first.
+--   * Mark for Death is omitted. Its rule is "swap the Mark when you need to change
+--     targets", which is player intent PRIO cannot infer (4 casts in 26 min of log).
+--     It stays `pickable` for manual use.
 --
--- GARROTE has TWO lines, and the order matters:
---   (a) during the Improved Garrote window -> always correct (empowered application).
---   (b) normal pandemic maintenance.
--- KNOWN APPROXIMATION: the guides say never overwrite an Improved-Garrote-empowered
--- Garrote with an unempowered one ("it is best to let the DoT run its full duration").
--- PRIO cannot read whether the DoT on the target was empowered -- only whether the IG
--- window is open right now. (a) sitting above (b) gets this right whenever the window
--- is open; outside it we can still clip an empowered bleed. Tune in game if it bites.
+-- GARROTE ordering: Mark row, then the Improved-Garrote window, then plain pandemic
+-- maintenance. PRIO cannot read whether the DoT on the target was empowered -- only
+-- whether the IG window is open right now -- so outside that window a plain refresh
+-- can still clip an empowered bleed. Tune in game if it bites.
 --------------------------------------------------------------------------------
-local function bleedsAndCooldowns()
-    return {
-        -- Thistle Tea when Energy is actually short. "When low on Energy" looked
-        -- unmodellable (Energy is secret in combat) until we gate on the game's CLEAN
-        -- insufficient-power flag instead of the value: Mutilate costs 50 Energy, so
-        -- "can't afford Mutilate" IS "Energy < 50". Harmless if you took the auto-cast
-        -- Thistle Tea talent -- it will already be on cooldown when this line looks.
-        { spell = "ThistleTea",    cond = noPower(ID_MUTILATE) },
-        -- Opener-only: Cut to the Chase + Envenom maintain it from here on.
-        { spell = "SliceandDice",  cond = AND(buffDown(ID_SND), cpMin(5)) },
-        -- Garrote inside the empowered window (Stealth/Vanish).
-        { spell = "Garrote",       cond = buffUp(ID_IMPGARROTE) },
-        -- Garrote maintenance. Uptime target is 100%; 18s base -> 5.4s pandemic.
-        { spell = "Garrote",       cond = keepUp(ID_GARROTE) },
-        -- Deathmark on cooldown (2 min). Bleeds are above it so they are up first --
-        -- Deathmark multiplies Rupture/Garrote/poison damage by 75%.
-        { spell = "Deathmark" },
-        -- Kingsbane on cooldown (1 min), synced immediately after Deathmark.
-        { spell = "Kingsbane" },
-        -- Vanish ONLY to open an Improved Garrote window, synced to Deathmark.
-        -- LOG-CONFIRMED: Vanish landed ~2.6s after Deathmark in the burst sample.
-        { spell = "Vanish",        cond = buffUp(ID_DEATHMARK) },
-    }
-end
 
--- AoE builders. Crimson Tempest spreads bleeds, Fan of Knives is the cheap filler
--- (35 vs 60 Energy). The real rule is "CT until every target has your bleeds, then
--- FoK" -- which needs per-target bleed coverage we cannot read. Proxy: CT early in
--- the combo-point cycle (the spreading phase), FoK to top the cycle off. This is the
--- single most worthwhile thing to retune in game.
--- Breakpoint is 2+ (Wowhead + Icy Veins "as soon as there is more than 1 target");
--- Maxroll says 3+. LOG-CONFIRMED heavy use of both (FoK 221-273, CT 152-266 per run).
--- The Scent of Blood clause is Wowhead's actual stop condition ("Crimson Tempest until
--- 5+ CP OR you have reached the maximum stacks available on Scent of Blood"). It is
--- LOG-GROUNDED: stacks go up 4 per bleeding target and cap at 20. AND-ing it can only
--- make CT fire LESS, never more -- below 5 targets the cap is unreachable so it is a
--- no-op, and at 5+ it correctly stops CT once the pack is fully bled.
-local function aoeBuilders()
-    return {
-        { spell = "CrimsonTempest", cond = AND(enemiesMin(2), cpMax(2), stacksMax(ID_SCENT, 16)) },
-        { spell = "FanOfKnives",    cond = AND(enemiesMin(2), cpMax(4)) },
-    }
+-- Shared row builders. Identical text appears in several lists; ORDER is set per list.
+-- Mark missing AND no Darkest Night pending. The DN-consuming Envenom re-applies the
+-- Mark by itself, so Garroting while DN is up burns a GCD and 45 Energy for nothing
+-- (the simulator caught this: Deathstalker Garrotes ran 8.3/min vs Fatebound 4.4).
+local function rowGarroteMark()
+    return { spell = "Garrote", cond = AND(buffDown(ID_DSMARK), buffDown(ID_DARKNIGHT)) }
 end
-
-local function append(dst, src)
-    for i = 1, #src do dst[#dst + 1] = src[i] end
-    return dst
+local function rowGarroteIG()   return { spell = "Garrote", cond = buffUp(ID_IMPGARROTE) } end
+local function rowGarroteKeep() return { spell = "Garrote", cond = keepUp(ID_GARROTE) } end
+local function rowDeathmark()   return { spell = "Deathmark" } end
+local function rowKingsbane()   return { spell = "Kingsbane" } end
+local function rowVanish()      return { spell = "Vanish", cond = buffUp(ID_DEATHMARK) } end
+local function rowSnD()         return { spell = "SliceandDice", cond = AND(buffDown(ID_SND), cpMin(5)) } end
+local function rowEnvenom()     return { spell = "Envenom", cond = cpMin(5) } end
+local function rowAmbush()      return { spell = "Ambush" } end     -- self-gates: stealth-only
+local function rowMutilate()    return { spell = "Mutilate", cond = cpMax(5) } end
+local function rowThistleTea()  return { spell = "ThistleTea", cond = noPower(ID_MUTILATE) } end
+local function rowFoK()         return { spell = "FanOfKnives", cond = AND(enemiesMin(2), cpMax(4)) } end
+-- Crimson Tempest spreads bleeds; the Scent of Blood clause is the guide's real stop
+-- condition ("until all targets have bleeds"). LOG-GROUNDED: Scent gains 4 stacks per
+-- bleeding target and caps at 20. AND-ing it can only make CT fire LESS -- under 5
+-- targets the cap is unreachable, so it is a no-op there.
+local function rowCrimsonTempest()
+    return { spell = "CrimsonTempest", cond = AND(enemiesMin(2), cpMax(4), stacksMax(ID_SCENT, 16)) }
 end
 
 --------------------------------------------------------------------------------
 -- DEATHSTALKER
 --
--- The loop (LOG-CONFIRMED against apply/remove timestamps): Garrote applies
+-- Loop (LOG-CONFIRMED from aura apply/remove timestamps): Garrote applies
 -- Deathstalker's Mark with 3 stacks -> every finisher spending 5+ CP consumes one ->
--- the last one grants Darkest Night -> spend Darkest Night on a MAX-CP Envenom, which
--- re-applies the Mark. In the log the cycle ran ~14-19s and Darkest Night was consumed
--- within 3-6s, at an Envenom with 6 or 7 CP.
+-- the last grants Darkest Night -> spend it on a max-CP Envenom, which re-applies the
+-- Mark. The cycle ran ~14-19s in the log and was consumed within 3-6s, at an Envenom
+-- with 6 or 7 CP.
 --
--- Two Deathstalker-specific rules, both readable and both implemented:
---   * Rupture is gated on Darkest Night being DOWN. Wowhead: "Do not cast Rupture
+-- Two readable tree-specific rules:
+--   * Rupture is gated on Darkest Night being DOWN -- Wowhead: "Do not cast Rupture
 --     during Darkest Night outside of your opener... Letting Rupture drop entirely to
---     facilitate this is acceptable." (A Rupture would eat a Mark stack instead.)
---   * Shiv is a core generator for Deathstalker (cheapest CP with Toxic Stiletto) but
---     SINGLE TARGET ONLY -- "never with any adds up, as Fan of Knives becomes more
---     efficient". LOG-CONFIRMED: the Deathstalker rogue cast Shiv 31 times vs 14-19
---     for the two Fatebound rogues.
---
--- Mark for Death is intentionally NOT in the list: its rule is "swap your Mark when you
--- need to change targets", which is player intent PRIO cannot infer. LOG-CONFIRMED as
--- situational (4 casts in 26 minutes). It stays pickable.
+--     facilitate this is acceptable." (It would consume a Mark stack instead.)
+--   * The plain Envenom row is ALSO gated on Darkest Night being down, so Envenom
+--     genuinely waits for 7 CP while it is up ("Cast it with 7 CP when Darkest Night
+--     is active") instead of dumping at 5. The bridge rows above supply the 7th point.
 --------------------------------------------------------------------------------
-local function deathstalkerList(isAoe)
-    local list = bleedsAndCooldowns()
-    -- Icy Veins' #1 Deathstalker line: "Make sure to use Garrote to apply Deathstalker's
-    -- Mark." Only Garrote can apply it, only one Mark exists at a time, and the whole
-    -- hero loop stalls without it -- so a missing Mark outranks a routine pandemic
-    -- refresh. Slots in just under the Improved-Garrote-window line.
-    table.insert(list, 4, { spell = "Garrote", cond = buffDown(ID_DSMARK) })
-    -- Rupture: 5+ CP, and NOT during Darkest Night (outside the opener).
-    list[#list + 1] = { spell = "Rupture", cond = AND(buffDown(ID_DARKNIGHT), cpMin(5), keepUp(ID_RUPTURE)) }
-    -- Darkest Night: dump it on the biggest Envenom you can.
-    list[#list + 1] = { spell = "Envenom", cond = AND(buffUp(ID_DARKNIGHT), cpMin(7)) }
-    -- Sitting at exactly 6 with Darkest Night up? Bridge to 7 with a 1-CP generator.
-    -- NOTE: if you do not run both Stratagem talents your max CP is below 7 and these
-    -- bridge lines cannot resolve -- the plain Envenom line below still catches it.
-    if isAoe then
-        list[#list + 1] = { spell = "FanOfKnives", cond = AND(buffUp(ID_DARKNIGHT), cpEq(6)) }
-    end
-    list[#list + 1] = { spell = "Shiv", cond = AND(buffUp(ID_DARKNIGHT), cpEq(6)) }
-    -- Shiv on cooldown, single target only.
-    list[#list + 1] = { spell = "Shiv", cond = enemiesMax(1) }
-    if isAoe then append(list, aoeBuilders()) end
-    list[#list + 1] = { spell = "Envenom",  cond = cpMin(5) }
-    list[#list + 1] = { spell = "Mutilate", cond = cpMax(5) }
-    return list
-end
+local deathstalker_st = {
+    { spell = "Stealth", cond = notStealthed() },
+    rowGarroteMark(),                                                      -- [1] Garrote applies the Mark
+    rowGarroteIG(),                                                        -- [3] maintain, from Vanish when possible
+    rowGarroteKeep(),                                                      -- [3]
+    { spell = "Rupture", cond = AND(buffDown(ID_DARKNIGHT), cpMin(5), keepUp(ID_RUPTURE)) }, -- [4]
+    rowDeathmark(),                                                        -- [5]
+    rowKingsbane(),                                                        -- [6] synced to Deathmark
+    rowVanish(),                                                           -- [3] "before every Deathmark"
+    -- [7] on cooldown. cpMax(6) is ours, not the guide's: Shiv generates 1 CP, and
+    -- this row sits ABOVE Envenom, so without it Shiv fires at max CP and overcaps.
+    { spell = "Shiv", cond = cpMax(6) },
+    rowSnD(),                                                              -- (not in guide; one cast starts the chain)
+    { spell = "Envenom", cond = AND(buffUp(ID_DARKNIGHT), cpMin(7)) },     -- [8] 7 CP under Darkest Night
+    { spell = "Shiv",    cond = AND(buffUp(ID_DARKNIGHT), cpEq(6)) },      -- [13] hoisted: bridge 6 -> 7
+    { spell = "Envenom", cond = AND(buffDown(ID_DARKNIGHT), cpMin(5)) },   -- [8] otherwise 5+ CP
+    rowAmbush(),                                                           -- [9] whenever usable (stealth)
+    rowMutilate(),                                                         -- [10]
+    rowFoK(),                                                              -- [11] more than 1 target
+    rowThistleTea(),                                                       -- [12] low energy
+}
+
+local deathstalker_aoe = {
+    { spell = "Stealth" },
+    rowGarroteMark(),                                                      -- [1]
+    rowGarroteIG(),                                                        -- [1] cast twice to extend Improved Garrote
+    rowGarroteKeep(),                                                      -- [3]
+    { spell = "Rupture", cond = AND(buffDown(ID_DARKNIGHT), cpMin(5), keepUp(ID_RUPTURE)) }, -- [3]
+    rowCrimsonTempest(),                                                   -- [4][5] AoE builder, spreads bleeds
+    rowFoK(),                                                              -- [5] once every target is bled
+    rowDeathmark(),                                                        -- [6]
+    rowKingsbane(),                                                        -- [7]
+    rowVanish(),                                                           -- [8] re-apply empowered Garrotes
+    rowSnD(),
+    { spell = "Envenom",     cond = AND(buffUp(ID_DARKNIGHT), cpMin(7)) }, -- [9]
+    { spell = "Shiv",        cond = AND(buffUp(ID_DARKNIGHT), cpEq(6)) },  -- [9] "Shiv to get to 7 CP"
+    { spell = "FanOfKnives", cond = AND(buffUp(ID_DARKNIGHT), cpEq(6)) },  -- [11] the other bridge
+    { spell = "Envenom",     cond = AND(buffDown(ID_DARKNIGHT), cpMin(5)) }, -- [9]
+    rowMutilate(),
+    rowThistleTea(),                                                       -- [10]
+}
 
 --------------------------------------------------------------------------------
 -- FATEBOUND
 --
--- Hand of Fate flips a Fatebound Coin on every finisher spending 5+ CP. Heads stacks
--- damage, Tails adds flat Cosmic damage, 7 flips in a row grants the Lucky Coin buff.
--- Both guides are explicit that you have NO control over the flips -- so Fatebound
--- needs NO coin-based decisions, only the 5+ CP finisher gate we already have. There
--- is nothing to track and nothing to read.
+-- Hand of Fate flips a coin on every finisher spending 5+ CP, but both guides are
+-- explicit that you have NO control over the flips -- so Fatebound needs no coin
+-- conditions and nothing extra to track. It is the plain 5+ CP list.
 --
--- Differences from Deathstalker: no Darkest Night / Mark lines, no 7-CP rule, and Shiv
--- drops to the BOTTOM. Wowhead measured Shiv as a ~1% DPS LOSS for Fatebound (Deal
--- Fate makes non-Shiv generators better), though it can flip positive under perfect
--- conditions -- so it sits last and is the first line to delete if you dislike it.
+-- Shiv drops to the BOTTOM (guide [10], below even Thistle Tea): Wowhead measures it
+-- as a ~1% DPS LOSS for this tree, because Deal Fate makes non-Shiv generators better.
 -- LOG-CONFIRMED: the Fatebound rogues cast Shiv 14 and 19 times vs 31 for Deathstalker.
+-- The Fatebound AoE list has no Shiv row at all.
 --------------------------------------------------------------------------------
-local function fateboundList(isAoe)
-    local list = bleedsAndCooldowns()
-    list[#list + 1] = { spell = "Rupture", cond = AND(cpMin(5), keepUp(ID_RUPTURE)) }
-    if isAoe then append(list, aoeBuilders()) end
-    list[#list + 1] = { spell = "Envenom",  cond = cpMin(5) }
-    list[#list + 1] = { spell = "Mutilate", cond = cpMax(5) }
-    list[#list + 1] = { spell = "Shiv" }
-    return list
-end
+local fatebound_st = {
+    { spell = "Stealth", cond = notStealthed() },
+    rowGarroteIG(),                                                        -- [1] maintain, from Vanish when possible
+    rowGarroteKeep(),                                                      -- [1]
+    { spell = "Rupture", cond = AND(cpMin(5), keepUp(ID_RUPTURE)) },       -- [2]
+    rowDeathmark(),                                                        -- [3]
+    rowKingsbane(),                                                        -- [4]
+    rowVanish(),                                                           -- [1] "before every Deathmark"
+    rowSnD(),
+    rowEnvenom(),                                                          -- [5]
+    rowAmbush(),                                                           -- [6]
+    rowMutilate(),                                                         -- [7]
+    rowFoK(),                                                              -- [8] more than 1 target
+    rowThistleTea(),                                                       -- [9]
+    { spell = "Shiv", cond = cpMax(6) },                                   -- [10] last: a ~1% loss for Fatebound
+}
 
--- Stealth leads each mode (the engine filters it in combat, so it only shows pre-pull).
-local function withStealth(list, isAoe)
-    local out = { isAoe and { spell = "Stealth" } or { spell = "Stealth", cond = notStealthed() } }
-    return append(out, list)
-end
+local fatebound_aoe = {
+    { spell = "Stealth" },
+    rowGarroteIG(),                                                        -- [1] ideally from Stealth
+    rowGarroteKeep(),                                                      -- [2]
+    { spell = "Rupture", cond = AND(cpMin(5), keepUp(ID_RUPTURE)) },       -- [1]
+    rowCrimsonTempest(),                                                   -- [2][3] AoE builder, spreads bleeds
+    rowFoK(),                                                              -- [3] once every target is bled
+    rowDeathmark(),                                                        -- [4]
+    rowKingsbane(),                                                        -- [5]
+    rowVanish(),                                                           -- [6]
+    rowSnD(),
+    rowEnvenom(),                                                          -- [7]
+    rowMutilate(),
+    rowThistleTea(),                                                       -- [8]
+}
 
 local heroLists = {
-    deathstalker = {
-        st  = withStealth(deathstalkerList(false), false),
-        aoe = withStealth(deathstalkerList(true),  true),
-    },
-    fatebound = {
-        st  = withStealth(fateboundList(false), false),
-        aoe = withStealth(fateboundList(true),  true),
-    },
+    deathstalker = { st = deathstalker_st, aoe = deathstalker_aoe },
+    fatebound    = { st = fatebound_st,    aoe = fatebound_aoe },
 }
 
 -- Hero detection by strict known-check on each tree's giveaway spell: Hand of Fate is

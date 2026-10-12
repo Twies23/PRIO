@@ -276,8 +276,18 @@ end)
 test("assa: both hero variants ship real lists", function()
     truthy(#assa.priorityByVariant.deathstalker.st > 5, "deathstalker ST list is populated")
     truthy(#assa.priorityByVariant.fatebound.st  > 5, "fatebound ST list is populated")
-    truthy(#assa.priorityByVariant.deathstalker.aoe > #assa.priorityByVariant.deathstalker.st,
-           "AoE adds the Crimson Tempest / Fan of Knives builders")
+    local function has(list, id)
+        for _, row in ipairs(list) do
+            if assa.spells[row.spell] == id then return true end
+        end
+        return false
+    end
+    truthy(has(assa.priorityByVariant.deathstalker.aoe, CRIMSONT), "DS AoE has Crimson Tempest")
+    truthy(has(assa.priorityByVariant.fatebound.aoe,    CRIMSONT), "FB AoE has Crimson Tempest")
+    falsy(has(assa.priorityByVariant.deathstalker.st,   CRIMSONT), "CT is AoE-only")
+    -- Shiv-on-cooldown is a Deathstalker single-target row ("never with adds up"); the
+    -- Fatebound AoE list has no Shiv row at all.
+    falsy(has(assa.priorityByVariant.fatebound.aoe,     SHIV), "no Shiv in the Fatebound AoE list")
 end)
 
 test("assa: Ambush is not in the spell map (zero casts in all three reference logs)", function()
@@ -306,18 +316,28 @@ test("assa: noPower / hasPower read the clean flag", function()
     truthy(evalClause({ type = "hasPower", spell = MUTILATE }), "...so hasPower is true")
 end)
 
-test("assa: Thistle Tea fires only when Mutilate is unaffordable", function()
-    setAssa("fatebound")
-    H.S.power[COMBO] = 4
-    H.S.insufficientPower[MUTILATE] = false
-    local r = H.Engine:Evaluate()
-    falsy(suggests(r, THISTLETEA), "no Thistle Tea while energy is fine")
-
+test("assa: Thistle Tea sits at the guide position [12], below Mutilate", function()
+    -- Icy Veins puts Thistle Tea at [12], under the builders. With softPowerUsable the
+    -- Mutilate row still shows at low energy (you press it as energy ticks up), so the
+    -- Thistle Tea row below it is only reachable when nothing above fires. The guide is
+    -- relaxed about this ("or simply play the version that auto-uses it; it makes no
+    -- difference") -- documented here so the ordering is a choice, not an accident.
     setAssa("fatebound")
     H.S.power[COMBO] = 4
     H.S.insufficientPower[MUTILATE] = true
+    local r = H.Engine:Evaluate()
+    eq(r.primary and r.primary.id, MUTILATE,
+       "Mutilate still wins at 4 CP -- Thistle Tea is below it in the guide order")
+
+    -- It IS reachable once the builder row is gated out (max combo points, single target).
+    setAssa("fatebound")
+    H.S.power[COMBO] = 7
+    H.S.auras[SND] = true
+    H.S.insufficientPower[MUTILATE] = true
+    H.S.ready[ENVENOM] = false        -- nothing above Thistle Tea can fire
+    H.S.ready[SHIV] = false
     local r2 = H.Engine:Evaluate()
-    eq(r2.primary and r2.primary.id, THISTLETEA, "low energy -> Thistle Tea")
+    truthy(suggests(r2, THISTLETEA), "reachable when the rows above are all gated out")
 end)
 
 --------------------------------------------------------------------------------

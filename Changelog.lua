@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.10.19", {
+        "Assassination priority lists rewritten to follow the Icy Veins 12.1 per-hero lists exactly: Rupture now above Deathmark, the Deathstalker Garrote-for-the-Mark row first, Shiv above Envenom for Deathstalker and last for Fatebound. Fixes: Deathstalker no longer wastes a global re-Garroting while Darkest Night is pending (the Envenom re-applies the Mark itself), Shiv can no longer overcap combo points, and Envenom properly waits for 7 CP under Darkest Night. Also adds a headless rotation simulator (python tools/sim.py) that drives the real engine and reports uptimes, combo-point waste and energy stalls.",
+    } },
     { "0.10.18", {
         "Assassination: Thistle Tea now fires on low energy. Energy's value is secret in combat, but the insufficient-power flag is clean -- \"can't afford Mutilate\" (50 Energy) reads as \"Energy < 50\". New Can't afford / Can afford conditions expose this to any secret-resource spec. Also picked up the newly tracked auras (Kingsbane, Thistle Tea, Scent of Blood, Caustic Spatter, Amplifying Poison); Deathstalker re-Garrotes when the Mark drops; and Crimson Tempest stops once Scent of Blood is capped, handing off to Fan of Knives.",
     } },

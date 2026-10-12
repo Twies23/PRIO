@@ -1,5 +1,12 @@
 # PRIO Changelog
 
+## 0.10.19 (alpha)
+- **Assassination priority lists rewritten to follow the Icy Veins 12.1 per-hero lists line for line**, with the guide's own numbering kept against each row so they can be audited. This fixed real ordering mistakes in the first pass — most importantly **Rupture now sits above Deathmark** (both trees), the Deathstalker **Garrote-for-the-Mark row is first**, and **Shiv moved above Envenom** for Deathstalker (and to the bottom for Fatebound, where it is a ~1% loss). Fan of Knives, Ambush and Thistle Tea now appear at their guide positions.
+- **Fix: Deathstalker wasted a global re-applying the Mark.** The Garrote-for-the-Mark row now also requires Darkest Night to be down — the Darkest-Night Envenom re-applies the Mark itself, so Garroting while it is pending burned a GCD and 45 Energy for nothing.
+- **Fix: Shiv could overcap combo points.** Now that it sits above Envenom it is capped at 6 CP, so it never fires at max and throws a point away.
+- **Envenom now genuinely waits for 7 combo points while Darkest Night is up** instead of dumping at 5, with the Shiv / Fan of Knives bridge hoisted above it so the 7th point is actually reachable.
+- **New: a headless rotation simulator** (`python tools/sim.py`). It drives the real engine through a modelled fight and reports DoT uptimes, combo-point waste, time stalled on energy and Darkest Night cycling, for both hero trees at 1 and 5 targets. It is what caught the Garrote bug above. Its calibration limits are documented in the file — relative comparisons are trustworthy, the absolute cast mix is not.
+
 ## 0.10.18 (alpha)
 - **Assassination: Energy is usable after all — indirectly.** The Energy *value* is a secret in combat, but the game's insufficient-power *flag* is clean, so "can't afford Mutilate" (50 Energy) is an exact read of "Energy < 50". New **Can't afford / Can afford** conditions expose this to any spec whose resource is a secret filling bar, and **Thistle Tea is now gated on it** instead of being left out of the rotation. Both fail closed — an unreadable flag never fires the clause, so a bad read can't spam a cooldown.
 - **Assassination: picked up the newly tracked auras** from an updated Cooldown Manager setup — Kingsbane, Thistle Tea, Scent of Blood, Caustic Spatter, Amplifying Poison, Momentum of Despair and Cold Blooded Killer are all readable now, and the stale "Kingsbane isn't tracked" setup warning is gone.
