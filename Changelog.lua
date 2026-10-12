@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.10.16", {
+        "Assassination Rogue (spec 259) added, with BOTH hero trees: Deathstalker and Fatebound. Built from the 12.1 Icy Veins/Wowhead/Maxroll priorities and cross-checked against three live +22 Mythic+ logs. Three 12.1 reworks a ported list gets wrong are handled: Crimson Tempest is a BUILDER now (not a finisher), Slice and Dice is cast once and then maintained by Envenom, and Caustic Spatter rides Envenom instead of Shiv. Deathstalker gets the Darkest Night rules (max-combo-point Envenom, Shiv bridge at exactly 6, and holding Rupture while it is up); Fatebound needs no coin decisions and drops Shiv to the bottom.",
+    } },
     { "0.10.15", {
         "Conduit AoE list rewritten (simpler, 24 rows; adopted from a player rewrite after A/B): Zenith on cooldown + chained 2nd charge, cooldowns, then every spender/proc ahead of Tiger Palm. Sim +1.4%, chi waste halved, look-ahead 39->44% consistent; pro replay TP-over-spender 85->18. Reset the Conduit AoE list to default to pick this up.",
     } },

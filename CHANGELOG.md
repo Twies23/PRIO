@@ -1,5 +1,14 @@
 # PRIO Changelog
 
+## 0.10.16 (alpha)
+- **Assassination Rogue (spec 259) added, with both hero trees — Deathstalker and Fatebound.** Priorities built from the 12.1 Icy Veins (per-hero tabs), Wowhead and Maxroll lists, then cross-checked against three live +22 Mythic+ logs (two Fatebound, one Deathstalker). Three 12.1 reworks that break any ported TWW-era list are handled explicitly:
+  - **Crimson Tempest is a builder now**, not a finisher (60 Energy, generates 1 CP, spreads your bleeds) — confirmed in the logs, where its casts carry no combo-point spend. It is deliberately *not* cost-clamped as a finisher.
+  - **Slice and Dice is cast once and then maintained by Envenom** (Cut to the Chase) — the logs show 1 cast for 95% uptime, so it is a single opener line, not a maintenance line.
+  - **Caustic Spatter rides Envenom/Kingsbane**, not Shiv, so there is nothing left to gate.
+- **Deathstalker** gets the real Darkest Night loop (log-confirmed from aura timestamps): Envenom at max combo points when it is up, a Shiv / Fan of Knives bridge at exactly 6 CP, Shiv on cooldown in single target only, and Rupture **held** while Darkest Night is pending so it does not eat a Deathstalker's Mark stack.
+- **Fatebound** needs no coin-flip decisions (you have no control over them), so it is the plain 5+ combo-point list with Shiv demoted to the bottom — Wowhead measures it as a ~1% loss for this tree.
+- Energy is a secret value in combat, so PRIO does **not** attempt Assassination's energy pooling or Envenom chaining, and leaves Thistle Tea out of the priority — take the auto-cast talent. `/prio setup` spells this out, along with the Kingsbane gap in the default Cooldown Manager setup.
+
 ## 0.10.15 (alpha)
 - **Conduit AoE list rewritten (simpler, 24 rows), adopted from a player rewrite after A/B.** Zenith on cooldown (never over its own window) with the chained 2nd charge, cooldowns, then every spender and proc ahead of Tiger Palm. Versus the previous AoE list: sim +1.4%, Chi waste halved, 3-deep look-ahead consistency 39% → 44%; against the pros' decision points, Tiger Palm is recommended over a castable spender 18 times instead of 85 (96% precision), with better Zenith Stomp / WDP / Rushing Wind Kick / SCK matching. Two rows kept from the validated list because the sim priced them: Invoke Xuen still goes with Celestial Conduit (gating it on Zenith lost a third of Xuen casts), and the Obsidian Spiral Blackout Kick row is the guide's AND. Reset the Conduit AoE list to default to pick this up.
 
