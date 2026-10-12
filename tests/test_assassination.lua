@@ -24,6 +24,9 @@ local STEALTH    = 1784
 local IMPGARROTE = 381632
 local DARKNIGHT  = 457058
 local HANDOFFATE = 452536
+local DSMARK     = 457052
+local SCENT      = 381799
+local THISTLETEA = 1298826
 local COMBO      = 4
 
 local assa = H.assaSpec
@@ -35,7 +38,8 @@ local function setAssa(hero)
     H.S.power[COMBO] = 0; H.S.powerMax[COMBO] = 7
     H.S.enemies = 1
     for _, id in ipairs({ GARROTE, RUPTURE, ENVENOM, DEATHMARK, KINGSBANE, SND,
-                          IMPGARROTE, DARKNIGHT, MARKDEATH }) do
+                          IMPGARROTE, DARKNIGHT, MARKDEATH, DSMARK, SCENT,
+                          THISTLETEA }) do
         H.S.tracked[id] = true
     end
     -- Bleeds + Slice and Dice up, empowered window closed, no Darkest Night.
@@ -45,6 +49,8 @@ local function setAssa(hero)
     H.S.auras[IMPGARROTE] = false
     H.S.auras[DARKNIGHT]  = false
     H.S.auras[DEATHMARK]  = false
+    H.S.auras[DSMARK]     = true       -- Deathstalker's Mark already applied by Garrote
+    H.S.stacks[SCENT]     = 0
     H.S.usable[STEALTH] = false        -- in combat
     -- Big cooldowns spent, so the steady-state lines below them get evaluated. Tests
     -- that care about Deathmark/Kingsbane/Vanish re-enable them explicitly.
@@ -276,4 +282,83 @@ end)
 
 test("assa: Ambush is not in the spell map (zero casts in all three reference logs)", function()
     falsy(assa.spells.Ambush, "Vanish->Garrote is the only stealth interaction in 12.1")
+end)
+
+--------------------------------------------------------------------------------
+-- Energy via the insufficient-power FLAG (the value itself is secret in combat).
+-- Mutilate costs 50 Energy, so "can't afford Mutilate" == "Energy < 50".
+--------------------------------------------------------------------------------
+test("assa: noPower fails CLOSED when the flag is unreadable", function()
+    setAssa("fatebound")
+    H.S.insufficientPower[MUTILATE] = nil      -- secret / unknown
+    falsy(evalClause({ type = "noPower", spell = MUTILATE }),
+          "an unreadable power flag must never fire the clause")
+end)
+
+test("assa: noPower / hasPower read the clean flag", function()
+    setAssa("fatebound")
+    H.S.insufficientPower[MUTILATE] = true
+    truthy(evalClause({ type = "noPower",  spell = MUTILATE }), "energy is short")
+    falsy(evalClause({ type = "hasPower", spell = MUTILATE }), "...so hasPower is false")
+
+    H.S.insufficientPower[MUTILATE] = false
+    falsy(evalClause({ type = "noPower",  spell = MUTILATE }), "energy is fine")
+    truthy(evalClause({ type = "hasPower", spell = MUTILATE }), "...so hasPower is true")
+end)
+
+test("assa: Thistle Tea fires only when Mutilate is unaffordable", function()
+    setAssa("fatebound")
+    H.S.power[COMBO] = 4
+    H.S.insufficientPower[MUTILATE] = false
+    local r = H.Engine:Evaluate()
+    falsy(suggests(r, THISTLETEA), "no Thistle Tea while energy is fine")
+
+    setAssa("fatebound")
+    H.S.power[COMBO] = 4
+    H.S.insufficientPower[MUTILATE] = true
+    local r2 = H.Engine:Evaluate()
+    eq(r2.primary and r2.primary.id, THISTLETEA, "low energy -> Thistle Tea")
+end)
+
+--------------------------------------------------------------------------------
+-- Deathstalker: Garrote is the only way to apply the Mark
+--------------------------------------------------------------------------------
+test("deathstalker: a missing Deathstalker's Mark pulls Garrote up", function()
+    setAssa("deathstalker")
+    H.S.auras[GARROTE] = true        -- the bleed is fine...
+    H.S.auras[DSMARK]  = false       -- ...but the Mark is gone, so the loop has stalled
+    H.S.power[COMBO] = 7
+    local r = H.Engine:Evaluate()
+    eq(r.primary and r.primary.id, GARROTE, "re-Garrote to re-apply the Mark")
+end)
+
+test("fatebound: a missing Deathstalker's Mark changes nothing", function()
+    setAssa("fatebound")
+    H.S.auras[GARROTE] = true
+    H.S.auras[DSMARK]  = false
+    H.S.power[COMBO] = 7
+    local r = H.Engine:Evaluate()
+    eq(r.primary and r.primary.id, ENVENOM, "Fatebound has no Mark to maintain")
+end)
+
+--------------------------------------------------------------------------------
+-- AoE: Scent of Blood caps Crimson Tempest (4 per bleeding target, cap 20)
+--------------------------------------------------------------------------------
+test("assa: Crimson Tempest spreads while Scent of Blood is below cap", function()
+    setAssa("fatebound")
+    H.S.enemies = 5
+    H.S.power[COMBO] = 0
+    H.S.stacks[SCENT] = 8            -- only 2 targets bled so far
+    local r = H.Engine:Evaluate()
+    truthy(suggests(r, CRIMSONT), "keep spreading bleeds")
+end)
+
+test("assa: Crimson Tempest stops once Scent of Blood is capped, Fan of Knives takes over", function()
+    setAssa("fatebound")
+    H.S.enemies = 5
+    H.S.power[COMBO] = 0
+    H.S.stacks[SCENT] = 20           -- whole pack bled
+    local r = H.Engine:Evaluate()
+    falsy(r.primary and r.primary.id == CRIMSONT, "nothing left to spread")
+    eq(r.primary and r.primary.id, FOK, "Fan of Knives is the cheaper builder (35 vs 60)")
 end)

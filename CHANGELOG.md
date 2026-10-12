@@ -1,5 +1,12 @@
 # PRIO Changelog
 
+## 0.10.18 (alpha)
+- **Assassination: Energy is usable after all — indirectly.** The Energy *value* is a secret in combat, but the game's insufficient-power *flag* is clean, so "can't afford Mutilate" (50 Energy) is an exact read of "Energy < 50". New **Can't afford / Can afford** conditions expose this to any spec whose resource is a secret filling bar, and **Thistle Tea is now gated on it** instead of being left out of the rotation. Both fail closed — an unreadable flag never fires the clause, so a bad read can't spam a cooldown.
+- **Assassination: picked up the newly tracked auras** from an updated Cooldown Manager setup — Kingsbane, Thistle Tea, Scent of Blood, Caustic Spatter, Amplifying Poison, Momentum of Despair and Cold Blooded Killer are all readable now, and the stale "Kingsbane isn't tracked" setup warning is gone.
+- **Deathstalker: a missing Deathstalker's Mark now pulls Garrote up the list.** Only Garrote can apply the Mark and the whole hero loop stalls without it, so it outranks a routine bleed refresh.
+- **AoE: Crimson Tempest now stops once the pack is actually bled.** It is gated on Scent of Blood being below cap — 4 stacks per bleeding target, cap 20 (confirmed from logs), which is Wowhead's real stop condition. Below 5 targets the cap is unreachable, so this only ever makes Crimson Tempest fire *less*, never more, and Fan of Knives takes over as the cheaper builder.
+- **New test suite: every registered spec is checked against the contract the UI reads** (label, key, specID, resource, spells, pickable, a priority list, and hero-split consistency). This is the check that would have caught 0.10.16's broken Assassination registration immediately — verified by reintroducing that bug and watching it fail.
+
 ## 0.10.17 (alpha)
 - **Fix: Assassination didn't register in the UI** — the spec shipped with a `name` field where every other spec uses `label`, so Options showed "No spec profile" and an empty Specialization dropdown. Also filled in the other fields it was missing: class name, the Combo Points resource label and 7-point cap, the look-ahead combo-point simulation (`ResourceDelta`), condition presets, the aura map, and the `/prio rotdebug` rows.
 

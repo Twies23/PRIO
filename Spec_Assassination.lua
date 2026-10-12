@@ -69,13 +69,22 @@ local ID_SHIV       = 5938     -- Utility. 30 Energy, +1 CP
 local ID_VANISH     = 1856     -- Utility + TrackedBuff. 2 min CD -- Improved Garrote enabler
 local ID_STEALTH    = 1784     -- TrackedBuff
 local ID_IMPGARROTE = 381632   -- TrackedBar. the 6s empowered-Garrote window
-local ID_KINGSBANE  = 385627   -- 1 min CD, +1 CP. NOT in the user's CDM dump (see setup)
-local ID_THISTLETEA = 1298826  -- energy cooldown; NOT in the priority (energy unreadable)
+local ID_KINGSBANE  = 385627   -- Essential + TrackedBuff. 1 min CD, +1 CP
+local ID_KINGSBANEBUFF = 394095 -- TrackedBuff. the stacking Kingsbane buff
+local ID_THISTLETEA = 1298826  -- Essential. energy cooldown -- see the noPower gate below
+-- Scent of Blood: 4 stacks per bleeding target, CAP 20 (log-confirmed -- the observed
+-- stack values are 0/1/4/8/12/16/20, matching "5 Ruptures to reach max stacks").
+local ID_SCENT      = 381799   -- TrackedBuff
+local ID_CAUSTIC    = 421975   -- TrackedBuff. now applied by Envenom/Kingsbane, not Shiv
+local ID_AMPPOISONDOT = 383414 -- TrackedBuff. the stacking Amplifying Poison debuff
+local ID_COLDBLOODED = 382245  -- TrackedBuff. Cold Blooded Killer
+local ID_UNSHAKEABLE = 1248774 -- TrackedBuff. Unshakeable Drive
 
 -- Deathstalker
 local ID_DSMARK     = 457052   -- TrackedBuff. Deathstalker's Mark (3 stacks, applied by Garrote)
 local ID_DARKNIGHT  = 457058   -- TrackedBuff. Darkest Night -- spend on a max-CP Envenom
 local ID_LINGERDARK = 457056   -- TrackedBuff. Lingering Darkness (passive damage node)
+local ID_MOMENTUM   = 457067   -- TrackedBuff. Momentum of Despair (AoE crit, feeds Seal Fate)
 
 -- Fatebound
 local ID_HANDOFFATE = 452536   -- keystone: flips a coin per 5+ CP finisher (hero detection)
@@ -102,6 +111,11 @@ local function cpEq(n)         return { type = "resourceEq",  v = n } end
 local function enemiesMin(n)   return { type = "enemiesMin",  v = n } end
 local function enemiesMax(n)   return { type = "enemiesMax",  v = n } end
 local function notStealthed()  return { type = "notStealthed" } end
+local function stacksMax(id, n) return { type = "stacksMax", spell = id, v = n } end
+-- THE readable low-energy proxy. Energy itself is secret in combat, but the game's
+-- insufficient-power FLAG is clean -- so "can't afford Mutilate" (50 Energy) is an
+-- exact, in-combat read of "Energy < 50". Fails closed: an unreadable flag never fires.
+local function noPower(id)     return { type = "noPower", spell = id } end
 
 -- "Keep it up": missing, or inside the pandemic window. `refreshable` fails CLOSED
 -- (only true when Blizzard confirms it), so this never spam-refreshes a fresh DoT.
@@ -124,6 +138,12 @@ local function keepUp(id) return OR(buffDown(id), refreshable(id)) end
 --------------------------------------------------------------------------------
 local function bleedsAndCooldowns()
     return {
+        -- Thistle Tea when Energy is actually short. "When low on Energy" looked
+        -- unmodellable (Energy is secret in combat) until we gate on the game's CLEAN
+        -- insufficient-power flag instead of the value: Mutilate costs 50 Energy, so
+        -- "can't afford Mutilate" IS "Energy < 50". Harmless if you took the auto-cast
+        -- Thistle Tea talent -- it will already be on cooldown when this line looks.
+        { spell = "ThistleTea",    cond = noPower(ID_MUTILATE) },
         -- Opener-only: Cut to the Chase + Envenom maintain it from here on.
         { spell = "SliceandDice",  cond = AND(buffDown(ID_SND), cpMin(5)) },
         -- Garrote inside the empowered window (Stealth/Vanish).
@@ -148,9 +168,14 @@ end
 -- single most worthwhile thing to retune in game.
 -- Breakpoint is 2+ (Wowhead + Icy Veins "as soon as there is more than 1 target");
 -- Maxroll says 3+. LOG-CONFIRMED heavy use of both (FoK 221-273, CT 152-266 per run).
+-- The Scent of Blood clause is Wowhead's actual stop condition ("Crimson Tempest until
+-- 5+ CP OR you have reached the maximum stacks available on Scent of Blood"). It is
+-- LOG-GROUNDED: stacks go up 4 per bleeding target and cap at 20. AND-ing it can only
+-- make CT fire LESS, never more -- below 5 targets the cap is unreachable so it is a
+-- no-op, and at 5+ it correctly stops CT once the pack is fully bled.
 local function aoeBuilders()
     return {
-        { spell = "CrimsonTempest", cond = AND(enemiesMin(2), cpMax(2)) },
+        { spell = "CrimsonTempest", cond = AND(enemiesMin(2), cpMax(2), stacksMax(ID_SCENT, 16)) },
         { spell = "FanOfKnives",    cond = AND(enemiesMin(2), cpMax(4)) },
     }
 end
@@ -184,6 +209,11 @@ end
 --------------------------------------------------------------------------------
 local function deathstalkerList(isAoe)
     local list = bleedsAndCooldowns()
+    -- Icy Veins' #1 Deathstalker line: "Make sure to use Garrote to apply Deathstalker's
+    -- Mark." Only Garrote can apply it, only one Mark exists at a time, and the whole
+    -- hero loop stalls without it -- so a missing Mark outranks a routine pandemic
+    -- refresh. Slots in just under the Improved-Garrote-window line.
+    table.insert(list, 4, { spell = "Garrote", cond = buffDown(ID_DSMARK) })
     -- Rupture: 5+ CP, and NOT during Darkest Night (outside the opener).
     list[#list + 1] = { spell = "Rupture", cond = AND(buffDown(ID_DARKNIGHT), cpMin(5), keepUp(ID_RUPTURE)) }
     -- Darkest Night: dump it on the biggest Envenom you can.
@@ -293,6 +323,10 @@ local spec = {
     -- built-resource specs (Maelstrom/Holy Power), where IsUsable is the correct check.
     softPowerUsable = true,
 
+    -- Surfaces the "Can't afford <spell>" conditions in the editor -- the readable
+    -- stand-in for Energy, which is a secret value in combat.
+    condTags = { nopower = true },
+
     -- FINISHERS spend ALL combo points and are castable at any CP >= 1, but the game
     -- reports their cost as the MAX -- so the affordability gate would wrongly withhold
     -- them below max. Clamped to a 1-CP minimum so the CP conditions above decide.
@@ -332,6 +366,8 @@ local spec = {
         { key = "impGarrote",  label = "Improved Garrote window",     clause = buffUp(ID_IMPGARROTE) },
         { key = "bleedsUp",    label = "Garrote + Rupture both up",   clause = AND(buffUp(ID_GARROTE), buffUp(ID_RUPTURE)) },
         { key = "burst",       label = "Deathmark window",            clause = buffUp(ID_DEATHMARK) },
+        { key = "lowEnergy",   label = "Low energy (<50, can't Mutilate)", clause = noPower(ID_MUTILATE) },
+        { key = "scentCapped", label = "Scent of Blood capped (20)",   clause = { type = "stacksMin", spell = ID_SCENT, v = 20 } },
     },
 
     auras = {
@@ -346,6 +382,11 @@ local spec = {
         LingeringDarkness = ID_LINGERDARK,
         Vanish            = ID_VANISH,
         Stealth           = ID_STEALTH,
+        Kingsbane         = ID_KINGSBANE,
+        ScentOfBlood      = ID_SCENT,
+        CausticSpatter    = ID_CAUSTIC,
+        AmplifyingPoison  = ID_AMPPOISONDOT,
+        MomentumOfDespair = ID_MOMENTUM,
     },
 
     debug = {
@@ -356,6 +397,9 @@ local spec = {
         { label = "Deathmark",            kind = "buff", spell = ID_DEATHMARK },
         { label = "Improved Garrote",     kind = "buff", spell = ID_IMPGARROTE },
         { label = "Darkest Night",        kind = "buff", spell = ID_DARKNIGHT },
+        { label = "Kingsbane",            kind = "buff", spell = ID_KINGSBANE },
+        { label = "Scent of Blood",       kind = "buff", spell = ID_SCENT },
+        { label = "Caustic Spatter",      kind = "buff", spell = ID_CAUSTIC },
     },
     economy = {
         gen   = { "Mutilate", "Fan of Knives", "Crimson Tempest", "Garrote", "Shiv", "Kingsbane" },
@@ -382,6 +426,11 @@ local spec = {
             { label = "Improved Garrote",    spell = ID_IMPGARROTE },
             { label = "Darkest Night (DS)",  spell = ID_DARKNIGHT },
             { label = "Deathstalker's Mark", spell = ID_DSMARK },
+            { label = "Kingsbane",           spell = ID_KINGSBANE },
+            { label = "Scent of Blood",      spell = ID_SCENT },
+            { label = "Caustic Spatter",     spell = ID_CAUSTIC },
+            { label = "Amplifying Poison",   spell = ID_AMPPOISONDOT },
+            { label = "Momentum of Despair (DS)", spell = ID_MOMENTUM },
         },
         rangeProbes = {
             { label = "Combo Points", kind = "resource" },
@@ -405,10 +454,12 @@ local spec = {
           hint = "DEATHSTALKER ONLY, and optional: PRIO does not gate on the Mark (Garrote applies it with 3 stacks and your 5+ CP finishers eat them automatically), but tracking it lets you watch the cycle." },
         { kind = "info", label = "Combo Points",
           hint = "No tracking needed -- combo points are a discrete resource PRIO reads directly, so every finisher and builder combo-point gate is exact. Max is 7 with Deeper Stratagem + Sanguine Stratagem." },
-        { kind = "info", label = "Energy is unreadable in combat",
-          hint = "Energy is a filling bar, so it is a secret value in combat. PRIO cannot do Assassination's energy pooling or Envenom chaining (pressing Envenom in the last 1-2s of the buff) -- that part stays on you. Take the AUTO-CAST Thistle Tea talent; it fires below 30 energy by itself and the guides say it makes no difference." },
-        { kind = "info", label = "Kingsbane is not in your Cooldown Manager",
-          hint = "PRIO reads cooldowns directly, so it will still recommend Kingsbane -- but it was missing from your Cooldown Viewer setup and it is a real 1-minute cooldown (21-24 casts per run in the reference logs). Add it to Essential if you want to see it on your own bars." },
+        { kind = "trackedAura", label = "Kingsbane tracked", spell = ID_KINGSBANE, optional = true,
+          hint = "Optional: PRIO reads cooldowns directly so Kingsbane is recommended either way, but tracking it (and its stacking buff 394095) lets you see the window you are stacking Envenoms into." },
+        { kind = "trackedAura", label = "Scent of Blood tracked", spell = ID_SCENT, optional = true,
+          hint = "Optional but useful in AoE: Scent of Blood gains 4 stacks per bleeding target and caps at 20. PRIO uses it to stop spamming Crimson Tempest once the pack is fully bled and switch to the cheaper Fan of Knives." },
+        { kind = "info", label = "Energy: tracked indirectly, and that is on purpose",
+          hint = "Energy is a filling bar, so its VALUE is a secret in combat -- but the game's insufficient-power FLAG is clean. PRIO uses that instead: \"can't afford Mutilate\" (50 Energy) is an exact read of \"Energy < 50\", and that is what gates Thistle Tea. The finer plays -- pooling, and chaining Envenom in the last 1-2s of its buff -- still need the real number, so they stay on you." },
         { kind = "info", label = "Poisons (pre-combat)",
           hint = "Run Deadly Poison AND Amplifying Poison together (Dragon-Tempered Blades lets you carry two lethal poisons). Non-lethal: Atrophic Poison for raid -- buffed in 12.1 to 4% damage reduction and 60s duration." },
     },

@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.10.18", {
+        "Assassination: Thistle Tea now fires on low energy. Energy's value is secret in combat, but the insufficient-power flag is clean -- \"can't afford Mutilate\" (50 Energy) reads as \"Energy < 50\". New Can't afford / Can afford conditions expose this to any secret-resource spec. Also picked up the newly tracked auras (Kingsbane, Thistle Tea, Scent of Blood, Caustic Spatter, Amplifying Poison); Deathstalker re-Garrotes when the Mark drops; and Crimson Tempest stops once Scent of Blood is capped, handing off to Fan of Knives.",
+    } },
     { "0.10.17", {
         "Fix: Assassination did not show up in Options (\"No spec profile\", empty Specialization dropdown) -- it shipped with the wrong name field. Also added its missing resource label / combo-point cap, look-ahead combo-point simulation, condition presets and rotation-debug rows.",
     } },

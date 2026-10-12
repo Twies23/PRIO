@@ -75,6 +75,14 @@ Cond.types = {
     { value = "resourceEq",  text = "Resource =", needsValue = true, min = 0, max = 12, def = 2 },
     { value = "usable",      text = "Usable",       needsSpell = true, target = "ability" },
     { value = "notUsable",   text = "Not usable",   needsSpell = true, target = "ability" },
+    -- A READABLE low-resource proxy for specs whose resource is a secret filling bar
+    -- (Energy/Focus/Rage). The raw value is unreadable in combat, but the game's own
+    -- insufficient-power FLAG is clean -- so "can't afford <a spell of known cost>"
+    -- stands in for "below that much resource" (e.g. Mutilate costs 50 Energy, so
+    -- noPower(Mutilate) means Energy < 50). Both fail CLOSED: an unreadable flag
+    -- never fires the clause, so a bad read can't spam a resource cooldown.
+    { value = "noPower",     text = "Can't afford",   needsSpell = true, target = "ability", tag = "nopower" },
+    { value = "hasPower",    text = "Can afford",     needsSpell = true, target = "ability", tag = "nopower" },
     { value = "enemiesMin",  text = "Enemies \226\137\165",   needsValue = true, min = 1, max = 10, def = 2 },
     { value = "enemiesMax",  text = "Enemies \226\137\164",   needsValue = true, min = 1, max = 10, def = 1 },
     { value = "enemiesEq",   text = "Enemies =",   needsValue = true, min = 1, max = 10, def = 1 },
@@ -190,6 +198,8 @@ function Cond.ClauseLabel(cl, selfSid)
     elseif t == "energyPctMax" then return "Energy \226\137\164 " .. (cl.v or 0) .. "%"
     elseif t == "usable" then return name .. " usable"
     elseif t == "notUsable" then return name .. " unusable"
+    elseif t == "noPower" then return "can't afford " .. name
+    elseif t == "hasPower" then return "can afford " .. name
     elseif t == "moteUp" then return "MotE up"
     elseif t == "moteDown" then return "MotE down"
     elseif t == "skStacks" then return "SK \226\137\165 " .. (cl.v or 1)
@@ -565,6 +575,9 @@ local function EvalClause(cl, S, selfSid)
     elseif t == "energyPctMax" then local p = EnergyPct(); return p ~= nil and p <= (cl.v or 0)
     elseif t == "usable" then return API.IsUsable(sid) and true or false
     elseif t == "notUsable" then return not API.IsUsable(sid)
+    -- Fail CLOSED on both: nil (secret/unknown) must not fire the clause.
+    elseif t == "noPower" then return API.InsufficientPower(sid) == true
+    elseif t == "hasPower" then return API.InsufficientPower(sid) == false
     -- MotE is predicted, not readable. Gate on the talent so these are correct on
     -- builds that don't take it (no talent -> never "up", always "down").
     elseif t == "moteUp" then return Engine.hasMote and S.mote and true or false
@@ -663,6 +676,12 @@ function Cond.ClauseStatus(cl, S, selfSid)
     elseif t == "usable" or t == "notUsable" then
         local u = API.IsUsable(sid); if u == nil then return "open" end
         local ok; if t == "usable" then ok = u else ok = not u end
+        return ok and "pass" or "fail"
+    elseif t == "noPower" or t == "hasPower" then
+        -- Unreadable flag shows as "open" in the debug window, but EvalClause still
+        -- fails these closed -- the row reads "can't tell", not "firing".
+        local ip = API.InsufficientPower(sid); if ip == nil then return "open" end
+        local ok; if t == "noPower" then ok = ip else ok = not ip end
         return ok and "pass" or "fail"
     end
     return EvalClause(cl, S, selfSid) and "pass" or "fail"
