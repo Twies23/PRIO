@@ -546,14 +546,19 @@ local srcColor = {
 local function buffText(sid)
     local a = API.IsAuraActive(sid)
     if a == nil then return "|cffe0a03auntracked|r" end
-    if a ~= true then return "|cffe0685agone|r" end
+    -- Warn when an aura question is being answered by an ABILITY-viewer frame: that
+    -- frame's IsActive() means "on cooldown", not "aura is up". Fix by adding the spell
+    -- to Tracked Buffs in the Cooldown Manager.
+    local auraSrc = API.AuraFrameIsFromAuraViewer and API.AuraFrameIsFromAuraViewer(sid)
+    local warn = (auraSrc == false) and "  |cffe0685a[cooldown frame! add to Tracked Buffs]|r" or ""
+    if a ~= true then return "|cffe0685agone|r" .. warn end
     -- NOTE: `X and f()` truncates multiple returns to one, so guard with an if to keep
     -- both n and src (this bug once made the source tag silently never render).
     local n, src
     if API.AuraStackSource then n, src = API.AuraStackSource(sid) end
     local stack = (n and n > 0) and (" |cff9fb0be\195\151" .. n .. "|r") or ""
     local tag = src and ("  |cff" .. (srcColor[src] or "5a6a76") .. src .. "|r") or ""
-    return "|cff0cd29factive|r" .. stack .. tag
+    return "|cff0cd29factive|r" .. stack .. tag .. warn
 end
 
 function RotationDebug:Update()

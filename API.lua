@@ -559,12 +559,24 @@ local VIEWERS = {
     "EssentialCooldownViewer", "UtilityCooldownViewer",
     "BuffIconCooldownViewer",  "BuffBarCooldownViewer",
 }
-local trackedFrames = {}   -- spellID -> Blizzard item frame
+local trackedFrames = {}   -- spellID -> Blizzard item frame (any viewer)
+-- Aura viewers ONLY. Many spells sit in BOTH an ability viewer and an aura viewer under
+-- the SAME spellID -- every Assassination DoT does (Garrote 703, Rupture 1943, Envenom
+-- 32645, Deathmark 360194, Slice and Dice 315496, Kingsbane 385627 are each in Essential
+-- *and* TrackedBuff). An Essential frame's IsActive() means "the ABILITY is on cooldown",
+-- which is a completely different question from "the aura is up" -- and answering an aura
+-- question with a cooldown frame silently inverts it. So aura reads resolve here first and
+-- only fall back to the general map. (Elemental never hit this because Flame Shock's aura
+-- id 470411 differs from its cast id 188389, so the two never collided.)
+local trackedAuraFrames = {}
+local AURA_VIEWERS = { BuffIconCooldownViewer = true, BuffBarCooldownViewer = true }
 
 function API.RefreshTracked()
     wipe(trackedFrames)
     if not (C_CooldownViewer and C_CooldownViewer.GetCooldownViewerCooldownInfo) then return end
+    wipe(trackedAuraFrames)
     for _, name in ipairs(VIEWERS) do
+        local isAuraViewer = AURA_VIEWERS[name]
         local viewer = _G[name]
         local pool = viewer and viewer.itemFramePool
         if pool and pool.EnumerateActive then
@@ -575,7 +587,10 @@ function API.RefreshTracked()
                     if ok and type(info) == "table" then
                         local function map(id)
                             id = SafeNum(id)
-                            if id and id > 0 then trackedFrames[id] = frame end
+                            if id and id > 0 then
+                                trackedFrames[id] = frame
+                                if isAuraViewer then trackedAuraFrames[id] = frame end
+                            end
                         end
                         map(info.spellID)
                         map(info.overrideSpellID)
@@ -652,9 +667,16 @@ API.linkedNameDisambig = API.linkedNameDisambig or {}
 
 -- true/false when the tracked aura's state is readable, nil when we can't tell
 -- (spell not tracked by the viewer). Callers fail open on nil.
+-- The frame that can answer "is this aura up": an aura viewer's if we have one, else
+-- whatever viewer registered the id. See trackedAuraFrames above for why this matters.
+local function auraFrame(spellID)
+    return trackedAuraFrames[spellID] or trackedFrames[spellID]
+end
+API.AuraFrameIsFromAuraViewer = function(spellID) return trackedAuraFrames[spellID] ~= nil end
+
 function API.IsAuraActive(spellID)
     if not spellID then return nil end
-    local frame = trackedFrames[spellID]
+    local frame = auraFrame(spellID)
     if frame then
         local active = frameActive(frame)
         if active ~= true then return active end        -- false / nil pass straight through
@@ -724,7 +746,7 @@ function API.SpellGlowing(spellID)
 end
 
 function API.AuraStackCount(spellID)
-    local frame = trackedFrames[spellID]
+    local frame = auraFrame(spellID)
     if not frame then return nil end
     local active = API.IsAuraActive(spellID)
     if active == false then return 0 end
@@ -840,7 +862,7 @@ end
 -- enabled in the Cooldown Manager; if it isn't, PandemicIcon is never created and
 -- this reads false. (See API.RefreshCarryover for a settings-independent probe.)
 function API.InPandemic(spellID)
-    local frame = trackedFrames[spellID]
+    local frame = auraFrame(spellID)
     if not frame then return nil end
     local icon = frame.PandemicIcon
     if icon == nil then return false end            -- niled when not in pandemic

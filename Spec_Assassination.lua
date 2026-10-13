@@ -157,7 +157,13 @@ local function keepUp(id) return OR(buffDown(id), refreshable(id)) end
 local function rowGarroteMark()
     return { spell = "Garrote", cond = AND(buffDown(ID_DSMARK), buffDown(ID_DARKNIGHT)) }
 end
-local function rowGarroteIG()   return { spell = "Garrote", cond = buffUp(ID_IMPGARROTE) } end
+-- Inside the Improved Garrote window Garrote has NO cooldown ("no cooldown when used
+-- from Stealth and for 6 sec after breaking Stealth"), so this row ignores the
+-- cooldown read -- that is what makes the guide's "cast it twice to extend Improved
+-- Garrote" reachable. The plain maintenance row below keeps the real 6s cooldown.
+local function rowGarroteIG()
+    return { spell = "Garrote", ignoreCD = true, cond = buffUp(ID_IMPGARROTE) }
+end
 local function rowGarroteKeep() return { spell = "Garrote", cond = keepUp(ID_GARROTE) } end
 local function rowDeathmark()   return { spell = "Deathmark" } end
 local function rowKingsbane()   return { spell = "Kingsbane" } end
@@ -350,6 +356,21 @@ local spec = {
     -- window where which Envenom you press actually matters.
     flash = {
         Envenom = { type = "buffActive", spell = ID_DARKNIGHT },
+    },
+
+    -- The Cooldown Viewer read lags a tick or two behind actually applying a DoT, so
+    -- without this PRIO re-suggests Garrote / Rupture on the very next global. Assume
+    -- they are up briefly after casting; the window is short, so a genuine miss or
+    -- immune corrects itself. (Same mechanism Elemental uses for Flame Shock.)
+    -- Deliberately NOT here: Envenom -> Slice and Dice. Cut to the Chase EXTENDS Slice
+    -- and Dice rather than applying it, so assuming it up after an Envenom could
+    -- suppress the one cast that actually starts the chain.
+    assumeOnCast = {
+        Garrote      = { aura = ID_GARROTE,    dur = 4 },
+        Rupture      = { aura = ID_RUPTURE,    dur = 4 },
+        SliceandDice = { aura = ID_SND,        dur = 4 },
+        Deathmark    = { aura = ID_DEATHMARK,  dur = 4 },
+        Vanish       = { aura = ID_IMPGARROTE, dur = 6 },   -- opens the empowered window
     },
 
     -- Look-ahead combo-point simulation. Finishers spend ALL combo points; Mutilate is

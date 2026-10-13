@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.10.22", {
+        "Fix: a DoT sharing its spell id with its own ability could be read off the ability's cooldown frame instead of its aura frame -- an Essential frame reports IS ON COOLDOWN, not AURA IS UP. Every Assassination DoT hit this (Garrote, Rupture, Envenom, Deathmark, Slice and Dice, Kingsbane are in Essential AND Tracked Buffs under the same id). Aura reads now resolve through the aura viewers first. The debug window flags any aura still coming from a cooldown frame.",
+    } },
     { "0.10.21", {
         "Fix: Improved Garrote is tracked under the passive id 381632 (what the Cooldown Manager is keyed on), not the buff UnitAuraID 392403 that 0.10.20 switched to. There is no CDM frame for 392403, so the debug row read untracked and the empowered-window line could not resolve.",
     } },

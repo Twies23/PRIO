@@ -1,5 +1,10 @@
 # PRIO Changelog
 
+## 0.10.22 (alpha)
+- **Fix: a DoT that shares its spell id with its own ability could be read off the wrong frame.** PRIO maps Cooldown Manager frames by spell id, but many spells sit in an **ability** viewer *and* an **aura** viewer under the *same* id — every Assassination DoT does (Garrote 703, Rupture 1943, Envenom 32645, Deathmark 360194, Slice and Dice 315496, Kingsbane 385627 are each in Essential **and** Tracked Buffs). An Essential frame's "is active" means **the ability is on cooldown**, which is a completely different question from "the aura is up" — so an aura check could silently answer with cooldown state. Aura reads now resolve through the **aura viewers first**, falling back to the general map only when there is no aura frame. Affects `buffUp`/`buffDown`, stack counts, and pandemic/refresh reads.
+- Elemental was never hit by this because Flame Shock's aura id (`470411`) differs from its cast id (`188389`), so the two never collided — which is exactly why Assassination was the spec that exposed it.
+- **New debug warning:** a tracked aura that is still resolving from a cooldown frame now shows `[cooldown frame! add to Tracked Buffs]` in the debug window, so the setup gap is visible instead of silent.
+
 ## 0.10.21 (alpha)
 - **Fix: Improved Garrote tracked under the wrong id.** 0.10.20 made PRIO also accept `392403` (the buff's UnitAuraID) and pointed the debug row at it — but the Cooldown Manager is keyed on the **passive id `381632`**, and the CDM is the only aura source that reads in combat. There is no CDM frame for `392403`, so that debug row would have read "untracked". Back to `381632` alone, with a note in the file so it does not get "fixed" again.
 

@@ -382,3 +382,54 @@ test("assa: Crimson Tempest stops once Scent of Blood is capped, Fan of Knives t
     falsy(r.primary and r.primary.id == CRIMSONT, "nothing left to spread")
     eq(r.primary and r.primary.id, FOK, "Fan of Knives is the cheaper builder (35 vs 60)")
 end)
+
+--------------------------------------------------------------------------------
+-- DoT application: the Cooldown Viewer read lags a tick behind the cast, and the
+-- Improved Garrote window removes Garrote's cooldown. Both bugs shipped once.
+--------------------------------------------------------------------------------
+test("assa: Garrote is not re-suggested on the global right after casting it", function()
+    setAssa("fatebound")
+    H.S.auras[GARROTE] = false            -- bleed is down, so Garrote leads
+    H.S.power[COMBO] = 0
+    local r = H.Engine:Evaluate()
+    eq(r.primary and r.primary.id, GARROTE, "Garrote first while the bleed is missing")
+
+    -- Cast it. The CDM still reads "missing" for a tick -- assumeOnCast covers the gap.
+    H.fire("UNIT_SPELLCAST_SUCCEEDED", "player", nil, GARROTE)
+    local r2 = H.Engine:Evaluate()
+    falsy(r2.primary and r2.primary.id == GARROTE,
+          "assumeOnCast must stop the immediate re-suggest")
+end)
+
+test("assa: Rupture is not re-suggested on the global right after casting it", function()
+    setAssa("fatebound")
+    H.S.auras[RUPTURE] = false
+    H.S.power[COMBO] = 7
+    local r = H.Engine:Evaluate()
+    eq(r.primary and r.primary.id, RUPTURE, "Rupture leads while it is missing at 7 CP")
+
+    H.fire("UNIT_SPELLCAST_SUCCEEDED", "player", nil, RUPTURE)
+    local r2 = H.Engine:Evaluate()
+    falsy(r2.primary and r2.primary.id == RUPTURE, "assumeOnCast covers the CDM lag")
+end)
+
+test("assa: Garrote still fires inside the Improved Garrote window while on cooldown", function()
+    setAssa("fatebound")
+    H.S.auras[GARROTE] = true             -- bleed is healthy...
+    H.S.auras[IMPGARROTE] = true          -- ...but the empowered window is open
+    H.S.ready[GARROTE] = false            -- and the 6s cooldown is ticking
+    H.S.power[COMBO] = 7
+    local r = H.Engine:Evaluate()
+    eq(r.primary and r.primary.id, GARROTE,
+       "Improved Garrote removes the cooldown -- this is what allows the double Garrote")
+end)
+
+test("assa: outside the window Garrote still respects its cooldown", function()
+    setAssa("fatebound")
+    H.S.auras[GARROTE] = false            -- would otherwise be the top row
+    H.S.auras[IMPGARROTE] = false
+    H.S.ready[GARROTE] = false
+    H.S.power[COMBO] = 0
+    local r = H.Engine:Evaluate()
+    falsy(r.primary and r.primary.id == GARROTE, "no free Garrote outside the window")
+end)
