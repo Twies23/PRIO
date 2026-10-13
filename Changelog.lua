@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.10.20", {
+        "Fix: Improved Garrote was not reading -- the Cooldown Manager tracks the talent id 381632 but the real buff aura is 392403, so PRIO now accepts either. Garrote and Rupture now show their refresh window in the debug (read off the Cooldown Manager pandemic glow; enable Pandemic Time on both). Assassination debug trimmed to only the signals the rotation gates on, plus a new Energy low probe.",
+    } },
     { "0.10.19", {
         "Assassination priority lists rewritten to follow the Icy Veins 12.1 per-hero lists exactly: Rupture now above Deathmark, the Deathstalker Garrote-for-the-Mark row first, Shiv above Envenom for Deathstalker and last for Fatebound. Fixes: Deathstalker no longer wastes a global re-Garroting while Darkest Night is pending (the Envenom re-applies the Mark itself), Shiv can no longer overcap combo points, and Envenom properly waits for 7 CP under Darkest Night. Also adds a headless rotation simulator (python tools/sim.py) that drives the real engine and reports uptimes, combo-point waste and energy stalls.",
     } },

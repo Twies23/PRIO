@@ -68,7 +68,10 @@ local ID_MARKDEATH  = 1293340  -- Essential. Deathstalker mark-swap: 25 Energy, 
 local ID_SHIV       = 5938     -- Utility. 30 Energy, +1 CP
 local ID_VANISH     = 1856     -- Utility + TrackedBuff. 2 min CD -- Improved Garrote enabler
 local ID_STEALTH    = 1784     -- TrackedBuff
-local ID_IMPGARROTE = 381632   -- TrackedBar. the 6s empowered-Garrote window
+local ID_IMPGARROTE = 381632   -- TrackedBar entry in the Cooldown Manager
+local ID_IMPGARROTE_AURA = 392403 -- the ACTUAL buff aura id (verified in game)
+-- Read EITHER: the CDM is keyed on the talent id, but the aura the game applies is
+-- 392403, so a setup that tracks one and not the other still resolves.
 local ID_KINGSBANE  = 385627   -- Essential + TrackedBuff. 1 min CD, +1 CP
 local ID_KINGSBANEBUFF = 394095 -- TrackedBuff. the stacking Kingsbane buff
 local ID_THISTLETEA = 1298826  -- Essential. energy cooldown -- see the noPower gate below
@@ -116,6 +119,7 @@ local function stacksMax(id, n) return { type = "stacksMax", spell = id, v = n }
 -- insufficient-power FLAG is clean -- so "can't afford Mutilate" (50 Energy) is an
 -- exact, in-combat read of "Energy < 50". Fails closed: an unreadable flag never fires.
 local function noPower(id)     return { type = "noPower", spell = id } end
+local function impGarroteUp() return OR(buffUp(ID_IMPGARROTE), buffUp(ID_IMPGARROTE_AURA)) end
 
 -- "Keep it up": missing, or inside the pandemic window. `refreshable` fails CLOSED
 -- (only true when Blizzard confirms it), so this never spam-refreshes a fresh DoT.
@@ -153,7 +157,7 @@ local function keepUp(id) return OR(buffDown(id), refreshable(id)) end
 local function rowGarroteMark()
     return { spell = "Garrote", cond = AND(buffDown(ID_DSMARK), buffDown(ID_DARKNIGHT)) }
 end
-local function rowGarroteIG()   return { spell = "Garrote", cond = buffUp(ID_IMPGARROTE) } end
+local function rowGarroteIG()   return { spell = "Garrote", cond = impGarroteUp() } end
 local function rowGarroteKeep() return { spell = "Garrote", cond = keepUp(ID_GARROTE) } end
 local function rowDeathmark()   return { spell = "Deathmark" } end
 local function rowKingsbane()   return { spell = "Kingsbane" } end
@@ -369,7 +373,7 @@ local spec = {
         { key = "finisherCP",  label = "Finisher combo points (>=5)", clause = cpMin(5) },
         { key = "lowCP",       label = "Low combo points (<=4)",      clause = cpMax(4) },
         { key = "darkestNight", label = "Darkest Night up",           clause = buffUp(ID_DARKNIGHT) },
-        { key = "impGarrote",  label = "Improved Garrote window",     clause = buffUp(ID_IMPGARROTE) },
+        { key = "impGarrote",  label = "Improved Garrote window",     clause = impGarroteUp() },
         { key = "bleedsUp",    label = "Garrote + Rupture both up",   clause = AND(buffUp(ID_GARROTE), buffUp(ID_RUPTURE)) },
         { key = "burst",       label = "Deathmark window",            clause = buffUp(ID_DEATHMARK) },
         { key = "lowEnergy",   label = "Low energy (<50, can't Mutilate)", clause = noPower(ID_MUTILATE) },
@@ -395,17 +399,15 @@ local spec = {
         MomentumOfDespair = ID_MOMENTUM,
     },
 
+    -- Only what the rotation actually reads. `pandemic` rows show Blizzard's own refresh
+    -- window off the Cooldown Manager glow (enable "Pandemic Time" on Garrote and Rupture).
     debug = {
-        { label = "Garrote (t)",          kind = "buff", spell = ID_GARROTE },
-        { label = "Rupture (t)",          kind = "buff", spell = ID_RUPTURE },
-        { label = "Envenom",              kind = "buff", spell = ID_ENVENOM },
-        { label = "Slice and Dice",       kind = "buff", spell = ID_SND },
-        { label = "Deathmark",            kind = "buff", spell = ID_DEATHMARK },
-        { label = "Improved Garrote",     kind = "buff", spell = ID_IMPGARROTE },
-        { label = "Darkest Night",        kind = "buff", spell = ID_DARKNIGHT },
-        { label = "Kingsbane",            kind = "buff", spell = ID_KINGSBANE },
-        { label = "Scent of Blood",       kind = "buff", spell = ID_SCENT },
-        { label = "Caustic Spatter",      kind = "buff", spell = ID_CAUSTIC },
+        { label = "Garrote (dot)",      kind = "buff",     spell = ID_GARROTE },
+        { label = "Garrote refresh",    kind = "pandemic", spell = ID_GARROTE },
+        { label = "Rupture (dot)",      kind = "buff",     spell = ID_RUPTURE },
+        { label = "Rupture refresh",    kind = "pandemic", spell = ID_RUPTURE },
+        { label = "Improved Garrote",   kind = "buff",     spell = ID_IMPGARROTE_AURA },
+        { label = "Darkest Night (DS)", kind = "buff",     spell = ID_DARKNIGHT },
     },
     economy = {
         gen   = { "Mutilate", "Fan of Knives", "Crimson Tempest", "Garrote", "Shiv", "Kingsbane" },
@@ -413,33 +415,30 @@ local spec = {
     },
 
     --------------------------------------------------------------------------------
-    -- Rotation Ability & Buff Debug (/prio rotdebug): the live signals the rotation
-    -- actually reads. Energy is absent on purpose -- it is a secret value in combat,
-    -- so there is nothing to show and nothing the engine gates on.
+    -- Rotation Ability & Buff Debug (/prio rotdebug). Deliberately short: every row
+    -- here is a signal the priority list actually gates on. Energy is absent because
+    -- its VALUE is secret -- the "Energy low" probe below is the readable stand-in.
     --------------------------------------------------------------------------------
     rotationDebug = {
         title = "Rotation Ability & Buff Debug",
         abilities = {
-            "Deathmark", "Kingsbane", "Vanish", "Shiv", "Garrote", "Rupture",
-            "Envenom", "Mutilate", "FanOfKnives", "CrimsonTempest", "SliceandDice",
+            "Garrote", "Rupture", "Envenom", "Mutilate",
+            "Deathmark", "Kingsbane", "Vanish", "Shiv",
+            "FanOfKnives", "CrimsonTempest",
         },
         buffs = {
-            { label = "Garrote (dot)",       spell = ID_GARROTE },
-            { label = "Rupture (dot)",       spell = ID_RUPTURE },
-            { label = "Envenom",             spell = ID_ENVENOM },
+            { label = "Garrote (dot)",       spell = ID_GARROTE, pandemic = true },
+            { label = "Rupture (dot)",       spell = ID_RUPTURE, pandemic = true },
+            { label = "Improved Garrote",    spell = ID_IMPGARROTE_AURA },
             { label = "Slice and Dice",      spell = ID_SND },
             { label = "Deathmark",           spell = ID_DEATHMARK },
-            { label = "Improved Garrote",    spell = ID_IMPGARROTE },
             { label = "Darkest Night (DS)",  spell = ID_DARKNIGHT },
             { label = "Deathstalker's Mark", spell = ID_DSMARK },
-            { label = "Kingsbane",           spell = ID_KINGSBANE },
             { label = "Scent of Blood",      spell = ID_SCENT },
-            { label = "Caustic Spatter",     spell = ID_CAUSTIC },
-            { label = "Amplifying Poison",   spell = ID_AMPPOISONDOT },
-            { label = "Momentum of Despair (DS)", spell = ID_MOMENTUM },
         },
         rangeProbes = {
             { label = "Combo Points", kind = "resource" },
+            { label = "Energy low",   kind = "noPower", spell = ID_MUTILATE },
         },
     },
 

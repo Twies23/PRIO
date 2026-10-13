@@ -1,5 +1,11 @@
 # PRIO Changelog
 
+## 0.10.20 (alpha)
+- **Fix: Improved Garrote wasn't reading.** The Cooldown Manager tracks it under the talent id `381632`, but the buff the game actually applies is `392403`. PRIO now accepts either, so the "re-Garrote inside the empowered window" line works regardless of which one your setup tracks.
+- **Garrote and Rupture now show refresh state in the debug window.** PRIO reads Blizzard's own pandemic indicator off the Cooldown Manager (the glow), so each shows `active` plus `REFRESH` / `hold`. Enable **Pandemic Time** on Garrote and Rupture in the Cooldown Manager for it to light up — the rotation already used this signal, it just wasn't visible.
+- **Assassination debug trimmed to what the rotation actually reads**: Garrote and Rupture (with refresh), Improved Garrote, Slice and Dice, Deathmark, Darkest Night, Deathstalker's Mark, Scent of Blood, combo points, and an **Energy low** probe. Dropped Kingsbane/Caustic Spatter/Amplifying Poison/Momentum of Despair/Cold Blooded Killer rows — nothing gates on them.
+- **New debug probe: Energy low.** Energy's value is secret in combat, so this shows the clean insufficient-power flag PRIO actually gates Thistle Tea on.
+
 ## 0.10.19 (alpha)
 - **Assassination priority lists rewritten to follow the Icy Veins 12.1 per-hero lists line for line**, with the guide's own numbering kept against each row so they can be audited. This fixed real ordering mistakes in the first pass — most importantly **Rupture now sits above Deathmark** (both trees), the Deathstalker **Garrote-for-the-Mark row is first**, and **Shiv moved above Envenom** for Deathstalker (and to the bottom for Fatebound, where it is a ~1% loss). Fan of Knives, Ambush and Thistle Tea now appear at their guide positions.
 - **Fix: Deathstalker wasted a global re-applying the Mark.** The Garrote-for-the-Mark row now also requires Darkest Night to be down — the Darkest-Night Envenom re-applies the Mark itself, so Garroting while it is pending burned a GCD and 45 Energy for nothing.

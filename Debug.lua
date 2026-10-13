@@ -573,7 +573,19 @@ function RotationDebug:Update()
         set("a" .. i, ok and res or "|cffe0685aerr|r")
     end
     for i, b in ipairs(rd.buffs or {}) do
-        local ok, res = pcall(function() return buffText(b.spell) end)
+        local ok, res = pcall(function()
+            local t = buffText(b.spell)
+            -- `pandemic = true` rows also show Blizzard's own refresh window, read off the
+            -- Cooldown Manager PandemicIcon (the glow). Needs that spell's "Pandemic Time"
+            -- alert enabled in the Cooldown Manager, else it reads "no alert".
+            if b.pandemic then
+                local ip = API.InPandemic and API.InPandemic(b.spell)
+                t = t .. (ip == true and "   |cff0cd29fREFRESH|r"
+                    or ip == false and "   |cff5a6a76hold|r"
+                    or "   |cffe0a03ano pandemic alert|r")
+            end
+            return t
+        end)
         set("b" .. i, ok and res or "|cffe0685aerr|r")
     end
     for i, p in ipairs(rd.predStacks or {}) do
@@ -593,7 +605,14 @@ function RotationDebug:Update()
     end
     for i, r in ipairs(rd.rangeProbes or {}) do
         local ok, res = pcall(function()
-            if r.kind == "health" then
+            if r.kind == "noPower" then
+                -- Energy itself is secret; this is the clean insufficient-power FLAG for a
+                -- spell of known cost, which is how the rotation reads "low energy".
+                local v = API.InsufficientPower and API.InsufficientPower(r.spell)
+                if v == true then return "|cffe0a03aLOW (cannot afford)|r" end
+                if v == false then return "|cff0cd29fok|r" end
+                return "|cffe0a03aunreadable|r"
+            elseif r.kind == "health" then
                 local p = API.TargetHealthPct and API.TargetHealthPct()
                 if p == nil then return "|cffe0a03asecret / no target|r" end
                 local col = (p < 35) and "0cd29f" or "9fb0be"
