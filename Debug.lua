@@ -345,9 +345,12 @@ function Debug:Update()
                 -- Secret-safe: reads Blizzard's PandemicIcon (needs the spell's
                 -- "Pandemic Time" alert enabled in the Cooldown Manager).
                 local ip = API.InPandemic and API.InPandemic(d.spell)
+                -- nil means the frame has no PandemicIcon at all. That region lives on the
+                -- Tracked BAR item frames, not the Tracked Buff (icon) ones -- which is why
+                -- Flame Shock (a bar) reads refresh and an icon-tracked DoT does not.
                 set(id, ip == true and "|cff0cd29fREFRESH (in pandemic)|r"
                     or ip == false and "|cff5a6a76hold|r"
-                    or "|cffe0a03auntracked|r")
+                    or "|cffe0a03ano refresh read - track it as a BAR + enable Pandemic Time|r")
             elseif d.kind == "hasMote" then
                 set(id, PRIO.Engine and PRIO.Engine.hasMote
                     and "|cff0cd29fdetected|r" or "|cffe0685anot detected|r")
@@ -587,7 +590,7 @@ function RotationDebug:Update()
                 local ip = API.InPandemic and API.InPandemic(b.spell)
                 t = t .. (ip == true and "   |cff0cd29fREFRESH|r"
                     or ip == false and "   |cff5a6a76hold|r"
-                    or "   |cffe0a03ano pandemic alert|r")
+                    or "   |cffe0a03ano refresh read - track as a BAR + Pandemic Time|r")
             end
             return t
         end)

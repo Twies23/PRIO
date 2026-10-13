@@ -894,13 +894,30 @@ function API.AuraFrameProbe(spellID)
                  pi and callv(pi, "IsShown") or "n/a") end
     end)
 
+    -- GENERIC DISCOVERY. We do not know what Blizzard calls the refresh glow on these
+    -- frames, and guessing field names has cost us several rounds -- so enumerate EVERY
+    -- field that looks like a region/frame and report whether it is shown. Run this once
+    -- with the aura freshly applied and once while it is glowing: whichever field flips
+    -- is the pandemic indicator.
     safe(function()
-        for _, key in ipairs({ "Glow", "SpellActivationAlert", "Overlay", "OverlayGlow",
-                               "Highlight", "Border", "PipGlow", "Pulse" }) do
-            local g, threw = field(frame, key)
-            if threw then add("  %s: |cffe0685aindex threw|r", key)
-            elseif g then add("  %s: shown=%s", key, callv(g, "IsShown")) end
+        local okP, keys = pcall(function()
+            local t = {}
+            for k, v in pairs(frame) do
+                if type(k) == "string" and type(v) == "table" then
+                    local okS = pcall(function() return v.IsShown end)
+                    if okS and v.IsShown then t[#t + 1] = k end
+                end
+            end
+            table.sort(t)
+            return t
+        end)
+        if not okP then add("  |cffe0685afield enumeration threw|r"); return end
+        if #keys == 0 then add("  |cffe0a03ano region-like fields found|r"); return end
+        local parts = {}
+        for _, k in ipairs(keys) do
+            parts[#parts + 1] = ("%s=%s"):format(k, callv(frame[k], "IsShown"))
         end
+        add("  fields: %s", table.concat(parts, "  "))
     end)
 
     -- Rendered text: this is where the visible countdown number lives.

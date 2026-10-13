@@ -1,5 +1,10 @@
 # PRIO Changelog
 
+## 0.10.25 (alpha)
+- **Why Garrote/Rupture showed no refresh, and how to fix it.** PRIO reads the refresh/pandemic state off Blizzard's `PandemicIcon`, and that region exists on the **Tracked Bar** item frames — not the Tracked Buff (icon) ones. Elemental reads Flame Shock's refresh for exactly this reason: Flame Shock is tracked as a **bar**. So: **track Garrote and Rupture as Tracked Bars and enable their Pandemic Time alert.** Presence works either way; the refresh glow needs the bar.
+- The debug window now says so instead of going quiet — a DoT with no readable refresh reads `no refresh read - track it as a BAR + enable Pandemic Time` rather than a blank or "untracked".
+- `/prio aura` now enumerates **every** region-like field on the frame with its shown state, so an unknown glow field can be found by diffing the output with the aura fresh vs glowing.
+
 ## 0.10.24 (alpha)
 - **`/prio tracked` now shows every spell id on a Cooldown Viewer entry**, not just the primary one — `override`, `tooltip` and `linked` ids are listed alongside it. This matters because an aura entry frequently carries a *different* id for the aura than for the castable spell: Flame Shock is **cast** as `188389` but its Cooldown Viewer **aura** is `470411`, and the aura id is the one PRIO has to read. Printing only the primary id hid that, which is why Garrote was being tracked under the wrong number.
 - `/prio aura` (the frame probe added in 0.10.23) is now hardened: every field read and method call is individually guarded, so one restricted field degrades to a single "threw" line instead of killing the whole dump, and the error text is printed rather than swallowed.

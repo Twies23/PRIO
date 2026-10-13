@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.10.25", {
+        "Garrote and Rupture show no refresh state because PRIO reads Blizzard's PandemicIcon, which only exists on the Tracked BAR frames -- not Tracked Buff icons. That is why Flame Shock (tracked as a bar) reads refresh and these did not. Track Garrote and Rupture as Tracked Bars with Pandemic Time enabled. The debug window now says this outright instead of going quiet.",
+    } },
     { "0.10.24", {
         "/prio tracked now lists every spell id on a Cooldown Viewer entry (override / tooltip / linked), not just the primary one. Aura entries often carry a different id for the aura than for the castable spell -- Flame Shock is cast as 188389 but its viewer aura is 470411 -- and the aura id is the one PRIO must read. /prio aura is also hardened so a restricted field no longer kills the whole dump.",
     } },
