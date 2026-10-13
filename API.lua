@@ -569,12 +569,14 @@ local trackedFrames = {}   -- spellID -> Blizzard item frame (any viewer)
 -- only fall back to the general map. (Elemental never hit this because Flame Shock's aura
 -- id 470411 differs from its cast id 188389, so the two never collided.)
 local trackedAuraFrames = {}
+local trackedViewers = {}   -- spellID -> "Essential+BuffIcon" etc, for the probe
 local AURA_VIEWERS = { BuffIconCooldownViewer = true, BuffBarCooldownViewer = true }
 
 function API.RefreshTracked()
     wipe(trackedFrames)
     if not (C_CooldownViewer and C_CooldownViewer.GetCooldownViewerCooldownInfo) then return end
     wipe(trackedAuraFrames)
+    wipe(trackedViewers)
     for _, name in ipairs(VIEWERS) do
         local isAuraViewer = AURA_VIEWERS[name]
         local viewer = _G[name]
@@ -590,6 +592,12 @@ function API.RefreshTracked()
                             if id and id > 0 then
                                 trackedFrames[id] = frame
                                 if isAuraViewer then trackedAuraFrames[id] = frame end
+                                local short = name:gsub("CooldownViewer", "")
+                                local cur = trackedViewers[id]
+                                if not cur then trackedViewers[id] = short
+                                elseif not cur:find(short, 1, true) then
+                                    trackedViewers[id] = cur .. "+" .. short
+                                end
                             end
                         end
                         map(info.spellID)
@@ -799,6 +807,91 @@ end
 -- in-game which source is readable. Prints: the raw .applications (and whether it's
 -- secret), IsAuraActive, what AuraStackCount resolves to, and every FontString text
 -- found on the tracked frame + its children. Drives /prio stackprobe.
+-- Dump EVERYTHING readable off a tracked aura's Cooldown Manager frame. Built to settle
+-- "is the aura up / is it in pandemic" empirically rather than by guessing which field
+-- Blizzard uses: the in-game signal is a TIMER on the icon (active) and a GLOW (pandemic),
+-- so this reports the cooldown timer, every rendered FontString, the PandemicIcon, and any
+-- glow-ish child -- each guarded, with secret values labelled rather than touched.
+function API.AuraFrameProbe(spellID)
+    local out = {}
+    local function add(f, ...) out[#out + 1] = string.format(f, ...) end
+    local function val(v)
+        if v == nil then return "nil" end
+        if IsSecret(v) then return "|cffe0a03a<SECRET>|r" end
+        return tostring(v)
+    end
+    local function callv(obj, method)
+        if not (obj and obj[method]) then return "n/a" end
+        local ok, a, b = pcall(obj[method], obj)
+        if not ok then return "|cffe0685athrew|r" end
+        if b ~= nil then return val(a) .. ", " .. val(b) end
+        return val(a)
+    end
+
+    local name = API.SpellName(spellID) or "?"
+    add("|cff0cd29f%s|r (%d)  viewers: |cff9fb0be%s|r", name, spellID, trackedViewers[spellID] or "NONE")
+
+    local gen, aura = trackedFrames[spellID], trackedAuraFrames[spellID]
+    if not gen then
+        add("  |cffe0685anot registered in any Cooldown Viewer|r -- add it to the Cooldown Manager")
+        return out
+    end
+    add("  aura-viewer frame: %s%s", aura and "|cff0cd29fyes|r" or "|cffe0685aNO|r",
+        aura and "" or "  |cffe0685a(aura reads are falling back to a COOLDOWN frame)|r")
+
+    local frame = aura or gen
+    add("  parent=%s  shown=%s  IsActive()=%s",
+        val(frame:GetParent() and frame:GetParent():GetName()), callv(frame, "IsShown"), callv(frame, "IsActive"))
+
+    -- THE TIMER. A running cooldown/duration on an aura icon IS "the aura is up".
+    for _, key in ipairs({ "Cooldown", "cooldown", "CooldownFlash" }) do
+        local cd = frame[key]
+        if cd then
+            add("  %s: GetCooldownTimes()=%s  GetCooldownDuration()=%s  shown=%s",
+                key, callv(cd, "GetCooldownTimes"), callv(cd, "GetCooldownDuration"), callv(cd, "IsShown"))
+        end
+    end
+
+    -- PandemicIcon is what API.InPandemic reads today.
+    local pi = frame.PandemicIcon
+    add("  PandemicIcon: %s  shown=%s", pi and "present" or "|cffe0a03anil (no Pandemic Time alert?)|r",
+        pi and callv(pi, "IsShown") or "n/a")
+
+    -- Anything glow-shaped, by name and by scanning children.
+    for _, key in ipairs({ "Glow", "SpellActivationAlert", "Overlay", "OverlayGlow", "Highlight", "Border" }) do
+        if frame[key] then add("  %s: shown=%s", key, callv(frame[key], "IsShown")) end
+    end
+
+    -- Rendered text (this is where the visible timer number lives).
+    local texts = {}
+    local function scanRegions(f, tag)
+        if not f.GetRegions then return end
+        local ok, regions = pcall(function() return { f:GetRegions() } end)
+        if not ok then return end
+        for _, r in ipairs(regions) do
+            if r and r.GetObjectType then
+                local okT, t = pcall(r.GetObjectType, r)
+                if okT and t == "FontString" then
+                    local okS, str = pcall(r.GetText, r)
+                    if okS and str and str ~= "" then
+                        texts[#texts + 1] = ("%s\"%s\"(shown=%s)"):format(tag, val(str), callv(r, "IsShown"))
+                    end
+                end
+            end
+        end
+    end
+    scanRegions(frame, "")
+    local okC, kids = pcall(function() return { frame:GetChildren() } end)
+    if okC then
+        for i, kid in ipairs(kids) do scanRegions(kid, ("child%d:"):format(i)) end
+    end
+    add("  texts: %s", #texts > 0 and table.concat(texts, "  ") or "|cff5a6a76none|r")
+
+    add("  |cff5a6a76PRIO reads:|r IsAuraActive=%s  InPandemic=%s  stacks=%s",
+        val(API.IsAuraActive(spellID)), val(API.InPandemic(spellID)), val(API.AuraStackCount(spellID)))
+    return out
+end
+
 function API.StackProbe(spellID)
     local out = {}
     local frame = trackedFrames[spellID]

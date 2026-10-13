@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.10.23", {
+        "New /prio aura command: dumps what the Cooldown Manager frames actually expose for an aura (which viewers registered it, whether an aura-viewer frame exists, IsActive, the cooldown timer, the PandemicIcon, glow children, every rendered FontString, and what PRIO concludes). Run it in combat to settle whether a DoT reads correctly.",
+    } },
     { "0.10.22", {
         "Fix: a DoT sharing its spell id with its own ability could be read off the ability's cooldown frame instead of its aura frame -- an Essential frame reports IS ON COOLDOWN, not AURA IS UP. Every Assassination DoT hit this (Garrote, Rupture, Envenom, Deathmark, Slice and Dice, Kingsbane are in Essential AND Tracked Buffs under the same id). Aura reads now resolve through the aura viewers first. The debug window flags any aura still coming from a cooldown frame.",
     } },

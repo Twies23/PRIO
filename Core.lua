@@ -616,6 +616,27 @@ SlashCmdList.PRIO = function(msg)
         if PRIO.Changelog then PRIO.Changelog:Toggle() end
     elseif msg == "export" then
         if PRIO.Options then PRIO.Options:ExportCurrent() end
+    elseif msg:match("^aura") and msg ~= "auras" then
+        -- /prio aura [spellID ...] -- dump what the Cooldown Manager frames actually expose
+        -- for an aura. With no ids, probes the current spec's gated auras.
+        local API = PRIO.API
+        pcall(API.RefreshTracked)
+        local ids = {}
+        for n in raw:gmatch("%d+") do ids[#ids + 1] = tonumber(n) end
+        if #ids == 0 then
+            local spec = PRIO.specs and PRIO.specs[API.GetSpecID()]
+            for _, b in ipairs(spec and spec.rotationDebug and spec.rotationDebug.buffs or {}) do
+                if b.spell then ids[#ids + 1] = b.spell end
+            end
+            if #ids == 0 then ids = { 703, 1943 } end   -- Garrote / Rupture
+        end
+        print(("|cff0cd29fPRIO|r aura frame probe (%s):")
+            :format(InCombatLockdown() and "|cff0cd29fIN COMBAT|r" or "|cffe0a03aout of combat|r"))
+        for _, id in ipairs(ids) do
+            local ok, lines = pcall(API.AuraFrameProbe, id)
+            if ok and lines then for _, l in ipairs(lines) do print(l) end
+            else print(("  |cffe0685a%d: probe failed|r"):format(id)) end
+        end
     elseif msg == "pandemic" then
         StaticPopup_Show("PRIO_PANDEMIC_TIP")
     elseif msg == "power" then
