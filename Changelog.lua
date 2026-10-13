@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.10.21", {
+        "Fix: Improved Garrote is tracked under the passive id 381632 (what the Cooldown Manager is keyed on), not the buff UnitAuraID 392403 that 0.10.20 switched to. There is no CDM frame for 392403, so the debug row read untracked and the empowered-window line could not resolve.",
+    } },
     { "0.10.20", {
         "Fix: Improved Garrote was not reading -- the Cooldown Manager tracks the talent id 381632 but the real buff aura is 392403, so PRIO now accepts either. Garrote and Rupture now show their refresh window in the debug (read off the Cooldown Manager pandemic glow; enable Pandemic Time on both). Assassination debug trimmed to only the signals the rotation gates on, plus a new Energy low probe.",
     } },

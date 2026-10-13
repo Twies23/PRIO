@@ -68,10 +68,11 @@ local ID_MARKDEATH  = 1293340  -- Essential. Deathstalker mark-swap: 25 Energy, 
 local ID_SHIV       = 5938     -- Utility. 30 Energy, +1 CP
 local ID_VANISH     = 1856     -- Utility + TrackedBuff. 2 min CD -- Improved Garrote enabler
 local ID_STEALTH    = 1784     -- TrackedBuff
-local ID_IMPGARROTE = 381632   -- TrackedBar entry in the Cooldown Manager
-local ID_IMPGARROTE_AURA = 392403 -- the ACTUAL buff aura id (verified in game)
--- Read EITHER: the CDM is keyed on the talent id, but the aura the game applies is
--- 392403, so a setup that tracks one and not the other still resolves.
+-- Improved Garrote: the PASSIVE/talent id, and the one the Cooldown Manager tracks
+-- (TrackedBar #381632) -- so this is what PRIO reads. The buff the game applies
+-- carries UnitAuraID 392403, but that needs a direct aura read, which is dead in
+-- combat. Do not "fix" this to 392403: there is no CDM frame for it.
+local ID_IMPGARROTE = 381632
 local ID_KINGSBANE  = 385627   -- Essential + TrackedBuff. 1 min CD, +1 CP
 local ID_KINGSBANEBUFF = 394095 -- TrackedBuff. the stacking Kingsbane buff
 local ID_THISTLETEA = 1298826  -- Essential. energy cooldown -- see the noPower gate below
@@ -119,7 +120,6 @@ local function stacksMax(id, n) return { type = "stacksMax", spell = id, v = n }
 -- insufficient-power FLAG is clean -- so "can't afford Mutilate" (50 Energy) is an
 -- exact, in-combat read of "Energy < 50". Fails closed: an unreadable flag never fires.
 local function noPower(id)     return { type = "noPower", spell = id } end
-local function impGarroteUp() return OR(buffUp(ID_IMPGARROTE), buffUp(ID_IMPGARROTE_AURA)) end
 
 -- "Keep it up": missing, or inside the pandemic window. `refreshable` fails CLOSED
 -- (only true when Blizzard confirms it), so this never spam-refreshes a fresh DoT.
@@ -157,7 +157,7 @@ local function keepUp(id) return OR(buffDown(id), refreshable(id)) end
 local function rowGarroteMark()
     return { spell = "Garrote", cond = AND(buffDown(ID_DSMARK), buffDown(ID_DARKNIGHT)) }
 end
-local function rowGarroteIG()   return { spell = "Garrote", cond = impGarroteUp() } end
+local function rowGarroteIG()   return { spell = "Garrote", cond = buffUp(ID_IMPGARROTE) } end
 local function rowGarroteKeep() return { spell = "Garrote", cond = keepUp(ID_GARROTE) } end
 local function rowDeathmark()   return { spell = "Deathmark" } end
 local function rowKingsbane()   return { spell = "Kingsbane" } end
@@ -373,7 +373,7 @@ local spec = {
         { key = "finisherCP",  label = "Finisher combo points (>=5)", clause = cpMin(5) },
         { key = "lowCP",       label = "Low combo points (<=4)",      clause = cpMax(4) },
         { key = "darkestNight", label = "Darkest Night up",           clause = buffUp(ID_DARKNIGHT) },
-        { key = "impGarrote",  label = "Improved Garrote window",     clause = impGarroteUp() },
+        { key = "impGarrote",  label = "Improved Garrote window",     clause = buffUp(ID_IMPGARROTE) },
         { key = "bleedsUp",    label = "Garrote + Rupture both up",   clause = AND(buffUp(ID_GARROTE), buffUp(ID_RUPTURE)) },
         { key = "burst",       label = "Deathmark window",            clause = buffUp(ID_DEATHMARK) },
         { key = "lowEnergy",   label = "Low energy (<50, can't Mutilate)", clause = noPower(ID_MUTILATE) },
@@ -406,7 +406,7 @@ local spec = {
         { label = "Garrote refresh",    kind = "pandemic", spell = ID_GARROTE },
         { label = "Rupture (dot)",      kind = "buff",     spell = ID_RUPTURE },
         { label = "Rupture refresh",    kind = "pandemic", spell = ID_RUPTURE },
-        { label = "Improved Garrote",   kind = "buff",     spell = ID_IMPGARROTE_AURA },
+        { label = "Improved Garrote",   kind = "buff",     spell = ID_IMPGARROTE },
         { label = "Darkest Night (DS)", kind = "buff",     spell = ID_DARKNIGHT },
     },
     economy = {
@@ -429,7 +429,7 @@ local spec = {
         buffs = {
             { label = "Garrote (dot)",       spell = ID_GARROTE, pandemic = true },
             { label = "Rupture (dot)",       spell = ID_RUPTURE, pandemic = true },
-            { label = "Improved Garrote",    spell = ID_IMPGARROTE_AURA },
+            { label = "Improved Garrote",    spell = ID_IMPGARROTE },
             { label = "Slice and Dice",      spell = ID_SND },
             { label = "Deathmark",           spell = ID_DEATHMARK },
             { label = "Darkest Night (DS)",  spell = ID_DARKNIGHT },

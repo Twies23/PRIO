@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 0.10.21 (alpha)
+- **Fix: Improved Garrote tracked under the wrong id.** 0.10.20 made PRIO also accept `392403` (the buff's UnitAuraID) and pointed the debug row at it — but the Cooldown Manager is keyed on the **passive id `381632`**, and the CDM is the only aura source that reads in combat. There is no CDM frame for `392403`, so that debug row would have read "untracked". Back to `381632` alone, with a note in the file so it does not get "fixed" again.
+
 ## 0.10.20 (alpha)
 - **Fix: Improved Garrote wasn't reading.** The Cooldown Manager tracks it under the talent id `381632`, but the buff the game actually applies is `392403`. PRIO now accepts either, so the "re-Garrote inside the empowered window" line works regardless of which one your setup tracks.
 - **Garrote and Rupture now show refresh state in the debug window.** PRIO reads Blizzard's own pandemic indicator off the Cooldown Manager (the glow), so each shows `active` plus `REFRESH` / `hold`. Enable **Pandemic Time** on Garrote and Rupture in the Cooldown Manager for it to light up — the rotation already used this signal, it just wasn't visible.
