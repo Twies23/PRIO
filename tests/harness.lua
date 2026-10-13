@@ -31,6 +31,7 @@ function H.reset()
         ready = {},                            -- IsReady: default true
         usable = {},                           -- IsUsable: default true
         usableClean = {},                      -- UsableClean: true/false/nil
+        pandemic = {},                         -- InPandemic: true/false/nil (default nil)
         insufficientPower = {},                -- InsufficientPower: true/false/nil (default nil)
         chargeState = {},                      -- ChargeState: {max,cur,belowMax}
         talents = {},                          -- IsTalentSelected
@@ -120,7 +121,7 @@ function API.AuraStackSource(id)
 end
 function API.SpellGlowing(id) local v = S.glows[id]; if v == nil then return nil end; return v and true or false end
 function API.AuraRemaining(id) return nil end          -- secret in "combat"; use predicted
-function API.InPandemic(id) return nil end
+function API.InPandemic(id) local v = S.pandemic and S.pandemic[id]; if v == nil then return nil end; return v and true or false end
 function API.HasPowerCost(id) return S.powerCost and S.powerCost[id] ~= nil end
 function API.PowerCostAmount(id, powerType)
     local pc = S.powerCost and S.powerCost[id]     -- { type = <powerType>, cost = n }

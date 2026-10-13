@@ -433,3 +433,47 @@ test("assa: outside the window Garrote still respects its cooldown", function()
     local r = H.Engine:Evaluate()
     falsy(r.primary and r.primary.id == GARROTE, "no free Garrote outside the window")
 end)
+
+--------------------------------------------------------------------------------
+-- "Is refreshable" = missing OR in pandemic (one condition for DoT upkeep)
+--------------------------------------------------------------------------------
+local REFRESH = { type = "refreshable", spell = GARROTE }
+
+test("refreshable: aura missing -> true", function()
+    setAssa("fatebound")
+    H.S.auras[GARROTE] = false
+    truthy(evalClause(REFRESH), "a missing DoT is refreshable")
+end)
+
+test("refreshable: aura up and NOT in pandemic -> false", function()
+    setAssa("fatebound")
+    H.S.auras[GARROTE] = true; H.S.pandemic[GARROTE] = false
+    falsy(evalClause(REFRESH), "a fresh DoT is not refreshable")
+end)
+
+test("refreshable: aura up and in pandemic -> true", function()
+    setAssa("fatebound")
+    H.S.auras[GARROTE] = true; H.S.pandemic[GARROTE] = true
+    truthy(evalClause(REFRESH), "pandemic window is refreshable")
+end)
+
+test("refreshable: aura up, pandemic unreadable -> false (never refresh early)", function()
+    setAssa("fatebound")
+    H.S.auras[GARROTE] = true; H.S.pandemic[GARROTE] = nil
+    falsy(evalClause(REFRESH), "an unconfirmed pandemic read must not fire")
+end)
+
+test("refreshable: just cast -> false even while the Cooldown Viewer still reads missing", function()
+    setAssa("fatebound")
+    H.S.auras[GARROTE] = false
+    H.fire("UNIT_SPELLCAST_SUCCEEDED", "player", nil, GARROTE)
+    falsy(evalClause(REFRESH), "assumeOnCast covers the read lag")
+end)
+
+test("assa: Garrote row fires on pandemic alone (bleed still up)", function()
+    setAssa("fatebound")
+    H.S.auras[GARROTE] = true; H.S.pandemic[GARROTE] = true
+    H.S.power[COMBO] = 7
+    local r = H.Engine:Evaluate()
+    eq(r.primary and r.primary.id, GARROTE, "refresh Garrote inside its pandemic window")
+end)

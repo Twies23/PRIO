@@ -121,9 +121,8 @@ local function stacksMax(id, n) return { type = "stacksMax", spell = id, v = n }
 -- exact, in-combat read of "Energy < 50". Fails closed: an unreadable flag never fires.
 local function noPower(id)     return { type = "noPower", spell = id } end
 
--- "Keep it up": missing, or inside the pandemic window. `refreshable` fails CLOSED
--- (only true when Blizzard confirms it), so this never spam-refreshes a fresh DoT.
-local function keepUp(id) return OR(buffDown(id), refreshable(id)) end
+-- "Keep it up": the Is-refreshable condition already means missing OR in pandemic.
+local function keepUp(id) return refreshable(id) end
 
 --------------------------------------------------------------------------------
 -- PRIORITY LISTS -- one explicit list per hero tree per mode, written to follow the

@@ -48,7 +48,7 @@ Cond.types = {
     { value = "talentNo",    text = "Talent not selected", needsTalent = true },
     { value = "lastCast",    text = "Just cast",       needsSpell = true, target = "ability" },
     { value = "lastCastNot", text = "Didn't just cast", needsSpell = true, target = "ability" },
-    { value = "refreshable", text = "In pandemic (refreshable)", needsSpell = true, target = "buff" },
+    { value = "refreshable", text = "Is refreshable (missing or pandemic)", needsSpell = true, target = "buff" },
     { value = "moteUp",      text = "MotE up",   tag = "ele" },
     { value = "moteDown",    text = "MotE down", tag = "ele" },
     { value = "skStacks",    text = "SK stacks \226\137\165", needsValue = true, min = 1, max = 4, def = 1, tag = "ele" },
@@ -172,7 +172,7 @@ function Cond.ClauseLabel(cl, selfSid)
     elseif t == "talentNo" then return "no " .. (cl.spell and SpellShort(cl.spell) or "talent") .. " talent"
     elseif t == "lastCast" then return "just cast " .. name
     elseif t == "lastCastNot" then return "not just " .. name
-    elseif t == "refreshable" then return name .. " in pandemic"
+    elseif t == "refreshable" then return name .. " refreshable"
     elseif t == "stacksMin" then return name .. " \226\137\165 " .. (cl.v or 1) .. " stk"
     elseif t == "stacksMax" then return name .. " \226\137\164 " .. (cl.v or 1) .. " stk"
     elseif t == "stacksEq" then return name .. " = " .. (cl.v or 1) .. " stk"
@@ -497,10 +497,18 @@ local function EvalClause(cl, S, selfSid)
     elseif t == "talentNo" then return not API.IsTalentSelected(cl.spell)
     elseif t == "lastCast" then return LastCastMatch(cl.spell or selfSid, S)
     elseif t == "lastCastNot" then return not LastCastMatch(cl.spell or selfSid, S)
-    -- Pandemic window read (secret-safe via the Cooldown Viewer). Only true when
-    -- Blizzard confirms the DoT is refreshable; nil/false -> not (so it never fires
-    -- early, and degrades to "refresh on missing" if the pandemic alert is off).
-    elseif t == "refreshable" then return API.InPandemic(sid) == true
+    -- "Is refreshable": the aura is MISSING, or it is up and inside its pandemic window --
+    -- the one question a DoT-maintenance row actually asks. Missing follows "Missing buff"
+    -- exactly (simulated / just-cast / untracked handling included), so a look-ahead that
+    -- has already queued the refresh, or a cast that has not shown on the Cooldown Viewer
+    -- yet, does not ask for it twice. The pandemic half only counts when Blizzard confirms it.
+    elseif t == "refreshable" then
+        if S._sim and S._sim[sid] ~= nil then return not S._sim[sid] end
+        if Assumed(sid, S) then return false end
+        if not API.IsTracked(sid) then return true end
+        local a = API.IsAuraActive(sid)
+        if a == false or a == nil then return true end
+        return API.InPandemic(sid) == true
     -- Buff stack thresholds (secret-safe via the Cooldown Viewer). Unreadable/untracked
     -- reads as 0 stacks -> below any min, within any max.
     elseif t == "stacksMin" then return (StackCount(sid) or 0) >= (cl.v or 1)
@@ -627,8 +635,11 @@ function Cond.ClauseStatus(cl, S, selfSid)
         local a = API.IsAuraActive(sid); if a == nil then return "open" end
         return (a == false) and "pass" or "fail"
     elseif t == "refreshable" then
-        local a = API.InPandemic(sid); if a == nil then return "open" end
-        return a and "pass" or "fail"
+        if not API.IsTracked(sid) then return "pass" end     -- untracked -> assume missing
+        local a = API.IsAuraActive(sid); if a == nil then return "open" end
+        if a == false then return "pass" end                 -- missing counts as refreshable
+        local ip = API.InPandemic(sid); if ip == nil then return "open" end
+        return ip and "pass" or "fail"
     elseif t == "stacksMin" or t == "stacksMax" then
         local s = StackCount(sid); if s == nil then return "open" end
         local ok; if t == "stacksMin" then ok = s >= (cl.v or 1) else ok = s <= (cl.v or 1) end

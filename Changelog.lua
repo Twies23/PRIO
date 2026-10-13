@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.10.27", {
+        "The In pandemic condition is now Is refreshable and means missing OR in pandemic, so one condition covers DoT upkeep. Heads-up: any existing row using the old condition now also fires when the aura is missing (rows that already paired it with Missing buff are unchanged).",
+    } },
     { "0.10.26", {
         "Fix: Garrote and Rupture read as gone while ticking on your target. PRIO now also reads the aura timer Blizzard shows on the ability icon (the Tracked Buff item can stall for target debuffs), rebuilds its Cooldown Manager frame map every second instead of once per spec change (the frames are pooled and get reassigned), and detects the refresh glow from Blizzard's own pandemic calls rather than an icon that UI addons hide. Correction: Tracked Bars are NOT required -- that advice in 0.10.25 was wrong.",
     } },

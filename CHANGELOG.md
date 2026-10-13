@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.10.27 (alpha)
+- **The "In pandemic" condition is now "Is refreshable" and means *missing OR in pandemic*.** One condition covers DoT upkeep, instead of needing "Missing buff" OR "In pandemic" on every maintenance row. It follows the same rules as "Missing buff" for a spell you just cast or one the look-ahead has already queued, so it won't ask for the same refresh twice, and the pandemic half still only fires when Blizzard confirms it.
+- **Heads-up for existing lists (all specs):** any row using the old "In pandemic" condition now also fires when the aura is missing. Rows that paired it with "Missing buff" behave exactly as before.
+
 ## 0.10.26 (alpha)
 - **Fix: DoTs on your target (Garrote, Rupture) read "gone" while visibly ticking.** Three separate faults in how PRIO read the Cooldown Manager, all fixed:
   - **Wrong frame trusted.** PRIO asked the Tracked Buff item whether the aura was up, but that item is known to stall for a debuff on your *target* (it can sit inactive until you switch targets). Blizzard also shows the aura's timer on the **ability icon** and marks that frame when it does — the "there's a timer on the icon" signal. PRIO now accepts either, so one stalled frame no longer hides the DoT.
