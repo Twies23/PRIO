@@ -490,7 +490,26 @@ SlashCmdList.PRIO = function(msg)
                 for _, cdID in ipairs(ids) do
                     local infoOk, info = pcall(C_CooldownViewer.GetCooldownViewerCooldownInfo, cdID)
                     if infoOk and type(info) == "table" and info.spellID then
-                        print(string.format("   #%s  %s", tostring(info.spellID), API.SpellName(info.spellID)))
+                        -- Show EVERY id on the entry, not just spellID. An aura entry often
+                        -- carries a DIFFERENT id for the aura than the castable spell -- Flame
+                        -- Shock is cast as 188389 but its Cooldown Viewer aura is 470411, and
+                        -- that aura id is the one PRIO must read. Printing only spellID hid
+                        -- this and sent us chasing the wrong number for Garrote.
+                        local extra = {}
+                        local function note(label, v)
+                            v = tonumber(v)
+                            if v and v > 0 and v ~= info.spellID then
+                                extra[#extra + 1] = ("%s=%d (%s)"):format(label, v, API.SpellName(v) or "?")
+                            end
+                        end
+                        note("override", info.overrideSpellID)
+                        note("tooltip", info.overrideTooltipSpellID)
+                        if type(info.linkedSpellIDs) == "table" then
+                            for _, lid in ipairs(info.linkedSpellIDs) do note("linked", lid) end
+                        end
+                        print(string.format("   #%s  %s%s", tostring(info.spellID),
+                            API.SpellName(info.spellID) or "?",
+                            #extra > 0 and ("   |cffe0a03a" .. table.concat(extra, "  ") .. "|r") or ""))
                     end
                 end
             end
@@ -633,9 +652,13 @@ SlashCmdList.PRIO = function(msg)
         print(("|cff0cd29fPRIO|r aura frame probe (%s):")
             :format(InCombatLockdown() and "|cff0cd29fIN COMBAT|r" or "|cffe0a03aout of combat|r"))
         for _, id in ipairs(ids) do
-            local ok, lines = pcall(API.AuraFrameProbe, id)
-            if ok and lines then for _, l in ipairs(lines) do print(l) end
-            else print(("  |cffe0685a%d: probe failed|r"):format(id)) end
+            if not API.AuraFrameProbe then
+                print("  |cffe0685aAuraFrameProbe missing -- reload the UI|r")
+            else
+                local ok, lines = pcall(API.AuraFrameProbe, id)
+                if ok and lines then for _, l in ipairs(lines) do print(l) end
+                else print(("  |cffe0685a%d: probe failed:|r %s"):format(id, tostring(lines))) end
+            end
         end
     elseif msg == "pandemic" then
         StaticPopup_Show("PRIO_PANDEMIC_TIP")

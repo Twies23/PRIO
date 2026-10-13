@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.10.24 (alpha)
+- **`/prio tracked` now shows every spell id on a Cooldown Viewer entry**, not just the primary one — `override`, `tooltip` and `linked` ids are listed alongside it. This matters because an aura entry frequently carries a *different* id for the aura than for the castable spell: Flame Shock is **cast** as `188389` but its Cooldown Viewer **aura** is `470411`, and the aura id is the one PRIO has to read. Printing only the primary id hid that, which is why Garrote was being tracked under the wrong number.
+- `/prio aura` (the frame probe added in 0.10.23) is now hardened: every field read and method call is individually guarded, so one restricted field degrades to a single "threw" line instead of killing the whole dump, and the error text is printed rather than swallowed.
+
 ## 0.10.23 (alpha)
 - **New: `/prio aura` — a Cooldown Manager frame probe.** Dumps what Blizzard's frames actually expose for an aura, so "is it up / is it refreshable" can be settled from evidence instead of guesswork: which viewers registered the id, whether an **aura-viewer** frame exists at all, `IsActive()`, the **cooldown timer** (the visible countdown on the icon), the PandemicIcon, any glow-shaped child, every rendered FontString, and what PRIO currently concludes. Secret values are labelled, never touched.
 - Run it bare (`/prio aura`) to probe the current spec's gated auras, or with ids (`/prio aura 703 1943`) for Garrote and Rupture specifically. Run it **in combat** — that is where the reads differ.

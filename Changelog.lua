@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.10.24", {
+        "/prio tracked now lists every spell id on a Cooldown Viewer entry (override / tooltip / linked), not just the primary one. Aura entries often carry a different id for the aura than for the castable spell -- Flame Shock is cast as 188389 but its viewer aura is 470411 -- and the aura id is the one PRIO must read. /prio aura is also hardened so a restricted field no longer kills the whole dump.",
+    } },
     { "0.10.23", {
         "New /prio aura command: dumps what the Cooldown Manager frames actually expose for an aura (which viewers registered it, whether an aura-viewer frame exists, IsActive, the cooldown timer, the PandemicIcon, glow children, every rendered FontString, and what PRIO concludes). Run it in combat to settle whether a DoT reads correctly.",
     } },

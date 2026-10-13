@@ -809,27 +809,50 @@ end
 -- found on the tracked frame + its children. Drives /prio stackprobe.
 -- Dump EVERYTHING readable off a tracked aura's Cooldown Manager frame. Built to settle
 -- "is the aura up / is it in pandemic" empirically rather than by guessing which field
--- Blizzard uses: the in-game signal is a TIMER on the icon (active) and a GLOW (pandemic),
--- so this reports the cooldown timer, every rendered FontString, the PandemicIcon, and any
--- glow-ish child -- each guarded, with secret values labelled rather than touched.
+-- Blizzard uses: the in-game signal is a TIMER on the icon (active) and a GLOW (pandemic).
+--
+-- EVERY step is individually guarded. These are Blizzard frames and some of them are
+-- restricted to tainted code in combat, where even INDEXING a field can throw -- so a
+-- single bad field must degrade to one "threw" line, never kill the whole dump. (The
+-- first version wrapped the probe in one outer pcall and all we learned was "failed".)
 function API.AuraFrameProbe(spellID)
     local out = {}
-    local function add(f, ...) out[#out + 1] = string.format(f, ...) end
+    local function add(f, ...)
+        local ok, line = pcall(string.format, f, ...)
+        out[#out + 1] = ok and line or ("  |cffe0685a<format failed>|r")
+    end
     local function val(v)
         if v == nil then return "nil" end
-        if IsSecret(v) then return "|cffe0a03a<SECRET>|r" end
-        return tostring(v)
+        local ok, secret = pcall(IsSecret, v)
+        if ok and secret then return "|cffe0a03a<SECRET>|r" end
+        local okS, str = pcall(tostring, v)
+        return okS and str or "|cffe0685a<unreadable>|r"
+    end
+    -- Indexing a restricted frame can throw, so even field reads go through pcall.
+    local function field(obj, key)
+        if obj == nil then return nil end
+        local ok, v = pcall(function() return obj[key] end)
+        if not ok then return nil, true end
+        return v, false
     end
     local function callv(obj, method)
-        if not (obj and obj[method]) then return "n/a" end
-        local ok, a, b = pcall(obj[method], obj)
-        if not ok then return "|cffe0685athrew|r" end
+        if obj == nil then return "n/a" end
+        local fn, threw = field(obj, method)
+        if threw then return "|cffe0685aindex threw|r" end
+        if fn == nil then return "n/a" end
+        local ok, a, b = pcall(fn, obj)
+        if not ok then return "|cffe0685acall threw|r" end
         if b ~= nil then return val(a) .. ", " .. val(b) end
         return val(a)
     end
+    local function safe(fn)
+        local ok, err = pcall(fn)
+        if not ok then add("  |cffe0685astep failed:|r %s", val(err)) end
+    end
 
-    local name = API.SpellName(spellID) or "?"
-    add("|cff0cd29f%s|r (%d)  viewers: |cff9fb0be%s|r", name, spellID, trackedViewers[spellID] or "NONE")
+    local name = (pcall(API.SpellName, spellID) and API.SpellName(spellID)) or "?"
+    add("|cff0cd29f%s|r (%s)  viewers: |cff9fb0be%s|r", tostring(name), tostring(spellID),
+        trackedViewers[spellID] or "NONE")
 
     local gen, aura = trackedFrames[spellID], trackedAuraFrames[spellID]
     if not gen then
@@ -837,58 +860,80 @@ function API.AuraFrameProbe(spellID)
         return out
     end
     add("  aura-viewer frame: %s%s", aura and "|cff0cd29fyes|r" or "|cffe0685aNO|r",
-        aura and "" or "  |cffe0685a(aura reads are falling back to a COOLDOWN frame)|r")
+        aura and "" or "  |cffe0685a(aura reads fall back to a COOLDOWN frame)|r")
 
     local frame = aura or gen
-    add("  parent=%s  shown=%s  IsActive()=%s",
-        val(frame:GetParent() and frame:GetParent():GetName()), callv(frame, "IsShown"), callv(frame, "IsActive"))
 
-    -- THE TIMER. A running cooldown/duration on an aura icon IS "the aura is up".
-    for _, key in ipairs({ "Cooldown", "cooldown", "CooldownFlash" }) do
-        local cd = frame[key]
-        if cd then
-            add("  %s: GetCooldownTimes()=%s  GetCooldownDuration()=%s  shown=%s",
-                key, callv(cd, "GetCooldownTimes"), callv(cd, "GetCooldownDuration"), callv(cd, "IsShown"))
+    safe(function()
+        local parent = field(frame, "GetParent")
+        local pname = "n/a"
+        if parent then
+            local okP, pf = pcall(parent, frame)
+            if okP and pf then pname = callv(pf, "GetName") end
         end
-    end
+        add("  parent=%s  shown=%s  IsActive()=%s", pname, callv(frame, "IsShown"), callv(frame, "IsActive"))
+    end)
 
-    -- PandemicIcon is what API.InPandemic reads today.
-    local pi = frame.PandemicIcon
-    add("  PandemicIcon: %s  shown=%s", pi and "present" or "|cffe0a03anil (no Pandemic Time alert?)|r",
-        pi and callv(pi, "IsShown") or "n/a")
+    -- THE TIMER. A running duration on an aura icon IS "the aura is up".
+    safe(function()
+        for _, key in ipairs({ "Cooldown", "cooldown", "CooldownFlash" }) do
+            local cd, threw = field(frame, key)
+            if threw then add("  %s: |cffe0685aindex threw|r", key)
+            elseif cd then
+                add("  %s: times=%s  duration=%s  shown=%s", key,
+                    callv(cd, "GetCooldownTimes"), callv(cd, "GetCooldownDuration"), callv(cd, "IsShown"))
+            end
+        end
+    end)
 
-    -- Anything glow-shaped, by name and by scanning children.
-    for _, key in ipairs({ "Glow", "SpellActivationAlert", "Overlay", "OverlayGlow", "Highlight", "Border" }) do
-        if frame[key] then add("  %s: shown=%s", key, callv(frame[key], "IsShown")) end
-    end
+    safe(function()
+        local pi, threw = field(frame, "PandemicIcon")
+        if threw then add("  PandemicIcon: |cffe0685aindex threw|r")
+        else add("  PandemicIcon: %s  shown=%s",
+                 pi and "present" or "|cffe0a03anil (no Pandemic Time alert?)|r",
+                 pi and callv(pi, "IsShown") or "n/a") end
+    end)
 
-    -- Rendered text (this is where the visible timer number lives).
-    local texts = {}
-    local function scanRegions(f, tag)
-        if not f.GetRegions then return end
-        local ok, regions = pcall(function() return { f:GetRegions() } end)
-        if not ok then return end
-        for _, r in ipairs(regions) do
-            if r and r.GetObjectType then
-                local okT, t = pcall(r.GetObjectType, r)
+    safe(function()
+        for _, key in ipairs({ "Glow", "SpellActivationAlert", "Overlay", "OverlayGlow",
+                               "Highlight", "Border", "PipGlow", "Pulse" }) do
+            local g, threw = field(frame, key)
+            if threw then add("  %s: |cffe0685aindex threw|r", key)
+            elseif g then add("  %s: shown=%s", key, callv(g, "IsShown")) end
+        end
+    end)
+
+    -- Rendered text: this is where the visible countdown number lives.
+    safe(function()
+        local texts = {}
+        local function scanRegions(f, tag)
+            local getR = field(f, "GetRegions")
+            if not getR then return end
+            local ok, regions = pcall(function() return { f:GetRegions() } end)
+            if not ok then texts[#texts + 1] = tag .. "|cffe0685a<regions threw>|r"; return end
+            for _, r in ipairs(regions) do
+                local okT, t = pcall(function() return r:GetObjectType() end)
                 if okT and t == "FontString" then
-                    local okS, str = pcall(r.GetText, r)
+                    local okS, str = pcall(function() return r:GetText() end)
                     if okS and str and str ~= "" then
-                        texts[#texts + 1] = ("%s\"%s\"(shown=%s)"):format(tag, val(str), callv(r, "IsShown"))
+                        add("  text%s: %s  shown=%s", tag, val(str), callv(r, "IsShown"))
                     end
                 end
             end
         end
-    end
-    scanRegions(frame, "")
-    local okC, kids = pcall(function() return { frame:GetChildren() } end)
-    if okC then
-        for i, kid in ipairs(kids) do scanRegions(kid, ("child%d:"):format(i)) end
-    end
-    add("  texts: %s", #texts > 0 and table.concat(texts, "  ") or "|cff5a6a76none|r")
+        scanRegions(frame, "")
+        local okC, kids = pcall(function() return { frame:GetChildren() } end)
+        if okC then
+            for i, kid in ipairs(kids) do scanRegions(kid, ("[child%d]"):format(i)) end
+        else
+            add("  |cffe0685aGetChildren threw|r")
+        end
+    end)
 
-    add("  |cff5a6a76PRIO reads:|r IsAuraActive=%s  InPandemic=%s  stacks=%s",
-        val(API.IsAuraActive(spellID)), val(API.InPandemic(spellID)), val(API.AuraStackCount(spellID)))
+    safe(function()
+        add("  |cff5a6a76PRIO reads:|r IsAuraActive=%s  InPandemic=%s  stacks=%s",
+            val(API.IsAuraActive(spellID)), val(API.InPandemic(spellID)), val(API.AuraStackCount(spellID)))
+    end)
     return out
 end
 
