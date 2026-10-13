@@ -21,12 +21,17 @@ C_Spell = { GetSpellInfo = function(id) return { name = "Spell" .. tostring(id) 
             GetSpellCooldown = function() return { isActive = false } end,
             IsSpellUsable = function() return true, false end,
             GetSpellCharges = function() return nil end }
-C_UnitAuras = {}
+TARGET_AURAS = {}     -- name -> true: "my debuff of this name is on the target"
+C_UnitAuras = { GetAuraDataBySpellName = function(unit, name, filter)
+    if unit == "target" and filter == "HARMFUL|PLAYER" and TARGET_AURAS[name] then return { name = name } end
+    return nil
+end }
+UnitIsFriend = function() return false end
 C_NamePlate = { GetNamePlates = function() return {} end }
 Enum = { PowerType = { ComboPoints = 4, Energy = 3 } }
 
 -- cooldownID -> spellID
-CDINFO = { [1] = 703, [2] = 703, [3] = 1943, [4] = 999, [5] = 381632 }
+CDINFO = { [1] = 703, [2] = 703, [3] = 1943, [4] = 999, [5] = 381632, [7] = 457052 }
 C_CooldownViewer = {
     GetCooldownViewerCooldownInfo = function(cdID) return { spellID = CDINFO[cdID] } end,
     GetCooldownViewerCategorySet = function() return {} end,
@@ -54,9 +59,10 @@ BUFF_GARROTE = mkframe(2, false)   -- Tracked Buff item for Garrote (STALLED ina
 ESS_RUPTURE  = mkframe(3, false)
 ESS_ONLY     = mkframe(4, true)    -- an id that lives ONLY in an ability viewer
 BAR_IMPG     = mkframe(5, true)    -- Improved Garrote tracked bar
+BUFF_MARK    = mkframe(7, false)   -- Deathstalker's Mark: Tracked Buff ONLY, no ability icon
 
 EssentialCooldownViewer = { itemFramePool = pool({ ESS_GARROTE, ESS_RUPTURE, ESS_ONLY }) }
-BuffIconCooldownViewer  = { itemFramePool = pool({ BUFF_GARROTE }) }
+BuffIconCooldownViewer  = { itemFramePool = pool({ BUFF_GARROTE, BUFF_MARK }) }
 BuffBarCooldownViewer   = { itemFramePool = pool({ BAR_IMPG }) }
 
 PRIO = { color = {}, db = {}, On = function() end, specs = {} }
@@ -115,6 +121,24 @@ BUFF_GARROTE._active = false
 -- 8. Legacy: an id that lives ONLY in an ability viewer keeps its old IsActive() read.
 check("ability-viewer-only id keeps legacy read", API.IsAuraActive(999), true)
 check("tracked bar reads active", API.IsAuraActive(381632), true)
+
+-- 8b. DEATHSTALKER'S MARK: a target debuff whose ONLY frame is a Tracked Buff item.
+check("Mark: item inactive, nothing on target -> missing", API.IsAuraActive(457052), false)
+BUFF_MARK._active = true
+check("Mark: Tracked Buff item active -> present", API.IsAuraActive(457052), true)
+BUFF_MARK._active = false
+local MARK = API.SpellName(457052)
+TARGET_AURAS[MARK] = true                   -- item STALLED, but my Mark is on the target
+check("Mark: stalled item, target read finds it -> present", API.IsAuraActive(457052), true)
+TARGET_AURAS[MARK] = nil
+check("Mark: gone again -> missing", API.IsAuraActive(457052), false)
+-- The backstop only applies to ids that have a Tracked Buff/Bar item; an id that lives
+-- only in an ability viewer keeps its own read and is not overridden by a name match.
+ESS_ONLY._active = false
+TARGET_AURAS[API.SpellName(999)] = true
+check("ability-only id is not flipped by a target name match", API.IsAuraActive(999), false)
+TARGET_AURAS[API.SpellName(999)] = nil
+ESS_ONLY._active = true
 
 -- 9. POOLED FRAMES: the Cooldown Manager re-lays out and hands Garrote's Essential frame
 --    to Rupture (and vice versa). No spec change, no manual refresh.

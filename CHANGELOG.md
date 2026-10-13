@@ -1,5 +1,10 @@
 # PRIO Changelog
 
+## 0.10.28 (alpha)
+- **Deathstalker's Mark is read by presence from Tracked Buffs, with a backstop.** The Mark has no ability icon, so its Tracked Buff item is the only Cooldown Manager frame for it, and that kind of item can fail to pick up a debuff on your target until you switch targets. When the item says "not up", PRIO now also asks the game directly for *your* aura of that name on the current target. A hit means the Mark is up; no hit (or an unreadable result) changes nothing. Stacks are not read at all. This backstop applies to any buff-tracked aura you put on a target, for every spec.
+- The Mark now shows in the main debug window (`Deathstalker's Mark (DS)`), and its setup hint says what PRIO actually does with it: when the Mark is missing and Darkest Night isn't pending, Garrote moves to the top to re-apply it.
+- `/prio aura` shows the result of the direct target read alongside each frame.
+
 ## 0.10.27 (alpha)
 - **The "In pandemic" condition is now "Is refreshable" and means *missing OR in pandemic*.** One condition covers DoT upkeep, instead of needing "Missing buff" OR "In pandemic" on every maintenance row. It follows the same rules as "Missing buff" for a spell you just cast or one the look-ahead has already queued, so it won't ask for the same refresh twice, and the pandemic half still only fires when Blizzard confirms it.
 - **Heads-up for existing lists (all specs):** any row using the old "In pandemic" condition now also fires when the aura is missing. Rows that paired it with "Missing buff" behave exactly as before.

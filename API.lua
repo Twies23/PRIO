@@ -770,6 +770,29 @@ local function auraFrame(spellID)
 end
 API.AuraFrameIsFromAuraViewer = function(spellID) return trackedAuraFrames[spellID] ~= nil end
 
+-- Backstop for a debuff YOU put on the TARGET whose only Cooldown Manager frame is a
+-- Tracked Buff item (Deathstalker's Mark): that item can fail to bind the aura and sit
+-- inactive until a real target switch, and there is no ability icon to fall back on.
+-- Ask the game for "my aura of this name on the target" (ownership filtered by the
+-- engine). POSITIVE-ONLY: a hit means it is up; nil or a secret result means "no
+-- information", never "absent" -- so where the read is restricted this changes nothing.
+local function targetAuraByName(spellID)
+    if not (C_UnitAuras and C_UnitAuras.GetAuraDataBySpellName and UnitExists) then return nil end
+    local okE, exists = pcall(UnitExists, "target")
+    if not okE or IsSecret(exists) or not exists then return nil end
+    local name = API.SpellName(spellID)
+    if type(name) ~= "string" or name == "" then return nil end
+    local filter = "HARMFUL|PLAYER"
+    if UnitIsFriend then
+        local okF, friend = pcall(UnitIsFriend, "player", "target")
+        if okF and not IsSecret(friend) and friend then filter = "HELPFUL|PLAYER" end
+    end
+    local ok, d = pcall(C_UnitAuras.GetAuraDataBySpellName, "target", name, filter)
+    if ok and d ~= nil and not IsSecret(d) then return true end
+    return nil
+end
+API.TargetAuraByName = targetAuraByName
+
 function API.IsAuraActive(spellID)
     if not spellID then return nil end
     local list = entriesFor(spellID)
@@ -792,6 +815,7 @@ function API.IsAuraActive(spellID)
                 sawFalse = true
             end
         end
+        if hasAuraEntry and targetAuraByName(spellID) then return true end
         if sawFalse then return false end
         return nil
     end
@@ -949,6 +973,8 @@ function API.AuraFrameProbe(spellID)
             val(pandemicState[f] and true or false),
             get(function() local ic = f.PandemicIcon; if not ic then return "none" end; return ic:IsShown() and "shown" or "hidden" end))
     end
+    add("  target read by name (my aura on target): %s",
+        targetAuraByName(spellID) and "|cff0cd29ffound|r" or "|cff5a6a76no hit / unreadable|r")
     add("  |cff5a6a76PRIO reads:|r IsAuraActive=%s  InPandemic=%s  stacks=%s",
         val(API.IsAuraActive(spellID)), val(API.InPandemic(spellID)), val(API.AuraStackCount(spellID)))
     return out

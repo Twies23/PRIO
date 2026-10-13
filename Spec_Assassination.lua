@@ -85,7 +85,7 @@ local ID_COLDBLOODED = 382245  -- TrackedBuff. Cold Blooded Killer
 local ID_UNSHAKEABLE = 1248774 -- TrackedBuff. Unshakeable Drive
 
 -- Deathstalker
-local ID_DSMARK     = 457052   -- TrackedBuff. Deathstalker's Mark (3 stacks, applied by Garrote)
+local ID_DSMARK     = 457052   -- TrackedBuff ONLY (linked 457129). Read by PRESENCE, never stacks.
 local ID_DARKNIGHT  = 457058   -- TrackedBuff. Darkest Night -- spend on a max-CP Envenom
 local ID_LINGERDARK = 457056   -- TrackedBuff. Lingering Darkness (passive damage node)
 local ID_MOMENTUM   = 457067   -- TrackedBuff. Momentum of Despair (AoE crit, feeds Seal Fate)
@@ -427,6 +427,7 @@ local spec = {
         { label = "Rupture (dot)",      kind = "buff",     spell = ID_RUPTURE },
         { label = "Rupture refresh",    kind = "pandemic", spell = ID_RUPTURE },
         { label = "Improved Garrote",   kind = "buff",     spell = ID_IMPGARROTE },
+        { label = "Deathstalker's Mark (DS)", kind = "buff", spell = ID_DSMARK },
         { label = "Darkest Night (DS)", kind = "buff",     spell = ID_DARKNIGHT },
     },
     economy = {
@@ -476,7 +477,7 @@ local spec = {
         { kind = "trackedAura", label = "Darkest Night tracked", spell = ID_DARKNIGHT, optional = true,
           hint = "DEATHSTALKER ONLY: track Darkest Night. It drives the max-combo-point Envenom, the Shiv / Fan of Knives bridge at exactly 6 CP, and the rule that holds Rupture while it is up. Harmless to skip on Fatebound." },
         { kind = "trackedAura", label = "Deathstalker's Mark tracked", spell = ID_DSMARK, optional = true,
-          hint = "DEATHSTALKER ONLY, and optional: PRIO does not gate on the Mark (Garrote applies it with 3 stacks and your 5+ CP finishers eat them automatically), but tracking it lets you watch the cycle." },
+          hint = "DEATHSTALKER ONLY: track Deathstalker's Mark in Tracked Buffs. PRIO reads its PRESENCE on your target (not its stacks) -- when the Mark is missing and Darkest Night is not pending, Garrote moves to the top to re-apply it. Harmless to skip on Fatebound." },
         { kind = "info", label = "Combo Points",
           hint = "No tracking needed -- combo points are a discrete resource PRIO reads directly, so every finisher and builder combo-point gate is exact. Max is 7 with Deeper Stratagem + Sanguine Stratagem." },
         { kind = "trackedAura", label = "Kingsbane tracked", spell = ID_KINGSBANE, optional = true,

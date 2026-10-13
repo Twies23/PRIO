@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.10.28", {
+        "Deathstalker's Mark is read by presence (never stacks) from its Tracked Buff item, and when that item reads not-up PRIO now also asks the game for your aura of that name on the current target, since buff items can miss a target debuff until you switch targets. The Mark now appears in the main debug window. The same backstop applies to any buff-tracked aura you put on a target.",
+    } },
     { "0.10.27", {
         "The In pandemic condition is now Is refreshable and means missing OR in pandemic, so one condition covers DoT upkeep. Heads-up: any existing row using the old condition now also fires when the aura is missing (rows that already paired it with Missing buff are unchanged).",
     } },
