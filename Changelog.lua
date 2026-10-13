@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.10.26", {
+        "Fix: Garrote and Rupture read as gone while ticking on your target. PRIO now also reads the aura timer Blizzard shows on the ability icon (the Tracked Buff item can stall for target debuffs), rebuilds its Cooldown Manager frame map every second instead of once per spec change (the frames are pooled and get reassigned), and detects the refresh glow from Blizzard's own pandemic calls rather than an icon that UI addons hide. Correction: Tracked Bars are NOT required -- that advice in 0.10.25 was wrong.",
+    } },
     { "0.10.25", {
         "Garrote and Rupture show no refresh state because PRIO reads Blizzard's PandemicIcon, which only exists on the Tracked BAR frames -- not Tracked Buff icons. That is why Flame Shock (tracked as a bar) reads refresh and these did not. Track Garrote and Rupture as Tracked Bars with Pandemic Time enabled. The debug window now says this outright instead of going quiet.",
     } },

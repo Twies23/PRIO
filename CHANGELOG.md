@@ -1,5 +1,14 @@
 # PRIO Changelog
 
+## 0.10.26 (alpha)
+- **Fix: DoTs on your target (Garrote, Rupture) read "gone" while visibly ticking.** Three separate faults in how PRIO read the Cooldown Manager, all fixed:
+  - **Wrong frame trusted.** PRIO asked the Tracked Buff item whether the aura was up, but that item is known to stall for a debuff on your *target* (it can sit inactive until you switch targets). Blizzard also shows the aura's timer on the **ability icon** and marks that frame when it does — the "there's a timer on the icon" signal. PRIO now accepts either, so one stalled frame no longer hides the DoT.
+  - **Stale frame map.** The spell → frame map was built once per spec change, but those frames are pooled: whenever the Cooldown Manager re-laid out (an icon hiding when inactive, adding or removing a tracked spell) PRIO kept reading a frame that now belonged to a different spell. It now rebuilds every second and immediately when a frame is seen to have changed hands.
+  - **Refresh glow not detected.** PRIO read Blizzard's pandemic icon, but UI addons that draw their own glow (EllesmereUI does) hide that icon the moment it appears. PRIO now listens for Blizzard's own "entering / leaving pandemic" calls on the frame instead, so the refresh window reads correctly whatever is drawing the glow.
+- **Correction to 0.10.25:** Tracked *Bars* are **not** required. That advice was wrong and has been removed from the setup hints and the debug window — Essential and/or Tracked Buffs is enough.
+- `/prio aura` rewritten to show one line per registered frame with exactly the signals above (which frame says the aura is up, and whether it's flagged in pandemic).
+- New test suite that loads the real `API.lua` against simulated Cooldown Manager frames, covering the stalled-viewer, hidden-glow and re-layout cases.
+
 ## 0.10.25 (alpha)
 - **Why Garrote/Rupture showed no refresh, and how to fix it.** PRIO reads the refresh/pandemic state off Blizzard's `PandemicIcon`, and that region exists on the **Tracked Bar** item frames — not the Tracked Buff (icon) ones. Elemental reads Flame Shock's refresh for exactly this reason: Flame Shock is tracked as a **bar**. So: **track Garrote and Rupture as Tracked Bars and enable their Pandemic Time alert.** Presence works either way; the refresh glow needs the bar.
 - The debug window now says so instead of going quiet — a DoT with no readable refresh reads `no refresh read - track it as a BAR + enable Pandemic Time` rather than a blank or "untracked".

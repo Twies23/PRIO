@@ -572,13 +572,42 @@ local trackedAuraFrames = {}
 local trackedViewers = {}   -- spellID -> "Essential+BuffIcon" etc, for the probe
 local AURA_VIEWERS = { BuffIconCooldownViewer = true, BuffBarCooldownViewer = true }
 
+-- EVERY frame registered for a spell id, across all four viewers. One spell routinely
+-- has several: Garrote is an Essential ability icon AND a Tracked Buff AND (optionally) a
+-- Tracked Bar, all under 703. Each kind publishes "the aura is up" differently (see
+-- entryAuraActive), and any ONE of them saying so is enough.
+local trackedEntries = {}   -- spellID -> { { frame=, cdID=, aura=bool, viewer="BuffIcon" }, ... }
+local lastRefresh = 0
+
+-- PANDEMIC. Blizzard publishes the refresh window by calling ShowPandemicStateFrame /
+-- HidePandemicStateFrame on the item frame, so we observe those calls. Reading
+-- frame.PandemicIcon:IsShown() is NOT reliable: UI addons that draw their own pandemic
+-- glow (EllesmereUI does) hide Blizzard's PandemicIcon the instant it appears, so the
+-- icon reads hidden while the spell is visibly glowing.
+local pandemicState  = setmetatable({}, { __mode = "k" })   -- frame -> true while in pandemic
+local pandemicHooked = setmetatable({}, { __mode = "k" })
+local function pandemicShow(self) pandemicState[self] = true end
+local function pandemicHide(self) pandemicState[self] = nil end
+local function hookPandemic(frame)
+    if pandemicHooked[frame] or not hooksecurefunc then return end
+    if type(frame.ShowPandemicStateFrame) ~= "function" then return end
+    pandemicHooked[frame] = true
+    pcall(hooksecurefunc, frame, "ShowPandemicStateFrame", pandemicShow)
+    if type(frame.HidePandemicStateFrame) == "function" then
+        pcall(hooksecurefunc, frame, "HidePandemicStateFrame", pandemicHide)
+    end
+end
+
 function API.RefreshTracked()
+    lastRefresh = GetTime and GetTime() or 0
     wipe(trackedFrames)
     if not (C_CooldownViewer and C_CooldownViewer.GetCooldownViewerCooldownInfo) then return end
     wipe(trackedAuraFrames)
     wipe(trackedViewers)
+    wipe(trackedEntries)
     for _, name in ipairs(VIEWERS) do
         local isAuraViewer = AURA_VIEWERS[name]
+        local short = name:gsub("CooldownViewer", "")
         local viewer = _G[name]
         local pool = viewer and viewer.itemFramePool
         if pool and pool.EnumerateActive then
@@ -587,12 +616,19 @@ function API.RefreshTracked()
                 if cdID then
                     local ok, info = pcall(C_CooldownViewer.GetCooldownViewerCooldownInfo, cdID)
                     if ok and type(info) == "table" then
+                        hookPandemic(frame)
                         local function map(id)
                             id = SafeNum(id)
                             if id and id > 0 then
                                 trackedFrames[id] = frame
                                 if isAuraViewer then trackedAuraFrames[id] = frame end
-                                local short = name:gsub("CooldownViewer", "")
+                                local list = trackedEntries[id]
+                                if not list then list = {}; trackedEntries[id] = list end
+                                local dup = false
+                                for i = 1, #list do if list[i].frame == frame then dup = true end end
+                                if not dup then
+                                    list[#list + 1] = { frame = frame, cdID = cdID, aura = isAuraViewer and true or false, viewer = short }
+                                end
                                 local cur = trackedViewers[id]
                                 if not cur then trackedViewers[id] = short
                                 elseif not cur:find(short, 1, true) then
@@ -675,26 +711,89 @@ API.linkedNameDisambig = API.linkedNameDisambig or {}
 
 -- true/false when the tracked aura's state is readable, nil when we can't tell
 -- (spell not tracked by the viewer). Callers fail open on nil.
--- The frame that can answer "is this aura up": an aura viewer's if we have one, else
--- whatever viewer registered the id. See trackedAuraFrames above for why this matters.
+-- These are POOLED frames: when the Cooldown Manager re-lays out (an icon hides when
+-- inactive, you add or remove a tracked spell) a frame is handed to a different cooldown.
+-- The map used to be built once per spec change, so after any such change PRIO kept
+-- reading a frame that now belonged to something else. Rebuild it on a cheap throttle,
+-- and immediately when an entry is seen to have changed hands.
+local REFRESH_EVERY = 1.0
+local function ensureFresh()
+    local now = GetTime and GetTime() or 0
+    if now - lastRefresh >= REFRESH_EVERY then API.RefreshTracked() end
+end
+local function entryFresh(e)
+    local ok, cd = pcall(function() return e.frame.cooldownID end)
+    if not ok or cd == nil or IsSecret(cd) then return true end   -- unreadable: do not churn
+    return cd == e.cdID
+end
+local function entriesFor(spellID)
+    ensureFresh()
+    local list = trackedEntries[spellID]
+    if list then
+        for i = 1, #list do
+            if not entryFresh(list[i]) then
+                API.RefreshTracked()
+                return trackedEntries[spellID]
+            end
+        end
+    end
+    return list
+end
+
+-- "Is the aura up", asked the way each kind of frame actually answers it:
+--   * aura viewers (Tracked Buff / Tracked Bar): the item's own IsActive().
+--   * ability viewers (Essential / Utility): Blizzard shows the AURA's timer on the ability
+--     icon while it is up, and marks the frame with wasSetFromAura / auraInstanceID. That is
+--     the "there is a timer on the icon" signal -- and it is the dependable one for a DoT on
+--     your TARGET, where the buff viewer is known to stall (it can sit inactive until a real
+--     target switch). `hasAuraEntry` keeps the old IsActive() read for ids that live ONLY
+--     in an ability viewer, so nothing that relied on it changes.
+local function entryAuraActive(e, hasAuraEntry)
+    local f = e.frame
+    if e.aura then return frameActive(f) end
+    local ok, shown = pcall(function()
+        local w = f.wasSetFromAura
+        if w ~= nil and not IsSecret(w) and w then return true end
+        return type(f.auraInstanceID) ~= "nil"      -- type() is safe on a secret id
+    end)
+    if ok and shown then return true end
+    if not hasAuraEntry then return frameActive(f) end
+    -- Explicit branch on purpose: `ok and false or nil` is ALWAYS nil in Lua.
+    if not ok then return nil end
+    return false
+end
+
+-- Back-compat single-frame resolver (stacks / text reads): an aura viewer's frame first.
 local function auraFrame(spellID)
+    ensureFresh()
     return trackedAuraFrames[spellID] or trackedFrames[spellID]
 end
 API.AuraFrameIsFromAuraViewer = function(spellID) return trackedAuraFrames[spellID] ~= nil end
 
 function API.IsAuraActive(spellID)
     if not spellID then return nil end
-    local frame = auraFrame(spellID)
-    if frame then
-        local active = frameActive(frame)
-        if active ~= true then return active end        -- false / nil pass straight through
-        -- Frame is active. If this spell shares its frame with other linked spells,
-        -- it's only THE active one when the frame is currently showing its name.
-        if API.linkedNameDisambig[spellID] then
-            local shows = frameShowsText(frame, API.SpellName(spellID))
-            if shows ~= nil then return shows end        -- readable -> exact; unreadable -> plain active
+    local list = entriesFor(spellID)
+    if list and #list > 0 then
+        local hasAuraEntry = false
+        for i = 1, #list do if list[i].aura then hasAuraEntry = true end end
+        local sawFalse = false
+        for i = 1, #list do
+            local e = list[i]
+            local active = entryAuraActive(e, hasAuraEntry)
+            if active == true then
+                -- If this spell shares its frame with other linked spells, it is only THE
+                -- active one when the frame is currently showing its name.
+                if e.aura and API.linkedNameDisambig[spellID] then
+                    local shows = frameShowsText(e.frame, API.SpellName(spellID))
+                    if shows ~= nil then return shows end
+                end
+                return true
+            elseif active == false then
+                sawFalse = true
+            end
         end
-        return true
+        if sawFalse then return false end
+        return nil
     end
     -- NOT Cooldown-Manager tracked: read the player aura directly. This is the only
     -- path for buffs the CDM doesn't track -- e.g. the named Roll the Bones stage buffs
@@ -713,7 +812,9 @@ function API.IsAuraActive(spellID)
 end
 
 function API.IsTracked(spellID)
-    return spellID ~= nil and trackedFrames[spellID] ~= nil
+    if spellID == nil then return false end
+    ensureFresh()
+    return trackedFrames[spellID] ~= nil
 end
 
 -- Live buff STACK COUNT, secret-safe. Blizzard's Cooldown Viewer renders the aura's
@@ -807,150 +908,49 @@ end
 -- in-game which source is readable. Prints: the raw .applications (and whether it's
 -- secret), IsAuraActive, what AuraStackCount resolves to, and every FontString text
 -- found on the tracked frame + its children. Drives /prio stackprobe.
--- Dump EVERYTHING readable off a tracked aura's Cooldown Manager frame. Built to settle
--- "is the aura up / is it in pandemic" empirically rather than by guessing which field
--- Blizzard uses: the in-game signal is a TIMER on the icon (active) and a GLOW (pandemic).
---
--- EVERY step is individually guarded. These are Blizzard frames and some of them are
--- restricted to tainted code in combat, where even INDEXING a field can throw -- so a
--- single bad field must degrade to one "threw" line, never kill the whole dump. (The
--- first version wrapped the probe in one outer pcall and all we learned was "failed".)
+-- /prio aura: what each Cooldown Manager frame registered for a spell is saying right now,
+-- one line per frame, using exactly the signals IsAuraActive / InPandemic read. Every read
+-- is guarded and secrets are labelled, so it is safe to run mid-fight.
 function API.AuraFrameProbe(spellID)
     local out = {}
     local function add(f, ...)
         local ok, line = pcall(string.format, f, ...)
-        out[#out + 1] = ok and line or ("  |cffe0685a<format failed>|r")
+        out[#out + 1] = ok and line or "  |cffe0685a<format failed>|r"
     end
     local function val(v)
         if v == nil then return "nil" end
         local ok, secret = pcall(IsSecret, v)
         if ok and secret then return "|cffe0a03a<SECRET>|r" end
         local okS, str = pcall(tostring, v)
-        return okS and str or "|cffe0685a<unreadable>|r"
+        return okS and str or "?"
     end
-    -- Indexing a restricted frame can throw, so even field reads go through pcall.
-    local function field(obj, key)
-        if obj == nil then return nil end
-        local ok, v = pcall(function() return obj[key] end)
-        if not ok then return nil, true end
-        return v, false
-    end
-    local function callv(obj, method)
-        if obj == nil then return "n/a" end
-        local fn, threw = field(obj, method)
-        if threw then return "|cffe0685aindex threw|r" end
-        if fn == nil then return "n/a" end
-        local ok, a, b = pcall(fn, obj)
-        if not ok then return "|cffe0685acall threw|r" end
-        if b ~= nil then return val(a) .. ", " .. val(b) end
-        return val(a)
-    end
-    local function safe(fn)
-        local ok, err = pcall(fn)
-        if not ok then add("  |cffe0685astep failed:|r %s", val(err)) end
-    end
+    local function get(fn) local ok, v = pcall(fn); if ok then return val(v) end return "|cffe0685athrew|r" end
 
-    local name = (pcall(API.SpellName, spellID) and API.SpellName(spellID)) or "?"
-    add("|cff0cd29f%s|r (%s)  viewers: |cff9fb0be%s|r", tostring(name), tostring(spellID),
-        trackedViewers[spellID] or "NONE")
-
-    local gen, aura = trackedFrames[spellID], trackedAuraFrames[spellID]
-    if not gen then
-        add("  |cffe0685anot registered in any Cooldown Viewer|r -- add it to the Cooldown Manager")
+    pcall(API.RefreshTracked)
+    add("|cff0cd29f%s|r (%s)  viewers: |cff9fb0be%s|r", tostring(API.SpellName(spellID) or "?"),
+        tostring(spellID), trackedViewers[spellID] or "NONE")
+    local list = trackedEntries[spellID]
+    if not list or #list == 0 then
+        add("  |cffe0685anot registered in any Cooldown Viewer|r")
         return out
     end
-    add("  aura-viewer frame: %s%s", aura and "|cff0cd29fyes|r" or "|cffe0685aNO|r",
-        aura and "" or "  |cffe0685a(aura reads fall back to a COOLDOWN frame)|r")
-
-    local frame = aura or gen
-
-    safe(function()
-        local parent = field(frame, "GetParent")
-        local pname = "n/a"
-        if parent then
-            local okP, pf = pcall(parent, frame)
-            if okP and pf then pname = callv(pf, "GetName") end
-        end
-        add("  parent=%s  shown=%s  IsActive()=%s", pname, callv(frame, "IsShown"), callv(frame, "IsActive"))
-    end)
-
-    -- THE TIMER. A running duration on an aura icon IS "the aura is up".
-    safe(function()
-        for _, key in ipairs({ "Cooldown", "cooldown", "CooldownFlash" }) do
-            local cd, threw = field(frame, key)
-            if threw then add("  %s: |cffe0685aindex threw|r", key)
-            elseif cd then
-                add("  %s: times=%s  duration=%s  shown=%s", key,
-                    callv(cd, "GetCooldownTimes"), callv(cd, "GetCooldownDuration"), callv(cd, "IsShown"))
-            end
-        end
-    end)
-
-    safe(function()
-        local pi, threw = field(frame, "PandemicIcon")
-        if threw then add("  PandemicIcon: |cffe0685aindex threw|r")
-        else add("  PandemicIcon: %s  shown=%s",
-                 pi and "present" or "|cffe0a03anil (no Pandemic Time alert?)|r",
-                 pi and callv(pi, "IsShown") or "n/a") end
-    end)
-
-    -- GENERIC DISCOVERY. We do not know what Blizzard calls the refresh glow on these
-    -- frames, and guessing field names has cost us several rounds -- so enumerate EVERY
-    -- field that looks like a region/frame and report whether it is shown. Run this once
-    -- with the aura freshly applied and once while it is glowing: whichever field flips
-    -- is the pandemic indicator.
-    safe(function()
-        local okP, keys = pcall(function()
-            local t = {}
-            for k, v in pairs(frame) do
-                if type(k) == "string" and type(v) == "table" then
-                    local okS = pcall(function() return v.IsShown end)
-                    if okS and v.IsShown then t[#t + 1] = k end
-                end
-            end
-            table.sort(t)
-            return t
-        end)
-        if not okP then add("  |cffe0685afield enumeration threw|r"); return end
-        if #keys == 0 then add("  |cffe0a03ano region-like fields found|r"); return end
-        local parts = {}
-        for _, k in ipairs(keys) do
-            parts[#parts + 1] = ("%s=%s"):format(k, callv(frame[k], "IsShown"))
-        end
-        add("  fields: %s", table.concat(parts, "  "))
-    end)
-
-    -- Rendered text: this is where the visible countdown number lives.
-    safe(function()
-        local texts = {}
-        local function scanRegions(f, tag)
-            local getR = field(f, "GetRegions")
-            if not getR then return end
-            local ok, regions = pcall(function() return { f:GetRegions() } end)
-            if not ok then texts[#texts + 1] = tag .. "|cffe0685a<regions threw>|r"; return end
-            for _, r in ipairs(regions) do
-                local okT, t = pcall(function() return r:GetObjectType() end)
-                if okT and t == "FontString" then
-                    local okS, str = pcall(function() return r:GetText() end)
-                    if okS and str and str ~= "" then
-                        add("  text%s: %s  shown=%s", tag, val(str), callv(r, "IsShown"))
-                    end
-                end
-            end
-        end
-        scanRegions(frame, "")
-        local okC, kids = pcall(function() return { frame:GetChildren() } end)
-        if okC then
-            for i, kid in ipairs(kids) do scanRegions(kid, ("[child%d]"):format(i)) end
-        else
-            add("  |cffe0685aGetChildren threw|r")
-        end
-    end)
-
-    safe(function()
-        add("  |cff5a6a76PRIO reads:|r IsAuraActive=%s  InPandemic=%s  stacks=%s",
-            val(API.IsAuraActive(spellID)), val(API.InPandemic(spellID)), val(API.AuraStackCount(spellID)))
-    end)
+    local hasAuraEntry = false
+    for i = 1, #list do if list[i].aura then hasAuraEntry = true end end
+    for i = 1, #list do
+        local e = list[i]; local f = e.frame
+        add("  |cff6fb3ff[%s]|r IsActive()=%s  wasSetFromAura=%s  auraInstanceID=%s  |cff5a6a76=> aura up:|r %s",
+            e.viewer,
+            get(function() return f:IsActive() end),
+            get(function() return f.wasSetFromAura end),
+            get(function() return type(f.auraInstanceID) ~= "nil" and "set" or "nil" end),
+            val(entryAuraActive(e, hasAuraEntry)))
+        add("      pandemic: hooked=%s  flagged=%s  PandemicIcon=%s",
+            val(pandemicHooked[f] and true or false),
+            val(pandemicState[f] and true or false),
+            get(function() local ic = f.PandemicIcon; if not ic then return "none" end; return ic:IsShown() and "shown" or "hidden" end))
+    end
+    add("  |cff5a6a76PRIO reads:|r IsAuraActive=%s  InPandemic=%s  stacks=%s",
+        val(API.IsAuraActive(spellID)), val(API.InPandemic(spellID)), val(API.AuraStackCount(spellID)))
     return out
 end
 
@@ -1017,13 +1017,24 @@ end
 -- enabled in the Cooldown Manager; if it isn't, PandemicIcon is never created and
 -- this reads false. (See API.RefreshCarryover for a settings-independent probe.)
 function API.InPandemic(spellID)
-    local frame = auraFrame(spellID)
-    if not frame then return nil end
-    local icon = frame.PandemicIcon
-    if icon == nil then return false end            -- niled when not in pandemic
-    local ok, shown = pcall(icon.IsShown, icon)
-    if ok and not IsSecret(shown) then return shown and true or false end
-    return nil
+    local list = entriesFor(spellID)
+    if not list or #list == 0 then return nil end
+    local hasAuraEntry = false
+    for i = 1, #list do if list[i].aura then hasAuraEntry = true end end
+    for i = 1, #list do
+        local e = list[i]
+        -- Blizzard told this frame it is in pandemic. Only believe it while the aura is
+        -- still up there, so a pooled frame released mid-glow cannot leave a stale "yes".
+        if pandemicState[e.frame] and entryAuraActive(e, hasAuraEntry) ~= false then return true end
+        -- Blizzard-default style (nobody hides the icon), or the window opened before
+        -- our hook was installed.
+        local okI, icon = pcall(function() return e.frame.PandemicIcon end)
+        if okI and icon then
+            local ok, shown = pcall(icon.IsShown, icon)
+            if ok and shown ~= nil and not IsSecret(shown) and shown then return true end
+        end
+    end
+    return false
 end
 
 -- Settings-independent pandemic probe: how much of the current aura would carry over

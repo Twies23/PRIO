@@ -31,4 +31,10 @@ except Exception as e:  # noqa: BLE001
     sys.exit(2)
 
 failures = g.__TEST_FAILURES or 0
-sys.exit(1 if failures and failures > 0 else 0)
+
+# The Lua suite above runs against a MOCKED API. This one loads the real API.lua and
+# checks the Cooldown Manager frame reads (aura up / pandemic / pooled-frame staleness).
+import subprocess
+cdm = subprocess.call([sys.executable, os.path.join(TESTS_DIR, "test_cdm_reads.py")])
+
+sys.exit(1 if (failures and failures > 0) or cdm != 0 else 0)

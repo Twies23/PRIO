@@ -345,12 +345,9 @@ function Debug:Update()
                 -- Secret-safe: reads Blizzard's PandemicIcon (needs the spell's
                 -- "Pandemic Time" alert enabled in the Cooldown Manager).
                 local ip = API.InPandemic and API.InPandemic(d.spell)
-                -- nil means the frame has no PandemicIcon at all. That region lives on the
-                -- Tracked BAR item frames, not the Tracked Buff (icon) ones -- which is why
-                -- Flame Shock (a bar) reads refresh and an icon-tracked DoT does not.
                 set(id, ip == true and "|cff0cd29fREFRESH (in pandemic)|r"
                     or ip == false and "|cff5a6a76hold|r"
-                    or "|cffe0a03ano refresh read - track it as a BAR + enable Pandemic Time|r")
+                    or "|cffe0a03auntracked|r")
             elseif d.kind == "hasMote" then
                 set(id, PRIO.Engine and PRIO.Engine.hasMote
                     and "|cff0cd29fdetected|r" or "|cffe0685anot detected|r")
@@ -549,11 +546,7 @@ local srcColor = {
 local function buffText(sid)
     local a = API.IsAuraActive(sid)
     if a == nil then return "|cffe0a03auntracked|r" end
-    -- Warn when an aura question is being answered by an ABILITY-viewer frame: that
-    -- frame's IsActive() means "on cooldown", not "aura is up". Fix by adding the spell
-    -- to Tracked Buffs in the Cooldown Manager.
-    local auraSrc = API.AuraFrameIsFromAuraViewer and API.AuraFrameIsFromAuraViewer(sid)
-    local warn = (auraSrc == false) and "  |cffe0685a[cooldown frame! add to Tracked Buffs]|r" or ""
+    local warn = ""
     if a ~= true then return "|cffe0685agone|r" .. warn end
     -- NOTE: `X and f()` truncates multiple returns to one, so guard with an if to keep
     -- both n and src (this bug once made the source tag silently never render).
@@ -590,7 +583,7 @@ function RotationDebug:Update()
                 local ip = API.InPandemic and API.InPandemic(b.spell)
                 t = t .. (ip == true and "   |cff0cd29fREFRESH|r"
                     or ip == false and "   |cff5a6a76hold|r"
-                    or "   |cffe0a03ano refresh read - track as a BAR + Pandemic Time|r")
+                    or "   |cffe0a03ano refresh read|r")
             end
             return t
         end)

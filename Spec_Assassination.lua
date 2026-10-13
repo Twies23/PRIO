@@ -465,9 +465,9 @@ local spec = {
 
     setup = {
         { kind = "trackedAura", label = "Garrote tracked", spell = ID_GARROTE,
-          hint = "Track Garrote as a TRACKED BAR (not just a Tracked Buff) and enable its Pandemic Time alert. Presence works either way, but the refresh/pandemic glow PRIO reads only exists on the BAR frames -- this is exactly how Elemental tracks Flame Shock. 18s duration, 5.4s pandemic window, uptime target 100%." },
+          hint = "Track Garrote in the Cooldown Manager (Essential and/or Tracked Buffs -- any of them works; a bar is NOT required). PRIO reads the timer Blizzard shows on the icon for presence and the pandemic glow for refresh. 18s duration, 5.4s pandemic window, uptime target 100%." },
         { kind = "trackedAura", label = "Rupture tracked", spell = ID_RUPTURE,
-          hint = "Track Rupture as a TRACKED BAR (not just a Tracked Buff) and enable its Pandemic Time alert -- the refresh glow PRIO reads lives on the BAR frames only. Pandemic scales with the combo points spent: 7.2s at 5 CP, 8.4s at 6, 9.6s at 7. Uptime target is 100%." },
+          hint = "Track Rupture in the Cooldown Manager (Essential and/or Tracked Buffs -- any of them works; a bar is NOT required). Pandemic scales with the combo points spent: 7.2s at 5 CP, 8.4s at 6, 9.6s at 7. Uptime target is 100%." },
         { kind = "trackedAura", label = "Improved Garrote tracked", spell = ID_IMPGARROTE,
           hint = "Track Improved Garrote (it is a TrackedBar) so PRIO can see the 6-second empowered window opened by Stealth/Vanish and tell you to cast Garrote inside it." },
         { kind = "trackedAura", label = "Deathmark tracked", spell = ID_DEATHMARK,
