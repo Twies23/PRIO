@@ -130,18 +130,12 @@ local function slayerBase()
     H.S.glows[EXECUTE] = false; H.S.usableClean[EXECUTE] = false
 end
 
-test("Slayer 2 targets: Sweeping Strikes only when the buff is down", function()
+test("Slayer AoE: Sweeping Strikes only when the buff is down, then Cleave", function()
     slayerBase(); H.S.enemies = 2
     H.S.auras[SS] = false
     eq(H.Engine:Evaluate().primary.id, SS, "SS dropped -> Sweeping Strikes first")
     H.S.auras[SS] = true
-    eq(H.Engine:Evaluate().primary.id, MORTAL, "SS up -> single-target play (Mortal Strike), not Cleave")
-    done()
-end)
-
-test("Slayer AoE: Sweeping Strikes not re-asked while up; Cleave leads at 3+", function()
-    slayerBase(); H.S.enemies = 3; H.S.auras[SS] = true
-    eq(H.Engine:Evaluate().primary.id, CLEAVE, "3 targets, SS up -> Cleave")
+    eq(H.Engine:Evaluate().primary.id, CLEAVE, "SS up -> not re-asked; Cleave")
     done()
 end)
 

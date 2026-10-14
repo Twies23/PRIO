@@ -1,8 +1,10 @@
 # PRIO Changelog
 
+## 0.10.31 (alpha)
+- **Arms is back to four lists: ST, AoE, ST (Exec) and AoE (Exec).** The separate "2 Targets" list from 0.10.30 is gone. When the AoE list starts is set by **"AoE at" in the Behavior panel** (default 2 enemies, as before). All the other 0.10.30 list changes stay. Reset your Arms lists to default to pick this up.
+
 ## 0.10.30 (alpha)
 - **Arms Slayer lists rebuilt from real logs.** Every decision in four top Ula'tek logs and a top Coiled Altar kill was replayed through PRIO. The old lists recommended what those players pressed 29% of the time; the new ones get 45%. **Reset your Arms lists to default to pick this up** (you'll be prompted if you customised them).
-  - **New "2 Targets" tier.** On two targets top players play single target and just keep Sweeping Strikes up. Cleave now only leads from **3+ targets** (adjustable in Options).
   - **Sweeping Strikes is only asked for when it has dropped.** It used to come back every time it came off cooldown. **Track the Sweeping Strikes buff** in your Cooldown Manager for this (it's in the Arms setup checklist).
   - **Avatar waits for Colossus Smash** instead of firing on its own.
   - **Spend a Sudden Death proc right before Bladestorm.** This replaces the old "Execute before Bladestorm at under 3 Imminent Demise" line; top players were almost always at 3 stacks already.

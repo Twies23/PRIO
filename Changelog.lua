@@ -11,9 +11,12 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.10.31", {
+        "Arms is back to four lists (ST, AoE, ST Exec, AoE Exec); the 2 Targets list is gone. AoE start is set by AoE at in the Behavior panel (default 2). The other 0.10.30 list changes stay -- reset Arms lists to default.",
+    } },
     { "0.10.30", {
         "Arms Slayer lists rebuilt from real logs: matched what top players pressed 29% of the time before, 45% now. Reset your Arms lists to default to pick this up.",
-        "New 2 Targets tier: single-target play plus Sweeping Strikes; Cleave only leads at 3+. Sweeping Strikes is only asked for when it has dropped (track its buff in the Cooldown Manager). Avatar waits for Colossus Smash. A Sudden Death Execute goes right before Bladestorm. Heroic Strike is in the AoE lists. In execute range, Execute comes before Overpower.",
+        "Sweeping Strikes is only asked for when it has dropped (track its buff in the Cooldown Manager). Avatar waits for Colossus Smash. A Sudden Death Execute goes right before Bladestorm. Heroic Strike is in the AoE lists. In execute range, Execute comes before Overpower.",
     } },
     { "0.10.29", {
         "Fix (Arms): Executioner's Precision never counted -- the game casts Execute as 281000, not the 163201 PRIO listed, so your Executes were never seen and every Mortal Strike at 2 Executioner's Precision line was dead. Now: Execute +1 (max 2), Mortal Strike resets to 0, only when talented, and if you track the buff in the Cooldown Manager PRIO also resets the count when it falls off. Drives both the main pick and the queue.",

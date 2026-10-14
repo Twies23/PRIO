@@ -119,18 +119,8 @@ local slayer_st_execute = {
     { spell = "Slam" },
 }
 
--- 2 targets: top players play single target here (Cleave lost to Mortal Strike 85%, to
--- Heroic Strike 87%), so it's the ST list with Sweeping Strikes kept up.
-local function withSweeping(list)
-    local out = { { spell = "SweepingStrikes", cond = buffDown(ID_SWEEPING) } }
-    for i = 1, #list do out[#out + 1] = list[i] end
-    return out
-end
-local slayer_cleave         = withSweeping(slayer_st)
-local slayer_cleave_execute = withSweeping(slayer_st_execute)
-
--- Slayer AoE (3+): Cleave beats Mortal Strike / Heroic Strike / Overpower here; a Sudden
--- Death Execute is level with it. Sweeping Strikes only when it has dropped.
+-- Slayer AoE: Sweeping Strikes only when it has dropped. At 3+ targets top players rate
+-- Cleave above Mortal Strike / Heroic Strike / Overpower, level with a Sudden Death Execute.
 local slayer_aoe = {
     { spell = "SweepingStrikes", cond = buffDown(ID_SWEEPING) },
     { spell = "Cleave", cond = debuffDown(ID_REND) },
@@ -242,15 +232,13 @@ local colossus_aoe_execute = {
     { spell = "Slam" },
 }
 
--- Three tiers: ST (1 target), 2 Targets (ST + Sweeping Strikes) and AoE (3+), each with
--- an execute-phase variant the engine swaps in automatically.
+-- No Cleave tier: Arms uses ST (1 target) and AoE (2+, configurable via "AoE at" in the
+-- Behavior panel), each with an execute-phase variant the engine swaps in automatically.
 local heroLists = {
-    slayer   = { st = slayer_st,   cleave = slayer_cleave,   aoe = slayer_aoe,
-                 st_execute = slayer_st_execute, cleave_execute = slayer_cleave_execute,
-                 aoe_execute = slayer_aoe_execute },
-    colossus = { st = colossus_st, cleave = withSweeping(colossus_st), aoe = colossus_aoe,
-                 st_execute = colossus_st_execute, cleave_execute = withSweeping(colossus_st_execute),
-                 aoe_execute = colossus_aoe_execute },
+    slayer   = { st = slayer_st,   aoe = slayer_aoe,
+                 st_execute = slayer_st_execute,   aoe_execute = slayer_aoe_execute },
+    colossus = { st = colossus_st, aoe = colossus_aoe,
+                 st_execute = colossus_st_execute, aoe_execute = colossus_aoe_execute },
 }
 
 -- Active hero: Demolish (436358) is the Colossus capstone -- Slayer never has it, so
@@ -268,23 +256,21 @@ local spec = {
     specID   = 71,
     resource = RAGE,
     resourceLabel = "Rage",
-    -- 2 targets = the "2 Targets" tier (single-target play + Sweeping Strikes); AoE at 3+
-    -- (user-configurable via db.aoeThreshold). Top players only start Cleaving at 3.
+    -- No Cleave tier: AoE at 2+ by default (user-configurable via "AoE at" in Behavior).
+    -- cleaveAt == aoeAt collapses the middle tier in ResolveMode.
     cleaveAt = 2,
-    aoeAt    = 3,
+    aoeAt    = 2,
     usesPandemic = true,             -- Rend refreshes in its pandemic window
 
     -- Editor mode tabs and the execute-phase overlay map: when the latched "In execute
     -- range" flag is on, the engine swaps each tier to its execute variant.
     modes = {
-        { value = "st",             text = "ST" },
-        { value = "cleave",         text = "2 Targets" },
-        { value = "aoe",            text = "AoE" },
-        { value = "st_execute",     text = "ST (Exec)" },
-        { value = "cleave_execute", text = "2 Targets (Exec)" },
-        { value = "aoe_execute",    text = "AoE (Exec)" },
+        { value = "st",          text = "ST" },
+        { value = "aoe",         text = "AoE" },
+        { value = "st_execute",  text = "ST (Exec)" },
+        { value = "aoe_execute", text = "AoE (Exec)" },
     },
-    executeMode = { st = "st_execute", cleave = "cleave_execute", aoe = "aoe_execute" },
+    executeMode = { st = "st_execute", aoe = "aoe_execute" },
 
     -- Execute-range detection: Execute (163201) is usable only in execute range or on a
     -- Sudden Death proc, so "usable without the proc glow" => in range (see Engine's
