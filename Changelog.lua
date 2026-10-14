@@ -11,6 +11,10 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.10.29", {
+        "Fix (Arms): Executioner's Precision never counted -- the game casts Execute as 281000, not the 163201 PRIO listed, so your Executes were never seen and every Mortal Strike at 2 Executioner's Precision line was dead. Now: Execute +1 (max 2), Mortal Strike resets to 0, only when talented, and if you track the buff in the Cooldown Manager PRIO also resets the count when it falls off. Drives both the main pick and the queue.",
+        "Slayer's Bladestorm is recognised by its real cast ID (446035), and the Arms debug windows read the Executioner's Precision buff (386633).",
+    } },
     { "0.10.28", {
         "Deathstalker's Mark is read by presence (never stacks) from its Tracked Buff item, and when that item reads not-up PRIO now also asks the game for your aura of that name on the current target, since buff items can miss a target debuff until you switch targets. The Mark now appears in the main debug window. The same backstop applies to any buff-tracked aura you put on a target.",
     } },

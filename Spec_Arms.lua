@@ -29,7 +29,8 @@ local RAGE = (Enum and Enum.PowerType and Enum.PowerType.Rage) or 1
 -- Readable buff/debuff IDs (verified via /prio tracked in 12.1).
 local ID_SUDDENDEATH  = 29725    -- Sudden Death (free/instant Execute) -- tracked buff
 local ID_COLLATERAL   = 334779   -- Collateral Damage (stacks to 3; Sweeping Strikes)
-local ID_EXECPREC     = 386634   -- Executioner's Precision (stacks)
+local ID_EXECPREC     = 386634   -- Executioner's Precision TALENT (also the predicted-counter key)
+local ID_EXECPREC_AURA = 386633  -- Executioner's Precision BUFF (what the Cooldown Manager shows)
 local ID_IMMINENT     = 445606   -- Imminent Demise (stacks)
 local ID_COLOSSUS_DBF = 167105   -- Colossus Smash (tracked bar / debuff)
 local ID_SWEEPING     = 260708   -- Sweeping Strikes (self)
@@ -257,12 +258,20 @@ local spec = {
         { key = "colossus", label = "Colossus" },
     },
 
-    -- Predicted stack tracking (no readable count): Executioner's Precision gains a
-    -- stack on every Execute (cap 2) and is consumed by Mortal Strike. Keyed by the
-    -- buff's aura ID so predMin(ID_EXECPREC, n) reads it.
+    -- Predicted stack tracking (no readable count): when Executioner's Precision (talent
+    -- 386634) is taken, every Execute adds a stack (cap 2) and Mortal Strike resets it to 0.
+    -- If the buff (386633) is tracked in the Cooldown Manager and reads MISSING, the count
+    -- is also reset to 0 (it expired). Keyed by the talent ID so predMin(ID_EXECPREC, n)
+    -- and the "Exec. Precision (2)" preset read it. Drives the live pick AND the look-ahead.
     stackTrack = {
-        [ID_EXECPREC] = { max = 2, gen = { "Execute" }, reset = { "MortalStrike" } },
+        [ID_EXECPREC] = { max = 2, gen = { "Execute" }, reset = { "MortalStrike" },
+                          talent = ID_EXECPREC, aura = ID_EXECPREC_AURA },
     },
+
+    -- Cast IDs the game reports that differ from spells{} and are not overrides: Execute
+    -- SUCCEEDS as 281000 (listed 163201), Slayer's Bladestorm as 446035 (listed 227847).
+    -- Without these the casts never resolve, so Executioner's Precision never counted.
+    castAliases = { [281000] = "Execute", [446035] = "Bladestorm" },
 
     -- Named conditions surfaced in the editor. Each resolves to a readable clause
     -- (a proc-glow or predicted-stack read) so the user picks a MEANING, not a glow.
@@ -280,7 +289,7 @@ local spec = {
         Rend          = ID_REND,
         SuddenDeath   = ID_SUDDENDEATH,
         CollateralDamage = ID_COLLATERAL,
-        ExecutionersPrecision = ID_EXECPREC,
+        ExecutionersPrecision = ID_EXECPREC_AURA,
         ImminentDemise = ID_IMMINENT,
         ColossusSmash = ID_COLOSSUS_DBF,
         SweepingStrikes = ID_SWEEPING,
@@ -301,7 +310,7 @@ local spec = {
         { kind = "info", label = "Sudden Death / Imminent Demise / Collateral Damage",
           hint = "No tracking needed -- PRIO reads these from the Execute, Bladestorm and Cleave button glows automatically." },
         { kind = "info", label = "Executioner's Precision",
-          hint = "No tracking needed -- PRIO predicts its stacks from your Execute and Mortal Strike casts." },
+          hint = "PRIO counts it from your casts (Execute +1, max 2; Mortal Strike resets). Optional: track the Executioner's Precision buff in your Cooldown Manager so PRIO also resets the count when the buff falls off." },
     },
 
     spells = {
@@ -376,7 +385,7 @@ local spec = {
         { label = "Rend (target)",        kind = "buff",  spell = ID_REND },
         { label = "Sudden Death stacks",  kind = "stacks", spell = ID_SUDDENDEATH },
         { label = "Collateral Dmg stacks", kind = "stacks", spell = ID_COLLATERAL },
-        { label = "Exec. Precision stacks", kind = "stacks", spell = ID_EXECPREC },
+        { label = "Exec. Precision stacks", kind = "stacks", spell = ID_EXECPREC_AURA },
         { label = "Imminent Demise stacks", kind = "stacks", spell = ID_IMMINENT },
         { label = "Colossus Smash (t)",   kind = "buff",  spell = ID_COLOSSUS_DBF },
         { label = "Sweeping Strikes",     kind = "buff",  spell = ID_SWEEPING },
@@ -400,7 +409,7 @@ local spec = {
         buffs = {
             { label = "Sudden Death",           spell = ID_SUDDENDEATH },
             { label = "Imminent Demise",        spell = ID_IMMINENT },
-            { label = "Executioner's Precision", spell = ID_EXECPREC },
+            { label = "Executioner's Precision", spell = ID_EXECPREC_AURA },
         },
         -- Predicted counters (advanced by our casts; no readable aura count).
         predStacks = {

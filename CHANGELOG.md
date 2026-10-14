@@ -1,5 +1,14 @@
 # PRIO Changelog
 
+## 0.10.29 (alpha)
+- **Fix (Arms): Executioner's Precision never counted up.** The game casts Execute under a different spell ID (281000) than the one PRIO listed (163201), so PRIO never saw your Executes and the count stayed at 0. Every "Mortal Strike at 2 Executioner's Precision" line was dead as a result, mostly in the execute-phase lists. PRIO now recognises the real cast ID, so:
+  - each **Execute adds 1 stack (max 2)**, and **Mortal Strike resets it to 0**;
+  - it only counts when you have the **Executioner's Precision talent**;
+  - if you **track the Executioner's Precision buff** in your Cooldown Manager (optional), PRIO also resets the count to 0 when the buff falls off.
+  The same count drives both the main recommendation and the upcoming icons in the queue.
+- Slayer's Bladestorm is now recognised by the ID the game actually casts (446035), so "didn't just cast" checks see it.
+- The Arms debug windows now read the Executioner's Precision buff itself (386633) instead of the talent ID.
+
 ## 0.10.28 (alpha)
 - **Deathstalker's Mark is read by presence from Tracked Buffs, with a backstop.** The Mark has no ability icon, so its Tracked Buff item is the only Cooldown Manager frame for it, and that kind of item can fail to pick up a debuff on your target until you switch targets. When the item says "not up", PRIO now also asks the game directly for *your* aura of that name on the current target. A hit means the Mark is up; no hit (or an unreadable result) changes nothing. Stacks are not read at all. This backstop applies to any buff-tracked aura you put on a target, for every spec.
 - The Mark now shows in the main debug window (`Deathstalker's Mark (DS)`), and its setup hint says what PRIO actually does with it: when the Mark is missing and Darkest Night isn't pending, Garrote moves to the top to re-apply it.

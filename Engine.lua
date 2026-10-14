@@ -737,6 +737,15 @@ function Engine:OnSpecChanged()
             if ok and base and base ~= spellID then idToKey[base] = key end
         end
     end
+    -- Explicit cast-ID aliases: some spells SUCCEED under a different id than the one we
+    -- list, and the game does not report it as an override (Arms Execute is cast as 281000,
+    -- listed as 163201). Without this the cast never resolves to its key, so cast-driven
+    -- predictions (stack counters, last cast, charges) silently never advance.
+    if spec.castAliases then
+        for aliasID, key in pairs(spec.castAliases) do
+            if spec.spells[key] then idToKey[aliasID] = key end
+        end
+    end
 
     self:MigrateCustom()
 end
@@ -974,7 +983,10 @@ PRIO:On("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
     -- Mortal Strike) from our own cast.
     if spec.stackTrack then
         Engine.P.stacks = Engine.P.stacks or {}
-        Engine:AdvanceStacks(Engine.P.stacks, key)
+        if Engine:AdvanceStacks(Engine.P.stacks, key) then
+            Engine.P.stackTouched = Engine.P.stackTouched or {}
+            for counterID in pairs(spec.stackTrack) do Engine.P.stackTouched[counterID] = GetTime() end
+        end
     end
     if spec.OnCast then
         pcall(spec.OnCast, Engine.P, key, GetTime())
@@ -1736,21 +1748,57 @@ end
 -- Apply a cast's declared effects to the look-ahead sim: consume/grant auras,
 -- and adjust the predicted Master of the Elements / Stormkeeper stacks. This lets
 -- the queue reflect a beat ahead (Lava Burst eats Purging Flames, etc.).
+-- Is a stack counter's talent taken? No `talent` on the entry -> always counts.
+local function StackTalented(cfg)
+    if not cfg.talent then return true end
+    return API.IsTalentSelected(cfg.talent) or API.IsKnown(cfg.talent) or false
+end
+
 -- Advance a predicted stack table (P.stacks live, or the sim copy) for a cast `key`.
--- spec.stackTrack is keyed by the buff's aura ID: gen = cast keys that add a stack
--- (capped at max), reset = cast keys that zero it. reset wins if a key is in both.
+-- spec.stackTrack is keyed by the counter ID: gen = cast keys that add a stack (capped at
+-- max), reset = cast keys that zero it. reset wins if a key is in both. An entry with a
+-- `talent` only counts while that talent is taken (otherwise it holds 0). Returns true if
+-- any counter changed, so the live caller can stamp the time (see SyncStacks).
 function Engine:AdvanceStacks(stacks, key)
-    if not (spec and spec.stackTrack and key and stacks) then return end
-    for auraID, cfg in pairs(spec.stackTrack) do
+    if not (spec and spec.stackTrack and key and stacks) then return false end
+    local touched = false
+    for counterID, cfg in pairs(spec.stackTrack) do
         local isReset, isGen = false, false
         for _, k in ipairs(cfg.reset or {}) do if k == key then isReset = true; break end end
         if not isReset then
             for _, k in ipairs(cfg.gen or {}) do if k == key then isGen = true; break end end
         end
-        if isReset then
-            stacks[auraID] = 0
+        if not StackTalented(cfg) then
+            stacks[counterID] = 0
+        elseif isReset then
+            stacks[counterID] = 0; touched = true
         elseif isGen then
-            stacks[auraID] = math.min(cfg.max or 99, (stacks[auraID] or 0) + 1)
+            stacks[counterID] = math.min(cfg.max or 99, (stacks[counterID] or 0) + 1); touched = true
+        end
+    end
+    return touched
+end
+
+-- Live correction of the predicted counters from the real buff: if the entry names an
+-- `aura` that is tracked in the Cooldown Manager and that aura reads MISSING, the buff
+-- is gone (expired, or consumed by something we didn't model), so the counter is 0.
+-- A short grace after our own counted cast skips the read, because the Cooldown Viewer
+-- can lag a tick behind the cast that just applied the buff. Untracked / unreadable ->
+-- no correction (the cast-driven count stands). Also zeroes untalented counters.
+function Engine:SyncStacks(now)
+    if not (spec and spec.stackTrack) then return end
+    local P = self.P
+    P.stacks = P.stacks or {}
+    P.stackTouched = P.stackTouched or {}
+    for counterID, cfg in pairs(spec.stackTrack) do
+        if not StackTalented(cfg) then
+            P.stacks[counterID] = 0
+        elseif cfg.aura and (P.stacks[counterID] or 0) > 0 and API.IsTracked(cfg.aura) then
+            local grace = cfg.grace or 1.0
+            if now - (P.stackTouched[counterID] or -1e9) > grace
+                and API.IsAuraActive(cfg.aura) == false then
+                P.stacks[counterID] = 0
+            end
         end
     end
 end
@@ -1872,6 +1920,9 @@ function Engine:Evaluate()
     -- Execute overlay: refresh the latch, then swap to the mode's execute variant
     -- (st -> st_execute, aoe -> aoe_execute) while we're in execute range.
     self:UpdateExecuteRange()
+    -- Correct cast-predicted stack counters from the real buff BEFORE the state and the
+    -- look-ahead copy them, so both the primary and the queue start from the same count.
+    self:SyncStacks(GetTime())
     local exMode = spec.executeMode and spec.executeMode[mode]
     if exMode and self:InExecuteRange() then mode = exMode end
     -- Phase overlay (generic): swap to the mode's phase variant (st -> st_meta, aoe ->
