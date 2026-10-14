@@ -117,3 +117,47 @@ test("EP look-ahead: Mortal Strike in the queue resets the predicted count", fun
     eq(r.queue[1].id, EXECUTE, "after the predicted Mortal Strike EP is 0")
     done()
 end)
+
+-- 0.10.30 Slayer lists (log-validated): spot checks on the rows that changed.
+local SS, CS, AVATAR, OVERPOWER, CLEAVE, REND, HS = 260708, 167105, 107574, 7384, 845, 772, 1269383
+local function slayerBase()
+    arms()
+    H.S.tracked[REND] = true; H.S.auras[REND] = true             -- Rend up, not refreshable
+    H.S.tracked[CS] = true; H.S.auras[CS] = false                 -- Colossus Smash debuff down
+    H.S.tracked[SS] = true
+    H.S.ready[CS] = false; H.S.ready[AVATAR] = false; H.S.ready[227847] = false
+    H.S.ready[HS] = false; H.S.usable[HS] = false
+    H.S.glows[EXECUTE] = false; H.S.usableClean[EXECUTE] = false
+end
+
+test("Slayer 2 targets: Sweeping Strikes only when the buff is down", function()
+    slayerBase(); H.S.enemies = 2
+    H.S.auras[SS] = false
+    eq(H.Engine:Evaluate().primary.id, SS, "SS dropped -> Sweeping Strikes first")
+    H.S.auras[SS] = true
+    eq(H.Engine:Evaluate().primary.id, MORTAL, "SS up -> single-target play (Mortal Strike), not Cleave")
+    done()
+end)
+
+test("Slayer AoE: Sweeping Strikes not re-asked while up; Cleave leads at 3+", function()
+    slayerBase(); H.S.enemies = 3; H.S.auras[SS] = true
+    eq(H.Engine:Evaluate().primary.id, CLEAVE, "3 targets, SS up -> Cleave")
+    done()
+end)
+
+test("Slayer ST: Avatar waits for Colossus Smash", function()
+    slayerBase(); H.S.enemies = 1
+    H.S.ready[AVATAR] = true
+    falsy(H.Engine:Evaluate().primary.id == AVATAR, "Avatar ready but Colossus Smash on cooldown -> not Avatar")
+    H.S.ready[CS] = true
+    eq(H.Engine:Evaluate().primary.id, AVATAR, "Colossus Smash ready -> Avatar first")
+    done()
+end)
+
+test("Slayer ST-Execute: Execute above Overpower", function()
+    slayerBase(); H.S.enemies = 1
+    H.S.usableClean[EXECUTE] = true                               -- in execute range, no proc
+    H.S.ready[MORTAL] = false
+    eq(H.Engine:Evaluate().primary.id, EXECUTE, "execute range -> Execute before Overpower")
+    done()
+end)

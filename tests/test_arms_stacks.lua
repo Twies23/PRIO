@@ -147,12 +147,17 @@ test("execute overlay swaps the active mode", function()
     H.S.usableClean[EXECUTE] = true; H.S.glows[EXECUTE] = false
     eq(H.Engine:Evaluate().debug.mode, "st_execute", "1 target, in range -> st_execute")
 
-    -- 2 targets: AoE tier (cleave dropped), and in range -> AoE (Execute).
+    -- 2 targets: the "2 Targets" tier (ST + Sweeping Strikes), and its execute variant.
     H.S.enemies = 2
-    eq(H.Engine:Evaluate().debug.mode, "aoe_execute", "2 targets, in range -> aoe_execute")
+    eq(H.Engine:Evaluate().debug.mode, "cleave_execute", "2 targets, in range -> cleave_execute")
+    -- 3 targets: AoE.
+    H.S.enemies = 3
+    eq(H.Engine:Evaluate().debug.mode, "aoe_execute", "3 targets, in range -> aoe_execute")
     H.S.usableClean[EXECUTE] = false
     H.Engine:ResetExecuteRange()
-    eq(H.Engine:Evaluate().debug.mode, "aoe", "2 targets, not in range -> aoe (no cleave tier)")
+    eq(H.Engine:Evaluate().debug.mode, "aoe", "3 targets, not in range -> aoe")
+    H.S.enemies = 2
+    eq(H.Engine:Evaluate().debug.mode, "cleave", "2 targets, not in range -> 2 Targets tier")
 
     H.reset(); H.rebind()
 end)

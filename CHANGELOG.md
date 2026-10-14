@@ -1,5 +1,16 @@
 # PRIO Changelog
 
+## 0.10.30 (alpha)
+- **Arms Slayer lists rebuilt from real logs.** Every decision in four top Ula'tek logs and a top Coiled Altar kill was replayed through PRIO. The old lists recommended what those players pressed 29% of the time; the new ones get 45%. **Reset your Arms lists to default to pick this up** (you'll be prompted if you customised them).
+  - **New "2 Targets" tier.** On two targets top players play single target and just keep Sweeping Strikes up. Cleave now only leads from **3+ targets** (adjustable in Options).
+  - **Sweeping Strikes is only asked for when it has dropped.** It used to come back every time it came off cooldown. **Track the Sweeping Strikes buff** in your Cooldown Manager for this (it's in the Arms setup checklist).
+  - **Avatar waits for Colossus Smash** instead of firing on its own.
+  - **Spend a Sudden Death proc right before Bladestorm.** This replaces the old "Execute before Bladestorm at under 3 Imminent Demise" line; top players were almost always at 3 stacks already.
+  - **Heroic Strike is now in the AoE lists.** It used to appear only as the Slam replacement at the very bottom.
+  - **In execute range, Execute comes before Overpower.**
+  - Cleave refreshes Rend before Colossus Smash when Rend is about to run out, rather than whenever you didn't just Cleave.
+- Bladestorm is a channel and nothing is pressable during it; the Mortal Strikes you see during it are Unhinged procs. They also consume Executioner's Precision, which PRIO already accounts for.
+
 ## 0.10.29 (alpha)
 - **Fix (Arms): Executioner's Precision never counted up.** The game casts Execute under a different spell ID (281000) than the one PRIO listed (163201), so PRIO never saw your Executes and the count stayed at 0. Every "Mortal Strike at 2 Executioner's Precision" line was dead as a result, mostly in the execute-phase lists. PRIO now recognises the real cast ID, so:
   - each **Execute adds 1 stack (max 2)**, and **Mortal Strike resets it to 0**;
