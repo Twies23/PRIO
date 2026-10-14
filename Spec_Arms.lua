@@ -306,6 +306,9 @@ local spec = {
     -- (a proc-glow or predicted-stack read) so the user picks a MEANING, not a glow.
     condPresets = {
         { key = "suddenDeath",  label = "Sudden Death up",       clause = glowing(163201) },
+        -- 2 stacks: the count Blizzard draws on the Execute icon (Execute must be in the
+        -- Cooldown Manager). Only fires when that number reads clean -- never on a guess.
+        { key = "suddenDeath2", label = "Sudden Death (2)",      clause = { type = "iconCountMin", spell = 163201, v = 2 } },
         { key = "immDemise3",   label = "Imminent Demise (3)",   clause = glowing(ID_BLADESTORM) },
         { key = "immDemiseLt3", label = "Imminent Demise (<3)",  clause = notGlowing(ID_BLADESTORM) },
         { key = "collateral3",  label = "Collateral Damage (3)", clause = glowing(845) },
@@ -414,7 +417,7 @@ local spec = {
     debug = {
         { label = "Overpower charges",    kind = "charges", key = "Overpower" },
         { label = "Rend (target)",        kind = "buff",  spell = ID_REND },
-        { label = "Sudden Death stacks",  kind = "stacks", spell = ID_SUDDENDEATH },
+        { label = "Sudden Death stacks",  kind = "iconcount", spell = 163201 },   -- number on the Execute icon
         { label = "Collateral Dmg stacks", kind = "stacks", spell = ID_COLLATERAL },
         { label = "Exec. Precision stacks", kind = "stacks", spell = ID_EXECPREC_AURA },
         { label = "Imminent Demise stacks", kind = "stacks", spell = ID_IMMINENT },

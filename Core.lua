@@ -375,6 +375,17 @@ SlashCmdList.PRIO = function(msg)
         if PRIO.Debug then PRIO.Debug:Toggle() end
     elseif msg == "rotdebug" or msg == "rotation" then
         if PRIO.RotationDebug then PRIO.RotationDebug:Toggle() end
+    elseif msg:match("^iconcount") then
+        -- What a spell's Cooldown Manager icon exposes about the number drawn on it
+        -- (default: Execute 163201 -> Sudden Death stacks). Run with 1 and with 2 stacks,
+        -- in AND out of combat.
+        local API = PRIO.API
+        local sid = tonumber(msg:match("(%d+)")) or 163201
+        print(("|cff0cd29fPRIO|r icon count probe (%s):")
+            :format(InCombatLockdown() and "|cff0cd29fIN COMBAT|r" or "|cffe0a03aout of combat|r"))
+        local ok, lines = pcall(API.IconCountProbe, sid)
+        if ok and lines then for _, l in ipairs(lines) do print(l) end
+        else print("  |cffe0685aprobe failed:|r " .. tostring(lines)) end
     elseif msg == "stackprobe" then
         -- Diagnose stack-count reads: for each buff in the spec's rotationDebug (else
         -- its auras), dump raw .applications + rendered FontStrings. Run IN COMBAT with

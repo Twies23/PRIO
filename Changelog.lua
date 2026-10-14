@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.10.32", {
+        "Arms: PRIO tries to read the Sudden Death stack count (1 or 2) off the Execute icon in your Cooldown Manager; it shows in the debug window and a new Sudden Death (2) condition can use it. It is only used when the number is readable; if Blizzard hides it in combat, the condition never fires. New /prio iconcount shows what the icon exposes: run it with 1 and 2 stacks, in and out of combat.",
+    } },
     { "0.10.31", {
         "Arms is back to four lists (ST, AoE, ST Exec, AoE Exec); the 2 Targets list is gone. AoE start is set by AoE at in the Behavior panel (default 2). The other 0.10.30 list changes stay -- reset Arms lists to default.",
     } },

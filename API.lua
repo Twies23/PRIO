@@ -928,6 +928,99 @@ function API.AuraStackCount(spellID)
     return nil
 end
 
+-- The count Blizzard draws ON A SPELL'S COOLDOWN MANAGER ICON -- e.g. the 1 / 2 Sudden
+-- Death stacks shown on Execute. It sits in one of three spots depending on the frame
+-- layout (EllesmereUI reads the same ones): frame.Applications.Applications (aura stacks
+-- on an item), frame.Icon.Applications (container-Icon items), frame.ChargeCount.Current
+-- (spell charges). Returns:
+--   n, "text"   -- the number, read from text that is CLEAN (exact)
+--   nil, "secret" -- a count is on screen but its text is a secret value (combat lock)
+--   nil, "none" / "untracked" -- nothing drawn / the spell isn't in the Cooldown Manager
+-- Never compares or stores a secret. Callers fail closed on nil.
+local function countSpots(f)
+    local out = {}
+    local ok = pcall(function()
+        if f.Applications then out[#out + 1] = { "Applications", f.Applications.Applications or f.Applications } end
+        if f.Icon and f.Icon.Applications then out[#out + 1] = { "Icon.Applications", f.Icon.Applications } end
+        if f.ChargeCount then out[#out + 1] = { "ChargeCount", f.ChargeCount.Current or f.ChargeCount } end
+    end)
+    return ok and out or {}
+end
+API.IconCountSpots = countSpots
+
+function API.IconCount(spellID)
+    if not spellID then return nil, "none" end
+    local list = entriesFor(spellID)
+    if not list or #list == 0 then return nil, "untracked" end
+    local sawSecret = false
+    for i = 1, #list do
+        for _, spot in ipairs(countSpots(list[i].frame)) do
+            local fs = spot[2]
+            local okV, vis = pcall(function() return fs.IsVisible and fs:IsVisible() end)
+            if okV and vis ~= nil and not IsSecret(vis) and vis then
+                local okT, txt = pcall(function() return fs.GetText and fs:GetText() end)
+                if okT and type(txt) == "string" then
+                    if IsSecret(txt) then
+                        sawSecret = true
+                    else
+                        local n = tonumber(txt:match("%d+") or "")
+                        if n then return n, "text" end
+                    end
+                end
+            end
+        end
+    end
+    return nil, sawSecret and "secret" or "none"
+end
+
+-- /prio iconcount: everything each count spot on a spell's icon(s) exposes right now,
+-- so one in-combat run settles which signal (if any) can tell 1 from 2. Also hooks each
+-- spot's SetText once and reports how many times Blizzard has rewritten it since.
+local iconSetTextCalls = setmetatable({}, { __mode = "k" })
+function API.IconCountProbe(spellID)
+    local out = {}
+    local function add(f, ...)
+        local ok, line = pcall(string.format, f, ...)
+        out[#out + 1] = ok and line or "  <format failed>"
+    end
+    local function val(v)
+        if v == nil then return "nil" end
+        local okS, secret = pcall(IsSecret, v)
+        if okS and secret then return "|cffe0a03a<SECRET>|r" end
+        local ok, s = pcall(tostring, v)
+        return ok and s or "?"
+    end
+    local function get(fn) local ok, v = pcall(fn); if ok then return val(v) end return "|cffe0685athrew|r" end
+    pcall(API.RefreshTracked)
+    add("|cff0cd29f%s|r (%s)  viewers: |cff9fb0be%s|r", tostring(API.SpellName(spellID) or "?"),
+        tostring(spellID), trackedViewers[spellID] or "NONE")
+    local list = trackedEntries[spellID]
+    if not list or #list == 0 then
+        add("  |cffe0685anot in any Cooldown Viewer -- add it to Essential or Utility|r")
+        return out
+    end
+    for i = 1, #list do
+        local e = list[i]
+        add("  |cff6fb3ff[%s]|r frame shown=%s", e.viewer, get(function() return e.frame:IsShown() end))
+        local spots = countSpots(e.frame)
+        if #spots == 0 then add("      no count regions on this frame") end
+        for _, spot in ipairs(spots) do
+            local fs = spot[2]
+            if hooksecurefunc and type(fs) == "table" and fs.SetText and iconSetTextCalls[fs] == nil then
+                iconSetTextCalls[fs] = 0
+                pcall(hooksecurefunc, fs, "SetText", function(self) iconSetTextCalls[self] = (iconSetTextCalls[self] or 0) + 1 end)
+            end
+            add("      %s: shown=%s visible=%s text=%s width=%s  setText calls=%s", spot[1],
+                get(function() return fs:IsShown() end), get(function() return fs:IsVisible() end),
+                get(function() return fs:GetText() end), get(function() return fs.GetStringWidth and fs:GetStringWidth() end),
+                tostring(iconSetTextCalls[fs]))
+        end
+    end
+    local n, how = API.IconCount(spellID)
+    add("  |cff5a6a76PRIO reads:|r count=%s (%s)  glow=%s", val(n), tostring(how), val(API.SpellGlowing(spellID)))
+    return out
+end
+
 -- Diagnostic: dump everything we can learn about a buff's stack count, so we can see
 -- in-game which source is readable. Prints: the raw .applications (and whether it's
 -- secret), IsAuraActive, what AuraStackCount resolves to, and every FontString text

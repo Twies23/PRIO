@@ -10,7 +10,8 @@ lua.execute(r"""
 NOW = 1000
 function GetTime() return NOW end
 function wipe(t) for k in pairs(t) do t[k] = nil end return t end
-function issecretvalue(v) return false end
+SECRET_TEXT = "<<secret>>"   -- stands in for a secret string in combat
+function issecretvalue(v) return v == SECRET_TEXT end
 function hooksecurefunc(t, name, hook)
     local orig = t[name]
     t[name] = function(...) local r = orig(...); hook(...); return r end
@@ -31,7 +32,7 @@ C_NamePlate = { GetNamePlates = function() return {} end }
 Enum = { PowerType = { ComboPoints = 4, Energy = 3 } }
 
 -- cooldownID -> spellID
-CDINFO = { [1] = 703, [2] = 703, [3] = 1943, [4] = 999, [5] = 381632, [7] = 457052 }
+CDINFO = { [1] = 703, [2] = 703, [3] = 1943, [4] = 999, [5] = 381632, [7] = 457052, [8] = 163201 }
 C_CooldownViewer = {
     GetCooldownViewerCooldownInfo = function(cdID) return { spellID = CDINFO[cdID] } end,
     GetCooldownViewerCategorySet = function() return {} end,
@@ -60,8 +61,17 @@ ESS_RUPTURE  = mkframe(3, false)
 ESS_ONLY     = mkframe(4, true)    -- an id that lives ONLY in an ability viewer
 BAR_IMPG     = mkframe(5, true)    -- Improved Garrote tracked bar
 BUFF_MARK    = mkframe(7, false)   -- Deathstalker's Mark: Tracked Buff ONLY, no ability icon
+-- Execute's Essential icon, with the Sudden Death stack number drawn on it.
+local function mkfs()
+    return { _text = "", _shown = false,
+             GetText = function(self) return self._text end, SetText = function(self, t) self._text = t end,
+             IsShown = function(self) return self._shown end, IsVisible = function(self) return self._shown end,
+             GetStringWidth = function() return 7 end }
+end
+ESS_EXEC = mkframe(8, false)
+ESS_EXEC.Applications = { Applications = mkfs() }
 
-EssentialCooldownViewer = { itemFramePool = pool({ ESS_GARROTE, ESS_RUPTURE, ESS_ONLY }) }
+EssentialCooldownViewer = { itemFramePool = pool({ ESS_GARROTE, ESS_RUPTURE, ESS_ONLY, ESS_EXEC }) }
 BuffIconCooldownViewer  = { itemFramePool = pool({ BUFF_GARROTE, BUFF_MARK }) }
 BuffBarCooldownViewer   = { itemFramePool = pool({ BAR_IMPG }) }
 
@@ -156,6 +166,25 @@ BuffIconCooldownViewer.itemFramePool = { EnumerateActive = function()
 end }
 NOW = NOW + 2
 check("late-acquired buff icon is found without a spec change", API.IsAuraActive(315496), true)
+
+-- 10b. SUDDEN DEATH STACKS: the number Blizzard draws on the Execute icon.
+local SD = ESS_EXEC.Applications.Applications
+local cnt, how = API.IconCount(163201)
+check("no number drawn -> nil", cnt, nil); check("no number drawn -> none", how, "none")
+SD._shown = true; SD._text = "2"
+cnt, how = API.IconCount(163201)
+check("clean '2' on the icon -> 2", cnt, 2); check("clean '2' -> text", how, "text")
+SD._text = "1"
+check("clean '1' on the icon -> 1", (API.IconCount(163201)), 1)
+SD._text = SECRET_TEXT
+cnt, how = API.IconCount(163201)
+check("secret text -> nil (never guessed)", cnt, nil); check("secret text -> secret", how, "secret")
+SD._shown = false; SD._text = "2"
+check("hidden region is ignored", (API.IconCount(163201)), nil)
+local _, h2 = API.IconCount(424242)
+check("spell not in the Cooldown Manager -> untracked", h2, "untracked")
+local okP, pl = pcall(API.IconCountProbe, 163201)
+check("icon count probe runs", okP, true)
 
 -- 11. The probe runs clean.
 local ok, lines = pcall(API.AuraFrameProbe, 703)

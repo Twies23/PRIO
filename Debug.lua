@@ -323,6 +323,18 @@ function Debug:Update()
                 else
                     set(id, yesno(P.mote))
                 end
+            elseif d.kind == "iconcount" then
+                local n, how = API.IconCount and API.IconCount(d.spell)
+                if n then
+                    set(id, ("|cff0cd29f%d|r  |cff5a6a76(icon text)|r"):format(n))
+                elseif how == "secret" then
+                    local g = API.SpellGlowing and API.SpellGlowing(d.spell)
+                    set(id, g and "|cffe0a03aup, count secret|r" or "|cff5a6a76none|r")
+                elseif how == "untracked" then
+                    set(id, "|cffe0a03aadd the spell to the Cooldown Manager|r")
+                else
+                    set(id, API.SpellGlowing and API.SpellGlowing(d.spell) and "|cff0cd29fup|r  |cff5a6a76(glow, no number)|r" or "|cff5a6a76none|r")
+                end
             elseif d.kind == "stacks" then
                 local s = API.AuraStackCount and API.AuraStackCount(d.spell)
                 if s and s > 0 then

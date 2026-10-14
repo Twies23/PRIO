@@ -1,5 +1,11 @@
 # PRIO Changelog
 
+## 0.10.32 (alpha)
+- **Arms: PRIO now tries to read the Sudden Death stack count (1 or 2) off the Execute icon in your Cooldown Manager.** It shows in the Arms debug window, and there is a new **"Sudden Death (2)"** condition in the editor. The default lists don't use it yet.
+  - The number is only used when the game lets addons read it. Blizzard hides some numbers from addons in combat. If it's hidden, the condition simply never fires and the debug window says **"up, count secret"**. PRIO never guesses a 2.
+  - Execute has to be in your Cooldown Manager (Essential or Utility) for this.
+- **New `/prio iconcount`**: shows exactly what the Execute icon gives PRIO about that number. Run it with 1 and with 2 Sudden Death stacks, both out of combat and in combat (a training dummy is fine), and send the output; it tells us whether the count can be used in combat.
+
 ## 0.10.31 (alpha)
 - **Arms is back to four lists: ST, AoE, ST (Exec) and AoE (Exec).** The separate "2 Targets" list from 0.10.30 is gone. When the AoE list starts is set by **"AoE at" in the Behavior panel** (default 2 enemies, as before). All the other 0.10.30 list changes stay. Reset your Arms lists to default to pick this up.
 

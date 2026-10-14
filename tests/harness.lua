@@ -120,6 +120,7 @@ function API.AuraStackSource(id)
     return nil, nil
 end
 function API.SpellGlowing(id) local v = S.glows[id]; if v == nil then return nil end; return v and true or false end
+function API.IconCount(id) local v = S.iconCount and S.iconCount[id]; if v == nil then return nil, "secret" end; return v, "text" end
 function API.AuraRemaining(id) return nil end          -- secret in "combat"; use predicted
 function API.InPandemic(id) local v = S.pandemic and S.pandemic[id]; if v == nil then return nil end; return v and true or false end
 function API.HasPowerCost(id) return S.powerCost and S.powerCost[id] ~= nil end

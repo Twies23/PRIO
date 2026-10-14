@@ -155,3 +155,17 @@ test("Slayer ST-Execute: Execute above Overpower", function()
     eq(H.Engine:Evaluate().primary.id, EXECUTE, "execute range -> Execute before Overpower")
     done()
 end)
+
+-- Sudden Death (2): reads the number drawn on the Execute icon; unreadable fails closed.
+test("Sudden Death (2) preset: icon count 2 passes, 1 fails, unreadable fails closed", function()
+    arms()
+    H.S.iconCount = { [EXECUTE] = 2 }
+    truthy(evalClause({ type = "preset:suddenDeath2" }), "2 on the icon -> Sudden Death (2)")
+    H.S.iconCount = { [EXECUTE] = 1 }
+    falsy(evalClause({ type = "preset:suddenDeath2" }), "1 on the icon -> not 2")
+    H.S.iconCount = {}
+    falsy(evalClause({ type = "preset:suddenDeath2" }), "secret / unreadable -> never fires")
+    eq(H.Cond.ClauseStatus({ type = "preset:suddenDeath2" }, H.Engine:CurrentState(), nil), "open",
+       "editor shows it as can't-tell")
+    done()
+end)

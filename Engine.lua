@@ -517,6 +517,13 @@ local function EvalClause(cl, S, selfSid)
     -- Proc glow: clean boolean when readable; nil (API missing) -> treat as not glowing.
     elseif t == "glowing" then return API.SpellGlowing(sid) == true
     elseif t == "notGlowing" then return API.SpellGlowing(sid) == false
+    -- Count drawn on the spell's Cooldown Manager icon (Sudden Death stacks on Execute).
+    -- Exact when its text reads clean; unreadable (nil) fails CLOSED both ways.
+    elseif t == "iconCountMin" or t == "iconCountMax" then
+        local n = API.IconCount and API.IconCount(sid)
+        if n == nil then return false end
+        if t == "iconCountMin" then return n >= (cl.v or 1) end
+        return n <= (cl.v or 1)
     -- Predicted stacks (our own cast counter). Always defined (0 when none).
     elseif t == "predStackMin" then return PredStacks(sid, S) >= (cl.v or 1)
     elseif t == "predStackMax" then return PredStacks(sid, S) <= (cl.v or 1)
@@ -643,6 +650,10 @@ function Cond.ClauseStatus(cl, S, selfSid)
     elseif t == "stacksMin" or t == "stacksMax" then
         local s = StackCount(sid); if s == nil then return "open" end
         local ok; if t == "stacksMin" then ok = s >= (cl.v or 1) else ok = s <= (cl.v or 1) end
+        return ok and "pass" or "fail"
+    elseif t == "iconCountMin" or t == "iconCountMax" then
+        local n = API.IconCount and API.IconCount(sid); if n == nil then return "open" end
+        local ok; if t == "iconCountMin" then ok = n >= (cl.v or 1) else ok = n <= (cl.v or 1) end
         return ok and "pass" or "fail"
     elseif t == "glowing" or t == "notGlowing" then
         local g = API.SpellGlowing(sid); if g == nil then return "open" end
