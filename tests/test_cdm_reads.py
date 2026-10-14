@@ -183,6 +183,17 @@ SD._shown = false; SD._text = "2"
 check("hidden region is ignored", (API.IconCount(163201)), nil)
 local _, h2 = API.IconCount(424242)
 check("spell not in the Cooldown Manager -> untracked", h2, "untracked")
+-- Text secret, but the spell API's cast count reads clean -> use it (same number).
+CASTCOUNT = { [163201] = 2 }
+C_Spell.GetSpellCastCount = function(id) return CASTCOUNT[id] end
+SD._shown = true; SD._text = SECRET_TEXT
+cnt, how = API.IconCount(163201)
+check("secret text + clean cast count -> 2", cnt, 2); check("...from castCount", how, "castCount")
+CASTCOUNT[163201] = SECRET_TEXT          -- cast count secret too -> still never guessed
+cnt, how = API.IconCount(163201)
+check("secret text + secret cast count -> nil", cnt, nil); check("...secret", how, "secret")
+CASTCOUNT[163201] = nil
+SD._shown = false
 local okP, pl = pcall(API.IconCountProbe, 163201)
 check("icon count probe runs", okP, true)
 

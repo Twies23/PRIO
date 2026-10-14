@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.10.33", {
+        "Sudden Death stacks: the 1/2 on Execute is drawn as its charge/cast count, and the on-screen text is hidden from addons in combat. PRIO now also reads the same number from Execute's spell information, which can be readable when the text isn't. Still only used when genuinely readable. /prio iconcount now prints those fields too.",
+    } },
     { "0.10.32", {
         "Arms: PRIO tries to read the Sudden Death stack count (1 or 2) off the Execute icon in your Cooldown Manager; it shows in the debug window and a new Sudden Death (2) condition can use it. It is only used when the number is readable; if Blizzard hides it in combat, the condition never fires. New /prio iconcount shows what the icon exposes: run it with 1 and 2 stacks, in and out of combat.",
     } },

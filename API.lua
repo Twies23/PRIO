@@ -948,10 +948,46 @@ local function countSpots(f)
 end
 API.IconCountSpots = countSpots
 
+-- The SAME number through the spell API instead of the icon text. The Execute icon draws
+-- Sudden Death in its ChargeCount spot (verified in game, 0.10.32 probe), i.e. as the
+-- spell's cast count / charges -- and those API fields can read clean where the rendered
+-- text is secret. Tries the listed id and its live override (Execute casts as 281000).
+-- Only a CLEAN number is ever returned.
+local function spellCountIDs(spellID)
+    local ids = { spellID }
+    if C_Spell and C_Spell.GetOverrideSpell then
+        local ok, o = pcall(C_Spell.GetOverrideSpell, spellID)
+        o = ok and SafeNum(o) or nil
+        if o and o ~= spellID then ids[2] = o end
+    end
+    return ids
+end
+local function spellApiCount(spellID)
+    for _, id in ipairs(spellCountIDs(spellID)) do
+        if C_Spell and C_Spell.GetSpellCastCount then
+            local ok, c = pcall(C_Spell.GetSpellCastCount, id)
+            c = ok and SafeNum(c) or nil
+            if c then return c, "castCount" end
+        end
+        if C_Spell and C_Spell.GetSpellCharges then
+            local ok, ch = pcall(C_Spell.GetSpellCharges, id)
+            if ok and type(ch) == "table" then
+                local maxC, cur = SafeNum(ch.maxCharges), SafeNum(ch.currentCharges)
+                if maxC and maxC > 1 and cur then return cur, "charges" end
+            end
+        end
+    end
+    return nil
+end
+
 function API.IconCount(spellID)
     if not spellID then return nil, "none" end
     local list = entriesFor(spellID)
-    if not list or #list == 0 then return nil, "untracked" end
+    if not list or #list == 0 then
+        local c, how = spellApiCount(spellID)
+        if c then return c, how end
+        return nil, "untracked"
+    end
     local sawSecret = false
     for i = 1, #list do
         for _, spot in ipairs(countSpots(list[i].frame)) do
@@ -970,6 +1006,9 @@ function API.IconCount(spellID)
             end
         end
     end
+    -- Text unreadable or blank: ask the spell API for the same number.
+    local c, how = spellApiCount(spellID)
+    if c then return c, how end
     return nil, sawSecret and "secret" or "none"
 end
 
@@ -1015,6 +1054,18 @@ function API.IconCountProbe(spellID)
                 get(function() return fs:GetText() end), get(function() return fs.GetStringWidth and fs:GetStringWidth() end),
                 tostring(iconSetTextCalls[fs]))
         end
+    end
+    -- The same number via the spell API (cast count / charges), for the id and its override.
+    for _, id in ipairs(spellCountIDs(spellID)) do
+        add("  |cff6fb3ffspell API #%s|r castCount=%s", tostring(id),
+            get(function() return C_Spell.GetSpellCastCount(id) end))
+        add("      charges: cur=%s max=%s isActive=%s cdDuration=%s  usable=%s ready=%s",
+            get(function() return C_Spell.GetSpellCharges(id).currentCharges end),
+            get(function() return C_Spell.GetSpellCharges(id).maxCharges end),
+            get(function() return C_Spell.GetSpellCharges(id).isActive end),
+            get(function() return C_Spell.GetSpellCharges(id).cooldownDuration end),
+            get(function() return API.UsableClean and API.UsableClean(id) end),
+            get(function() return API.IsReady and API.IsReady(id) end))
     end
     local n, how = API.IconCount(spellID)
     add("  |cff5a6a76PRIO reads:|r count=%s (%s)  glow=%s", val(n), tostring(how), val(API.SpellGlowing(spellID)))
