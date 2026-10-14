@@ -130,12 +130,12 @@ local function slayerBase()
     H.S.glows[EXECUTE] = false; H.S.usableClean[EXECUTE] = false
 end
 
-test("Slayer AoE: Sweeping Strikes only when the buff is down, then Cleave", function()
+test("Slayer AoE: Sweeping Strikes first whenever ready, then Cleave", function()
     slayerBase(); H.S.enemies = 2
-    H.S.auras[SS] = false
-    eq(H.Engine:Evaluate().primary.id, SS, "SS dropped -> Sweeping Strikes first")
     H.S.auras[SS] = true
-    eq(H.Engine:Evaluate().primary.id, CLEAVE, "SS up -> not re-asked; Cleave")
+    eq(H.Engine:Evaluate().primary.id, SS, "AoE leads with Sweeping Strikes when it is off cooldown")
+    H.S.ready[SS] = false
+    eq(H.Engine:Evaluate().primary.id, CLEAVE, "Sweeping Strikes on cooldown -> Cleave")
     done()
 end)
 
@@ -144,15 +144,19 @@ test("Slayer ST: Avatar waits for Colossus Smash", function()
     H.S.ready[AVATAR] = true
     falsy(H.Engine:Evaluate().primary.id == AVATAR, "Avatar ready but Colossus Smash on cooldown -> not Avatar")
     H.S.ready[CS] = true
-    eq(H.Engine:Evaluate().primary.id, AVATAR, "Colossus Smash ready -> Avatar first")
+    eq(H.Engine:Evaluate().primary.id, CLEAVE, "Colossus Smash ready -> Cleave first (row 1: Rend missing OR CS ready)")
+    H.S.ready[CLEAVE] = false
+    eq(H.Engine:Evaluate().primary.id, AVATAR, "...then Avatar with Colossus Smash")
     done()
 end)
 
-test("Slayer ST-Execute: Execute above Overpower", function()
+test("Slayer ST-Execute: Overpower before the plain Execute", function()
     slayerBase(); H.S.enemies = 1
     H.S.usableClean[EXECUTE] = true                               -- in execute range, no proc
     H.S.ready[MORTAL] = false
-    eq(H.Engine:Evaluate().primary.id, EXECUTE, "execute range -> Execute before Overpower")
+    eq(H.Engine:Evaluate().primary.id, OVERPOWER, "execute range, no proc -> Overpower, then Execute")
+    H.S.ready[OVERPOWER] = false
+    eq(H.Engine:Evaluate().primary.id, EXECUTE, "Overpower on cooldown -> Execute")
     done()
 end)
 

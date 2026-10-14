@@ -1,5 +1,12 @@
 # PRIO Changelog
 
+## 0.10.34 (alpha)
+- **Arms Slayer: new default lists, and no more AoE (Exec).** Arms now has three lists: **ST, AoE and ST (Exec)**. The AoE list is used at any target health. When AoE starts is still set by "AoE at" in the Behavior panel. **Reset your Arms lists to default to pick this up.**
+  - **ST:** Cleave when Rend is missing or Colossus Smash is ready, Avatar with Colossus Smash, Colossus Smash, Execute right before Bladestorm (under 3 Imminent Demise, Colossus Smash up), Bladestorm in Colossus Smash, Execute on Sudden Death, Heroic Strike, Mortal Strike, Overpower, Cleave to re-apply Rend, Slam.
+  - **AoE:** Sweeping Strikes, Cleave to apply Rend, Avatar with Colossus Smash, Colossus Smash, Cleave at 3 Collateral Damage, Bladestorm, Execute on Sudden Death, Cleave, Overpower, Execute (when usable), Mortal Strike, Heroic Strike, Slam.
+  - **ST (Exec):** Avatar with Colossus Smash, Colossus Smash, Heroic Strike, Bladestorm in Colossus Smash, Mortal Strike at 2 Executioner's Precision, Execute on Sudden Death, Overpower, Execute.
+- The Sweeping Strikes tracking step is removed from the Arms setup checklist; the AoE list no longer needs it.
+
 ## 0.10.33 (alpha)
 - **Sudden Death stacks: a second way to read the count.** Your probe showed that the 1/2 on Execute is drawn as the spell's charge/cast count, and that its on-screen text is hidden from addons in combat. PRIO now also asks the game for that same number through Execute's spell information, which can be readable when the text isn't. As before, the count is only used when it's genuinely readable, and nothing is guessed.
 - `/prio iconcount` now also prints Execute's cast count and charge fields (current, max, recharging, cooldown) for both Execute IDs. Please run it again with 1 and 2 stacks, in and out of combat.

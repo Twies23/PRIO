@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.10.34", {
+        "Arms Slayer: new default ST, AoE and ST (Exec) lists, and AoE (Exec) is removed -- the AoE list runs at any target health. AoE start is still AoE at in the Behavior panel. Reset Arms lists to default to pick this up.",
+    } },
     { "0.10.33", {
         "Sudden Death stacks: the 1/2 on Execute is drawn as its charge/cast count, and the on-screen text is hidden from addons in combat. PRIO now also reads the same number from Execute's spell information, which can be readable when the text isn't. Still only used when genuinely readable. /prio iconcount now prints those fields too.",
     } },

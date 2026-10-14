@@ -76,79 +76,52 @@ local API = PRIO.API
 --   "Collateral Damage (3)" = Cleave glows           (845)
 --   "Exec. Precision (2)"   = predicted counter (Execute casts, reset by Mortal Strike)
 
--- Slayer lists (0.10.30), rebuilt from the posted 12.1 priority and checked decision by
--- decision against four top Ula'tek logs + a top Coiled Altar log (agreement with what
--- those players pressed: 28.6% with the old lists -> 44.8%). Bladestorm is a channel:
--- nothing is pressable during it, and the Mortal Strikes you see are Unhinged procs.
-
--- Sudden Death Execute right before Bladestorm: top players spend the proc first (87% of
--- their pre-Bladestorm Executes were procs; Imminent Demise was usually already at 3).
-local preBladestormExecute = { spell = "Execute",
-    cond = AND(preset("suddenDeath"), cdReady(ID_BLADESTORM), buffUp(ID_COLOSSUS_DBF)) }
+-- Slayer lists (0.10.34): set explicitly by the user. AoE has no separate execute list --
+-- the same AoE list runs at any target health.
+local function debuffUp(id) return { type = "debuffActive", spell = id } end
+local function usable(id) return { type = "usable", spell = id } end
 
 -- Slayer single target.
 local slayer_st = {
-    { spell = "Cleave", cond = AND(refreshable(ID_REND), cdReady(ID_COLOSSUS_DBF)) }, -- refresh Rend before Colossus Smash
-    { spell = "Cleave", cond = debuffDown(ID_REND) },                                 -- apply Rend
-    { spell = "Avatar", cond = OR(cdReady(ID_COLOSSUS_DBF), buffUp(ID_COLOSSUS_DBF)) }, -- with Colossus Smash (refs: 95%)
+    { spell = "Cleave", cond = OR(debuffDown(ID_REND), cdReady(ID_COLOSSUS_DBF)) },          -- no Rend OR Colossus Smash ready
+    { spell = "Avatar", cond = OR(cdReady(ID_COLOSSUS_DBF), debuffUp(ID_COLOSSUS_DBF)) },    -- with Colossus Smash
     { spell = "ColossusSmash" },
-    preBladestormExecute,
-    { spell = "Bladestorm", cond = buffUp(ID_COLOSSUS_DBF) },                         -- inside Colossus Smash
+    { spell = "Execute", cond = AND(preset("immDemiseLt3"), cdReady(ID_BLADESTORM), buffUp(ID_COLOSSUS_DBF)) }, -- before Bladestorm, <3 Imminent Demise
+    { spell = "Bladestorm", cond = buffUp(ID_COLOSSUS_DBF) },
+    { spell = "Execute", cond = preset("suddenDeath") },
     { spell = "HeroicStrike" },
     { spell = "MortalStrike" },
-    { spell = "Execute", cond = preset("suddenDeath") },
     { spell = "Overpower" },
-    { spell = "Cleave", cond = refreshable(ID_REND) },
+    { spell = "Cleave", cond = debuffDown(ID_REND) },
     { spell = "Slam" },
 }
 
--- Slayer ST-Execute: Execute sits ABOVE Overpower (refs pressed it 61:22 over Overpower;
--- it simply isn't castable when rage is short).
+-- Slayer ST-Execute.
 local slayer_st_execute = {
-    { spell = "Cleave", cond = AND(refreshable(ID_REND), cdReady(ID_COLOSSUS_DBF)) },
-    { spell = "Avatar", cond = OR(cdReady(ID_COLOSSUS_DBF), buffUp(ID_COLOSSUS_DBF)) },
+    { spell = "Avatar", cond = OR(cdReady(ID_COLOSSUS_DBF), debuffUp(ID_COLOSSUS_DBF)) },
     { spell = "ColossusSmash" },
     { spell = "HeroicStrike" },
-    preBladestormExecute,
     { spell = "Bladestorm", cond = buffUp(ID_COLOSSUS_DBF) },
-    { spell = "MortalStrike", cond = preset("execPrec2") },                           -- 2 Executioner's Precision
+    { spell = "MortalStrike", cond = preset("execPrec2") },                                  -- 2 Executioner's Precision
     { spell = "Execute", cond = preset("suddenDeath") },
-    { spell = "Execute" },
     { spell = "Overpower" },
-    { spell = "MortalStrike" },
-    { spell = "Slam" },
+    { spell = "Execute" },
 }
 
--- Slayer AoE: Sweeping Strikes only when it has dropped. At 3+ targets top players rate
--- Cleave above Mortal Strike / Heroic Strike / Overpower, level with a Sudden Death Execute.
+-- Slayer AoE (any target health).
 local slayer_aoe = {
-    { spell = "SweepingStrikes", cond = buffDown(ID_SWEEPING) },
+    { spell = "SweepingStrikes" },
     { spell = "Cleave", cond = debuffDown(ID_REND) },
-    { spell = "Avatar", cond = OR(cdReady(ID_COLOSSUS_DBF), buffUp(ID_COLOSSUS_DBF)) },
+    { spell = "Avatar", cond = OR(cdReady(ID_COLOSSUS_DBF), debuffUp(ID_COLOSSUS_DBF)) },
     { spell = "ColossusSmash" },
-    preBladestormExecute,
-    { spell = "Bladestorm", cond = buffUp(ID_COLOSSUS_DBF) },
+    { spell = "Cleave", cond = preset("collateral3") },                                      -- 3 Collateral Damage
+    { spell = "Bladestorm" },
     { spell = "Execute", cond = preset("suddenDeath") },
     { spell = "Cleave" },
-    { spell = "HeroicStrike" },
-    { spell = "MortalStrike" },
     { spell = "Overpower" },
-    { spell = "Slam" },
-}
-
-local slayer_aoe_execute = {
-    { spell = "SweepingStrikes", cond = buffDown(ID_SWEEPING) },
-    { spell = "Cleave", cond = debuffDown(ID_REND) },
-    { spell = "Avatar", cond = OR(cdReady(ID_COLOSSUS_DBF), buffUp(ID_COLOSSUS_DBF)) },
-    { spell = "ColossusSmash" },
-    preBladestormExecute,
-    { spell = "Bladestorm", cond = buffUp(ID_COLOSSUS_DBF) },
-    { spell = "Execute", cond = preset("suddenDeath") },
-    { spell = "Cleave" },
-    { spell = "HeroicStrike" },
+    { spell = "Execute", cond = usable(163201) },                                                -- execute range
     { spell = "MortalStrike" },
-    { spell = "Execute" },
-    { spell = "Overpower" },
+    { spell = "HeroicStrike" },
     { spell = "Slam" },
 }
 
@@ -213,32 +186,12 @@ local colossus_st_execute = {
     { spell = "Slam" },
 }
 
-local colossus_aoe_execute = {
-    { spell = "SweepingStrikes" },
-    { spell = "Cleave", cond = buffDown(ID_REND) },
-    { spell = "Avatar" },
-    { spell = "ThunderousRoar" },
-    { spell = "ChampionsSpear" },
-    { spell = "ColossusSmash" },
-    { spell = "Ravager" },
-    { spell = "Demolish", cond = buffUp(ID_COLOSSUS_DBF) },
-    { spell = "Cleave", cond = preset("collateral3") },
-    { spell = "MortalStrike", cond = preset("execPrec2") },
-    { spell = "Execute", cond = preset("suddenDeath") },
-    { spell = "Execute" },
-    { spell = "Cleave" },
-    { spell = "Overpower" },
-    { spell = "MortalStrike" },
-    { spell = "Slam" },
-}
-
 -- No Cleave tier: Arms uses ST (1 target) and AoE (2+, configurable via "AoE at" in the
--- Behavior panel), each with an execute-phase variant the engine swaps in automatically.
+-- Behavior panel). Only ST swaps to an execute-phase list; AoE runs the same list at any
+-- target health.
 local heroLists = {
-    slayer   = { st = slayer_st,   aoe = slayer_aoe,
-                 st_execute = slayer_st_execute,   aoe_execute = slayer_aoe_execute },
-    colossus = { st = colossus_st, aoe = colossus_aoe,
-                 st_execute = colossus_st_execute, aoe_execute = colossus_aoe_execute },
+    slayer   = { st = slayer_st,   aoe = slayer_aoe,   st_execute = slayer_st_execute },
+    colossus = { st = colossus_st, aoe = colossus_aoe, st_execute = colossus_st_execute },
 }
 
 -- Active hero: Demolish (436358) is the Colossus capstone -- Slayer never has it, so
@@ -263,14 +216,13 @@ local spec = {
     usesPandemic = true,             -- Rend refreshes in its pandemic window
 
     -- Editor mode tabs and the execute-phase overlay map: when the latched "In execute
-    -- range" flag is on, the engine swaps each tier to its execute variant.
+    -- range" flag is on, the engine swaps ST to ST (Exec). AoE has no execute variant.
     modes = {
         { value = "st",          text = "ST" },
         { value = "aoe",         text = "AoE" },
         { value = "st_execute",  text = "ST (Exec)" },
-        { value = "aoe_execute", text = "AoE (Exec)" },
     },
-    executeMode = { st = "st_execute", aoe = "aoe_execute" },
+    executeMode = { st = "st_execute" },
 
     -- Execute-range detection: Execute (163201) is usable only in execute range or on a
     -- Sudden Death proc, so "usable without the proc glow" => in range (see Engine's
@@ -335,8 +287,6 @@ local spec = {
     setup = {
         { kind = "trackedAura", label = "Rend tracked", spell = ID_REND,
           hint = "Track Rend (target debuff) in your Cooldown Manager so PRIO can tell when it's missing or about to fall off." },
-        { kind = "trackedAura", label = "Sweeping Strikes tracked", spell = ID_SWEEPING,
-          hint = "Track Sweeping Strikes (buff) in your Cooldown Manager so PRIO only asks for it when it has dropped. Untracked, PRIO assumes it is down and asks whenever it is off cooldown." },
         { kind = "trackedAura", label = "Colossus Smash tracked", spell = ID_COLOSSUS_DBF,
           hint = "Track Colossus Smash in your Cooldown Manager so PRIO can see its debuff window (drives the Bladestorm / Demolish timing)." },
         { kind = "pandemic", label = "Rend pandemic alert", spell = ID_REND,
