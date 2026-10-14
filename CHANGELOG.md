@@ -1,5 +1,9 @@
 # PRIO Changelog
 
+## 0.10.35 (alpha)
+- **Arms: PRIO no longer collapses to a single button during Bladestorm.** Nothing can be pressed while Bladestorm is up, but the game doesn't report it as a cast or channel, so PRIO used to fall back to one button. It now treats Bladestorm like a channel: for its duration it shows what to press when it ends, based on cooldowns and your list's conditions, and Bladestorm itself isn't shown. If you track the Bladestorm buff in your Cooldown Manager, PRIO switches back the moment it ends. This follows the existing "Advance primary while casting" option, which is on by default.
+- **Arms: running out of rage no longer shrinks the queue to one button.** An ability that's unusable only because you lack rage is now still recommended, with its icon dimmed until you can afford it, so the queue keeps showing what comes next. Execute above 35% without Sudden Death is unusable for a different reason and still isn't shown.
+
 ## 0.10.34 (alpha)
 - **Arms Slayer: new default lists, and no more AoE (Exec).** Arms now has three lists: **ST, AoE and ST (Exec)**. The AoE list is used at any target health. When AoE starts is still set by "AoE at" in the Behavior panel. **Reset your Arms lists to default to pick this up.**
   - **ST:** Cleave when Rend is missing or Colossus Smash is ready, Avatar with Colossus Smash, Colossus Smash, Execute right before Bladestorm (under 3 Imminent Demise, Colossus Smash up), Bladestorm in Colossus Smash, Execute on Sudden Death, Heroic Strike, Mortal Strike, Overpower, Cleave to re-apply Rend, Slam.

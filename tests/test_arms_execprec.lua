@@ -173,3 +173,67 @@ test("Sudden Death (2) preset: icon count 2 passes, 1 fails, unreadable fails cl
        "editor shows it as can't-tell")
     done()
 end)
+
+-- Out of rage / Bladestorm: the queue keeps showing what to press next.
+local BLADESTORM_ID = 227847
+local function allUnusable(noPower)
+    setmetatable(H.S.usable, { __index = function() return false end })
+    H.S.usableNoPower = setmetatable({}, { __index = function() return noPower end })
+    H.S.insufficientPower = setmetatable({}, { __index = function() return noPower end })
+end
+local function queueLen(r) return (r and r.primary and 1 or 0) + #((r and r.queue) or {}) end
+
+test("Arms out of rage: spenders still shown (dimmed), full queue", function()
+    slayerBase(); H.S.enemies = 1; H.db.numQueue = 3
+    allUnusable(true)                                   -- every spender short on rage
+    local r = H.Engine:Evaluate()
+    truthy(r and r.primary, "still has a primary")
+    eq(queueLen(r), 4, "primary + 3 queued, not a lone fallback")
+    truthy(r.primary.noResource, "primary dimmed: not enough rage")
+    done()
+end)
+
+test("Arms: Execute unusable for a non-rage reason stays filtered", function()
+    slayerBase(); H.S.enemies = 1
+    H.S.usable[EXECUTE] = false
+    H.S.usableNoPower = { [EXECUTE] = false }          -- not in range, no proc
+    H.S.glows[EXECUTE] = true                           -- even with the SD row's glow
+    local r = H.Engine:Evaluate()
+    falsy(r.primary.id == EXECUTE, "not usable (not a rage shortfall) -> not shown")
+    done()
+end)
+
+test("Arms Bladestorm lockout: predicts past it, never shows Bladestorm", function()
+    slayerBase(); H.S.enemies = 1; H.db.numQueue = 3
+    H.db.advanceWhileCasting = true                     -- the in-game default
+    H.S.ready[CS] = true
+    fire(BLADESTORM_CAST)                               -- Slayer Bladestorm (446035)
+    allUnusable(false)                                  -- nothing pressable, NOT a rage issue
+    local r = H.Engine:Evaluate()
+    truthy(r and r.primary, "lockout: still recommends")
+    eq(queueLen(r), 4, "lockout: full queue")
+    falsy(r.primary.id == BLADESTORM_ID, "Bladestorm itself is not re-shown")
+    for _, e in ipairs(r.queue) do falsy(e.id == BLADESTORM_ID, "not in the queue either") end
+
+    -- After the window the usable gate is back: nothing pressable -> the old lone filler.
+    H.S.now = H.S.now + 5
+    local r2 = H.Engine:Evaluate()
+    eq(queueLen(r2), 1, "lockout over + genuinely unusable -> lone fallback, no queue")
+    -- With "Advance primary while casting" turned off, the lockout is off too.
+    H.db.advanceWhileCasting = false
+    H.Engine.P.lockoutUntil = 0; fire(BLADESTORM_CAST)
+    local r3 = H.Engine:Evaluate()
+    eq(queueLen(r3), 1, "option off -> no prediction through Bladestorm")
+    setmetatable(H.S.usable, nil); H.S.usableNoPower = nil; H.S.insufficientPower = {}
+    done()
+end)
+
+test("Arms Bladestorm lockout ends early when its tracked buff drops", function()
+    slayerBase(); H.S.enemies = 1
+    H.S.tracked[446035] = true; H.S.auras[446035] = true
+    fire(BLADESTORM_CAST)
+    truthy(H.Engine:InLockout(H.S.now + 1), "buff up -> in lockout")
+    H.S.auras[446035] = false
+    falsy(H.Engine:InLockout(H.S.now + 1), "buff gone after the grace -> lockout over")
+    done()
+end)

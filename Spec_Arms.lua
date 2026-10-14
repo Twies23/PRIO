@@ -37,6 +37,7 @@ local ID_SWEEPING     = 260708   -- Sweeping Strikes (self)
 local ID_REND         = 772      -- Rend debuff (on target)
 local ID_DEMOLISH     = 436358   -- Demolish (Colossus capstone -- hero signature)
 local ID_BLADESTORM   = 227847   -- Bladestorm (Slayer weave gate)
+local ID_BLADESTORM_BUFF = 446035 -- Slayer Bladestorm aura (and its real cast id)
 
 local function AND(...) return { op = "and", clauses = { ... } } end
 local function OR(...)  return { op = "or",  clauses = { ... } } end
@@ -248,6 +249,17 @@ local spec = {
         [ID_EXECPREC] = { max = 2, gen = { "Execute" }, reset = { "MortalStrike" },
                           talent = ID_EXECPREC, aura = ID_EXECPREC_AURA },
     },
+
+    -- Rage starvation: a spender that is unusable ONLY for lack of rage is still recommended
+    -- (dimmed by the insufficient-power flag), so the queue keeps showing what to press when
+    -- rage comes back instead of collapsing to one button. Execute above 35% with no Sudden
+    -- Death is unusable for another reason and stays filtered.
+    softPowerUsable = true,
+
+    -- Bladestorm is not reported as a cast or channel, yet nothing is pressable during it.
+    -- Treat it as a lockout: for its duration (or until its tracked aura drops) PRIO ignores
+    -- the usable flag and shows what to press when it ends.
+    lockout = { key = "Bladestorm", dur = 4.5, aura = ID_BLADESTORM_BUFF },
 
     -- Cast IDs the game reports that differ from spells{} and are not overrides: Execute
     -- SUCCEEDS as 281000 (listed 163201), Slayer's Bladestorm as 446035 (listed 227847).

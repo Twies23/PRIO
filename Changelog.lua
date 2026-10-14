@@ -11,6 +11,10 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "0.10.35", {
+        "Arms: during Bladestorm PRIO now shows what to press when it ends (based on cooldowns and your list), instead of one fallback button; Bladestorm itself isn't shown. If the Bladestorm buff is tracked, PRIO switches back as soon as it ends. Follows Advance primary while casting.",
+        "Arms: out of rage, abilities that are only short on rage are still recommended (dimmed), so the queue no longer collapses to one button. Execute above 35% without Sudden Death still isn't shown.",
+    } },
     { "0.10.34", {
         "Arms Slayer: new default ST, AoE and ST (Exec) lists, and AoE (Exec) is removed -- the AoE list runs at any target health. AoE start is still AoE at in the Behavior panel. Reset Arms lists to default to pick this up.",
     } },

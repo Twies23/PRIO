@@ -958,6 +958,14 @@ PRIO:On("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
     Engine.P.lastCast     = spellID          -- for "previous cast" conditions
     Engine.P.lastCastKey  = key
     Engine.P.lastCastTime = GetTime()
+    -- Lockout (spec.lockout): a cast after which NOTHING is pressable for a while but the
+    -- game reports no cast/channel (Slayer's Bladestorm). Arm the window; Evaluate treats
+    -- it like a channel and predicts past it.
+    local lo = spec.lockout
+    if lo and key == lo.key then
+        Engine.P.lockoutStart = GetTime()
+        Engine.P.lockoutUntil = GetTime() + (lo.dur or 4)
+    end
     -- STAGE READ (Outlaw Roll the Bones): the "builder" (Sinister Strike) awards 1 CP per
     -- strike PLUS the RtB stage bonus, and the stage bonus arrives INSTANTLY while a
     -- double-strike lands ~200-330ms later. So the FIRST combo-point bump after the cast
@@ -1130,7 +1138,7 @@ PRIO:On("PLAYER_REGEN_ENABLED", function()
     -- Combat ended: clear volatile procs; Maelstrom and charges keep syncing from
     -- the real values now that they're readable again.
     local P = Engine.P
-    if P then P.fsExpire = 0; P.mote = false; P.skStacks = 0; P.ssT0 = nil; P.ssCP0 = nil; P.ssBumps = nil; P.ssLastCP = nil; P.oppStacks = 0; P.superCharge = 0; P.groundSouls = 0; P.seq = nil; P.tbStacks = spec and spec.tigereye and spec.tigereye.oocStart or nil; P.tbAccum = 0; if P.auraExpire then wipe(P.auraExpire) end; if P.auraWasActive then wipe(P.auraWasActive) end; if P.stacks then wipe(P.stacks) end; if P.predFlags then wipe(P.predFlags) end end
+    if P then P.fsExpire = 0; P.mote = false; P.skStacks = 0; P.ssT0 = nil; P.ssCP0 = nil; P.ssBumps = nil; P.ssLastCP = nil; P.oppStacks = 0; P.superCharge = 0; P.groundSouls = 0; P.seq = nil; P.tbStacks = spec and spec.tigereye and spec.tigereye.oocStart or nil; P.tbAccum = 0; if P.auraExpire then wipe(P.auraExpire) end; if P.auraWasActive then wipe(P.auraWasActive) end; if P.stacks then wipe(P.stacks) end; if P.predFlags then wipe(P.predFlags) end; P.lockoutUntil = 0 end
     Engine:ResetExecuteRange()
     Engine.openerActive = false
 end)
@@ -1875,6 +1883,23 @@ end
 -- advance past the spell already in flight. Resolves the cast to a spec KEY by ID
 -- first, then by base/override ID, then by name (Farseer/Echo variants can report a
 -- spellID that isn't the spec's canonical one).
+-- Inside a spec.lockout window? Armed on the lockout cast (see UNIT_SPELLCAST_SUCCEEDED).
+-- If the lockout's aura is tracked in the Cooldown Manager, it ends the moment that aura
+-- reads gone (after a short grace for the viewer to catch up); otherwise the timer runs out.
+function Engine:InLockout(now)
+    local lo = spec and spec.lockout
+    if not lo then return false end
+    now = now or GetTime()
+    local P = self.P
+    if now >= (P.lockoutUntil or 0) then return false end
+    if lo.aura and API.IsTracked(lo.aura) and now - (P.lockoutStart or now) > (lo.grace or 0.5)
+        and API.IsAuraActive(lo.aura) == false then
+        P.lockoutUntil = 0
+        return false
+    end
+    return true
+end
+
 function Engine:InFlightCast()
     local name, _, _, _, _, _, _, _, spellID = UnitCastingInfo("player")
     if type(spellID) ~= "number" then
@@ -2018,6 +2043,15 @@ function Engine:Evaluate()
                 usedSpell[castSid] = true                                -- don't re-show it
             end
         end
+    end
+
+    -- Lockout (Bladestorm): nothing reports usable and no channel is reported, so do what
+    -- the channel path does -- skip the usable gate, judge by cooldowns + conditions, and
+    -- don't re-show the lockout spell itself.
+    if not castingNow and PRIO.db.advanceWhileCasting ~= false and self:InLockout(S.now) then
+        castingNow = true
+        local lsid = spec.spells[spec.lockout.key]
+        if lsid then usedSpell[lsid] = true end
     end
 
     -- Test one list row as a candidate. HARD gates (known, charges, dup, cooldown, usable,
