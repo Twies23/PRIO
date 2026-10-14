@@ -11,6 +11,14 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "1.0.0", {
+        "First 1.0 release -- everything since 0.10.0, promoted to stable.",
+        "New spec: Assassination Rogue (Deathstalker and Fatebound), lists following the 12.1 guide, with the Darkest Night loop and a readable low-Energy check.",
+        "Arms rebuilt and checked against real logs: Executioner's Precision now counts, new ST / AoE / ST (Exec) Slayer lists, the queue keeps going through Bladestorm and when you're out of rage, and a Sudden Death (2) condition (fires only when the count is readable).",
+        "Windwalker Conduit and Shado-Pan re-tuned from top-player logs, plus queue fixes (no Tiger Palm spam while channelling, no double Zenith, stays full when starved).",
+        "Cooldown Manager reads fixed for every spec: target DoTs no longer read gone while ticking, refresh windows come from Blizzard's pandemic signal, and PRIO keeps up when icons rearrange. In pandemic is now Is refreshable (missing or in pandemic).",
+        "If you've customised Arms or Assassination lists, reset to default to get the new ones.",
+    } },
     { "0.10.35", {
         "Arms: during Bladestorm PRIO now shows what to press when it ends (based on cooldowns and your list), instead of one fallback button; Bladestorm itself isn't shown. If the Bladestorm buff is tracked, PRIO switches back as soon as it ends. Follows Advance primary while casting.",
         "Arms: out of rage, abilities that are only short on rage are still recommended (dimmed), so the queue no longer collapses to one button. Execute above 35% without Sudden Death still isn't shown.",

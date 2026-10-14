@@ -1,5 +1,30 @@
 # PRIO Changelog
 
+## 1.0.0
+First 1.0 release: everything since 0.10.0, promoted to stable.
+
+**New spec: Assassination Rogue, both hero trees (Deathstalker and Fatebound).** Single-target and AoE lists follow the 12.1 guide line by line. They include Deathstalker's Darkest Night loop (Envenom at full combo points, re-applying the Mark when it's missing), Crimson Tempest only until the pack is bled, and a readable "low Energy" check built from the game's not-enough-power flag.
+
+**Arms Warrior, rebuilt and checked against real logs.**
+- **Executioner's Precision now actually counts.** In game, Execute is cast under a different spell ID than the one PRIO listed, so every "Mortal Strike at 2 Executioner's Precision" line was dead. Now each Execute adds a stack (up to 2) and Mortal Strike resets it, only when talented. If you track the buff, the count also resets when the buff falls off.
+- **New default Slayer lists: ST, AoE and ST (Exec).** The AoE list is used at any target health. When AoE starts is still the "AoE at" setting in Behavior.
+- **During Bladestorm**, PRIO now shows what to press when it ends instead of one fallback button.
+- **Out of rage**, the queue no longer collapses: abilities that are only short on rage stay listed, dimmed.
+- New "Sudden Death (2)" condition and `/prio iconcount` probe. In combat the game hides the stack count from addons, so the condition only fires when the number is readable.
+
+**Windwalker re-tuned from top-player logs.** Conduit and Shado-Pan lists were rebuilt from about 3,400 replayed casts, including Zenith charge chaining inside Xuen, Rising Sun Kick to enable Whirling Dragon Punch, and Unbroken Rhythm. The queue no longer spams Tiger Palm while channelling, double-queues Zenith, or empties when you're starved.
+
+**Cooldown Manager reads, fixed for every spec.**
+- DoTs on your target (Garrote, Rupture and similar) no longer read "gone" while visibly ticking.
+- The refresh window is read from Blizzard's own pandemic signal, so it works even with UI addons that restyle the glow.
+- PRIO keeps up when the Cooldown Manager rearranges its icons.
+- Target debuffs that only have a Tracked Buff icon get a backstop read.
+- The "In pandemic" condition is now **"Is refreshable"** (missing or in pandemic).
+
+**Also:** the queue understands abilities that only become castable after another one (for example, Whirling Dragon Punch after Rising Sun Kick). New diagnostics: `/prio aura`, `/prio tracked` showing every ID on a Cooldown Manager entry, and `/prio iconcount`.
+
+**Heads-up:** if you've customised your Arms or Assassination lists, use **reset to default** to get the new ones (you'll be prompted). Any custom row that used "In pandemic" now also fires when the aura is missing.
+
 ## 0.10.35 (alpha)
 - **Arms: PRIO no longer collapses to a single button during Bladestorm.** Nothing can be pressed while Bladestorm is up, but the game doesn't report it as a cast or channel, so PRIO used to fall back to one button. It now treats Bladestorm like a channel: for its duration it shows what to press when it ends, based on cooldowns and your list's conditions, and Bladestorm itself isn't shown. If you track the Bladestorm buff in your Cooldown Manager, PRIO switches back the moment it ends. This follows the existing "Advance primary while casting" option, which is on by default.
 - **Arms: running out of rage no longer shrinks the queue to one button.** An ability that's unusable only because you lack rage is now still recommended, with its icon dimmed until you can afford it, so the queue keeps showing what comes next. Execute above 35% without Sudden Death is unusable for a different reason and still isn't shown.
