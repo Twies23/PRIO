@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 1.2.1
+**Subtlety Trickster: new default list, used for both single target and AoE.** Shadowstrike from Stealth. Shadow Blades and Goremaw's Bite go when Shadow Dance is ready. Shadow Dance at 6+ combo points with Secret Technique ready or Shadow Blades up. Vanish at 2 or fewer combo points. Secret Technique inside Dance with a supercharged combo point. Then Eviscerate at 6+, Shadowstrike in Dance, and Backstab outside it. Deathstalker is unchanged. If you've customised Subtlety, reset to default to pick this up.
+
 ## 1.2.0
 **Subtlety: Supercharger tracking.** Shadow Dance banks 2 supercharged combo points, and each Eviscerate, Secret Technique or Black Powder spends one. PRIO counts them and keeps the count out of combat, so a pre-pull Dance carries into the fight. The count shows in the rotation debug, and new "Supercharged CP" conditions are in the editor. Outlaw uses the same tracker, which now also counts down through the queued slots.
 

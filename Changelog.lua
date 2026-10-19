@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "1.2.1", {
+        "Subtlety Trickster: new default list, the same for single target and AoE -- Shadowstrike from Stealth, Blades + Goremaw's when Dance is ready, Dance at 6+ combo points (Secret Technique ready or Blades up), Vanish at 2 or fewer, Secret Technique in Dance with a supercharged combo point, then Eviscerate / Shadowstrike in Dance / Backstab outside. Deathstalker unchanged.",
+    } },
     { "1.2.0", {
         "Subtlety: Supercharger is tracked -- Shadow Dance banks 2 supercharged combo points, each Eviscerate / Secret Technique / Black Powder spends one, and the count survives out of combat for a pre-pull Dance. Shown in the rotation debug; new Supercharged CP conditions. Outlaw shares the tracker and now counts it down in the queue too.",
         "Subtlety: better queue predictions -- Shadow Blades doubles builders, Premeditation fills the Shadowstrike after Vanish, Ancient Arts refunds a finisher (two finishers in a row), Shuriken Storm gives 1 combo point per target, and Shadowstrike shows after a queued Dance or Vanish.",

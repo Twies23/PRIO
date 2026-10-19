@@ -127,51 +127,31 @@ local function rowVanishST()  return { spell = "Vanish", cond = AND(buffDown(ID_
 local function rowVanishAoE() return { spell = "Vanish", cond = AND(buffDown(ID_SHADOWDANCE), notStealthed()) } end
 
 --------------------------------------------------------------------------------
--- TRICKSTER
+-- TRICKSTER -- the user's own tuned list (1.2.1), used for BOTH ST and AoE.
 --
--- Enter Shadow Dance at 6+ CP with Secret Technique ready -- the first GCD inside is
--- Secret Technique. Exception (guide, "Setting up for Shadow Dance"): in the second half
--- of Shadow Blades, Dance again as soon as the first runs out, whatever your CP.
--- Coup de Grace and Eviscerate share one row in ST (identical 6+ CP gate; the icon
--- follows the override). In AoE, CdG beats Black Powder, so it gets its own row.
+-- Shadow Blades and Goremaw's Bite are lined up with Shadow Dance (only when Dance is
+-- ready). Dance at 6+ CP with Secret Technique ready or Shadow Blades up. Secret
+-- Technique only inside Dance with a supercharged combo point banked (Dance gives 2).
+-- Shadowstrike from Stealth, and spammed in Dance; Backstab only outside Dance.
+-- Coup de Grace still shows on the Eviscerate row via the override icon.
 --------------------------------------------------------------------------------
-local function rowDanceTrickster()
-    return { spell = "ShadowDance", cond = AND(buffDown(ID_SHADOWDANCE),
-        OR(buffUp(ID_SHADOWBLADES), AND(cpMin(6), cdReady(ID_SECRETTECH), sbWindowOk()))) }
+local function trickster_list()
+    return {
+        { spell = "Stealth",         cond = notStealthed() },
+        { spell = "Shadowstrike",    cond = buffUp(ID_STEALTH) },
+        { spell = "ShadowBlades",    cond = cdReady(ID_SHADOWDANCE) },
+        { spell = "GoremawsBite",    cond = cdReady(ID_SHADOWDANCE) },
+        { spell = "ShadowDance",     cond = AND(cpMin(6), cdReady(ID_SECRETTECH)) },
+        { spell = "ShadowDance",     cond = AND(cpMin(6), buffUp(ID_SHADOWBLADES)) },
+        { spell = "Vanish",          cond = cpMax(2) },
+        { spell = "SecretTechnique", cond = AND(cpMin(6), buffUp(ID_SHADOWDANCE), scMin(1)) },
+        { spell = "Eviscerate",      cond = cpMin(6) },
+        { spell = "Shadowstrike",    cond = buffUp(ID_SHADOWDANCE) },
+        { spell = "Backstab",        cond = buffDown(ID_SHADOWDANCE) },
+    }
 end
--- Force Ancient Arts before Secret Technique: one extra Shadowstrike at full CP
--- (Shadow Techniques never spends past max CP, so the stacks stay and trigger it).
--- lastCastNot caps it at ONE extra press so a dry Shadow Techniques can't eat the Dance.
-local function rowArtsBeforeST()
-    return { spell = "Shadowstrike", cond = AND(buffUp(ID_SHADOWDANCE), cdReady(ID_SECRETTECH),
-        cpMin(6), buffDown(ID_ANCIENTARTS), lastCastNot(ID_SHADOWSTRIKE)) }
-end
-
-local trickster_st = {
-    rowStealth(),
-    rowGoremaw(),                                                          -- CD [3] before Dance
-    rowDanceTrickster(),                                                   -- CD [1]
-    rowBlades(),                                                           -- CD [2] inside Dance
-    rowArtsBeforeST(),                                                     -- (guide note: AA on Secret Technique)
-    rowSecretTech(),                                                       -- Dance [2]
-    rowEviscerate(),                                                       -- Dance [3] / Outside [2] (CdG when up)
-    rowVanishST(),                                                         -- CD [4]
-    rowShadowstrike(),                                                     -- Dance [5]
-    rowBackstab(),                                                         -- Outside [4]
-}
-
-local trickster_aoe = {
-    { spell = "Stealth" },
-    rowGoremaw(),
-    rowDanceTrickster(),
-    rowBlades(),
-    rowSecretTech(),                                                       -- Dance [2]
-    { spell = "Eviscerate", cond = AND(coupReady(), cpMin(6), lastCastNot(ID_EVISCERATE)) }, -- [3] Coup de Grace
-    rowSnDApply(),                                                         -- (note: SnD in the AoE opener)
-    rowBlackPowder(),                                                      -- [4]
-    rowVanishAoE(),                                                        -- Silent Storm
-    rowStorm(),                                                            -- [6]
-}
+local trickster_st  = trickster_list()
+local trickster_aoe = trickster_list()   -- independent copy, so editing one never edits the other
 
 --------------------------------------------------------------------------------
 -- DEATHSTALKER
@@ -346,8 +326,9 @@ local spec = {
     spellEffects = {
         ShadowDance  = { grant = { ID_SHADOWDANCE } },
         ShadowBlades = { grant = { ID_SHADOWBLADES } },
-        Vanish       = { grant = { ID_PREMEDITATION } },
-        Stealth      = { grant = { ID_PREMEDITATION } },
+        Vanish       = { grant = { ID_PREMEDITATION, ID_STEALTH } },
+        Stealth      = { grant = { ID_PREMEDITATION, ID_STEALTH } },
+        Shadowstrike = { consume = { ID_STEALTH } },          -- breaks Stealth (not Dance)
         Eviscerate   = { grant = { ID_SND }, consume = { ID_DARKNIGHT } },
     },
 
