@@ -282,6 +282,10 @@ local spec = {
 
     fillers = { [ID_BACKSTAB] = true, [ID_SHURIKENSTORM] = true },
 
+    -- Not offered by the Cooldown Manager for Subtlety (no cooldown to show), so Setup
+    -- leaves them out of the "add to Essential / Utility" column. PRIO reads them directly.
+    cdmUnavailable = { [ID_SHADOWSTRIKE] = true, [ID_BLACKPOWDER] = true, [ID_SHURIKENSTORM] = true },
+
     -- Pulse the Eviscerate icon while Darkest Night is up (Deathstalker's key press).
     flash = {
         Eviscerate = { type = "buffActive", spell = ID_DARKNIGHT },

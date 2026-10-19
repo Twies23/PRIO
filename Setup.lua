@@ -136,6 +136,10 @@ local function modelFor(spec)
         local seenAb = {}
         local function addAbility(id)
             if seenAb[id] then return end
+            -- Abilities the Cooldown Manager doesn't offer at all (spec.cdmUnavailable) can't
+            -- be added, so listing them would leave a dot that can never turn green. Glow
+            -- reads still need the spell, so a glow-driving one is kept regardless.
+            if spec.cdmUnavailable and spec.cdmUnavailable[id] and not req.glows[id] then return end
             local nm = API.SpellName(id)
             if not (nm and nm ~= "") then return end
             seenAb[id] = true

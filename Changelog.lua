@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "1.1.1", {
+        "Subtlety setup: Shadowstrike, Black Powder and Shuriken Storm are no longer listed under abilities to add -- the Cooldown Manager doesn't offer them, and PRIO doesn't need them tracked.",
+    } },
     { "1.1.0", {
         "New spec: Subtlety Rogue (Trickster and Deathstalker), lists following the 12.1.5 guide. Trickster Dances at 6+ combo points, Deathstalker at 2 or fewer, and both Dance again right away while Shadow Blades is up. Dance is held when Shadow Blades is under 10 seconds from ready.",
         "Subtlety: one extra Shadowstrike when Ancient Arts isn't up before Secret Technique (Trickster) or the Darkest Night Eviscerate (Deathstalker) -- track Ancient Arts in the Cooldown Manager. Coup de Grace needs no tracking: PRIO sees when Eviscerate turns into it and, in AoE, prefers it over Black Powder.",

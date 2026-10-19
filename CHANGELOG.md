@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 1.1.1
+Subtlety setup: Shadowstrike, Black Powder and Shuriken Storm are no longer listed under abilities to add. The Cooldown Manager doesn't offer them, so they could never turn green. PRIO doesn't need them tracked.
+
 ## 1.1.0
 **New spec: Subtlety Rogue, both hero trees (Trickster and Deathstalker).** Single-target and AoE lists follow the 12.1.5 Icy Veins guide. Lists are built around Shadow Blades and two Shadow Dances:
 - **Trickster** enters Shadow Dance at 6+ combo points with Secret Technique ready. **Deathstalker** enters at 2 or fewer. Both Dance again right away while Shadow Blades is up.
