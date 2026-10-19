@@ -68,7 +68,8 @@ local ID_RUPTURE      = 1943     -- NOT in the 12.1 rotation; pickable only
 local ID_ANCIENTARTS  = 1268932  -- TrackedBuff (linked 1269163): next finisher refunds CP
 local ID_SHADOWTECH   = 196912   -- TrackedBuff (linked 196911). shown in debug only
 local ID_SILENTSTORM  = 385722   -- TrackedBuff (linked 385727). next Shuriken Storm crits
-local ID_PREMEDITATION = 343160  -- TrackedBuff (linked 343173)
+local ID_PREMEDITATION = 343160  -- TrackedBuff (linked 343173): next builder = full CP
+local ID_SUPERCHARGER = 470347   -- talent: Shadow Dance supercharges 2 combo points
 
 -- Trickster
 local ID_UNSEENBLADE  = 441146   -- keystone (hero detection)
@@ -93,6 +94,7 @@ local function cpMin(n)        return { type = "resourceMin", v = n } end
 local function cpMax(n)        return { type = "resourceMax", v = n } end
 local function notStealthed()  return { type = "notStealthed" } end
 -- Eviscerate is currently re-skinned into Coup de Grace (clean spell-id read).
+local function scMin(n)        return { type = "superChargeMin", v = n } end
 local function coupReady()     return { type = "overrideActive", spell = ID_EVISCERATE, v = ID_COUPDEGRACE } end
 
 --------------------------------------------------------------------------------
@@ -241,6 +243,20 @@ local function activeHero()
     return "trickster"
 end
 
+-- Look-ahead helpers. Inside the queue simulation S._sim holds the auras earlier picks
+-- turned on/off; otherwise (and for anything the sim hasn't touched) read the live
+-- Cooldown Manager state. Untracked reads as down.
+local FINISHER = { Eviscerate = true, SecretTechnique = true, BlackPowder = true }
+local BUILDER  = { Shadowstrike = 2, Backstab = 1, ShurikenStorm = "perTarget" }
+local function simAura(S, id)
+    if S and S._sim and S._sim[id] ~= nil then return S._sim[id] and true or false end
+    if not (API.IsTracked and API.IsTracked(id)) then return false end
+    return API.IsAuraActive(id) == true
+end
+local function simConsume(S, id)
+    if S and S._sim then S._sim[id] = false end
+end
+
 local spec = {
     key      = "ROGUE_SUBTLETY",
     label    = "Subtlety",
@@ -271,7 +287,24 @@ local spec = {
     -- Energy is secret and the guide says not to manage it: a spender unusable ONLY for
     -- lack of energy still shows (you press it as energy ticks up).
     softPowerUsable = true,
-    condTags = { nopower = true },
+    condTags = { nopower = true, supercharge = true, stealth = true },
+
+    -- SUPERCHARGER (470347, 2/2): Shadow Dance supercharges 2 combo points; each DAMAGING
+    -- finisher consumes one and hits as if it spent 2 more. Not readable, so predicted from
+    -- our casts (same engine tracker as Outlaw) -- live and per queue slot. PERSISTS out of
+    -- combat: the guide's pre-pull move is a Shadow Dance 20s+ before the pull to bank them.
+    superchargeTrack = {
+        talent  = ID_SUPERCHARGER,
+        charge  = { ShadowDance = 2 },
+        consume = { Eviscerate = true, SecretTechnique = true, BlackPowder = true },
+        persist = true,
+    },
+
+    -- Shadowstrike needs Stealth / Shadow Dance, so its live usable flag is false until you
+    -- actually Dance. A QUEUED Shadowstrike after a queued Dance / Vanish is fine.
+    usableAfter = {
+        Shadowstrike = { ShadowDance = true, Vanish = true, Stealth = true },
+    },
 
     -- Show the live override's icon/name: Eviscerate -> Coup de Grace (Trickster) and
     -- Backstab -> Gloomblade if talented. Reads stay on the base spell.
@@ -281,6 +314,9 @@ local spec = {
     finishers = { Eviscerate = true, SecretTechnique = true, BlackPowder = true },
 
     fillers = { [ID_BACKSTAB] = true, [ID_SHURIKENSTORM] = true },
+    -- No cooldown, so the queue may show them again in later slots (their combo-point
+    -- conditions decide): Eviscerate after an Ancient Arts refund, Shadowstrike spam in Dance.
+    repeatable = { [ID_EVISCERATE] = true, [ID_BLACKPOWDER] = true, [ID_SHADOWSTRIKE] = true },
 
     -- Not offered by the Cooldown Manager for Subtlety (no cooldown to show), so Setup
     -- leaves them out of the "add to Essential / Utility" column. PRIO reads them directly.
@@ -303,24 +339,47 @@ local spec = {
         ShadowDance  = { aura = ID_SHADOWDANCE,  dur = 2 },
         ShadowBlades = { aura = ID_SHADOWBLADES, dur = 2 },
     },
-    -- Look-ahead: casting Dance / Blades turns those auras on in the simulated queue.
+    -- Look-ahead aura changes per simulated cast. Vanish / Stealth arm Premeditation (the
+    -- next builder gives full CP); Eviscerate keeps Slice and Dice up (Cut to the Chase) and
+    -- spends Darkest Night. Ancient Arts / Premeditation are consumed inside ResourceDelta,
+    -- which needs to see them first.
     spellEffects = {
         ShadowDance  = { grant = { ID_SHADOWDANCE } },
         ShadowBlades = { grant = { ID_SHADOWBLADES } },
+        Vanish       = { grant = { ID_PREMEDITATION } },
+        Stealth      = { grant = { ID_PREMEDITATION } },
+        Eviscerate   = { grant = { ID_SND }, consume = { ID_DARKNIGHT } },
     },
 
-    -- Look-ahead combo-point simulation. Not modelled: Shadow Techniques' stored points,
-    -- Shadow Blades' doubling and Premeditation's full-CP Shadowstrike -- all large but
-    -- not predictable from what we can read; the real CP read corrects every GCD.
+    -- Look-ahead combo points. Combo points read clean, so every slot starts from the real
+    -- value; this only has to predict what the queued casts do to it:
+    --   * Finishers spend everything -- UNLESS Ancient Arts is up, which refunds you back to
+    --     max (it expends Shadow Techniques like a builder), so the next slot is another
+    --     finisher, not a builder.
+    --   * Builders: Shadowstrike 2, Backstab 1, Shuriken Storm 1 PER TARGET. Premeditation
+    --     (after Stealth / Vanish) makes the next one fill to max; Shadow Blades doubles them.
+    -- Not modelled: Shadow Techniques' banked points from auto attacks (random) and which
+    -- builder will proc Ancient Arts (needs the secret stack count).
     ResourceDelta = function(_, key, sid, S)
-        if key == "Eviscerate" or key == "SecretTechnique" or key == "BlackPowder" then
-            return -(S.maelstrom or 0)
-        elseif key == "Shadowstrike" then
-            return 2
-        elseif key == "Backstab" or key == "ShurikenStorm" then
-            return 1
+        local cur = S.maelstrom or 0
+        local cap = S.maelstromMax
+        if not cap or cap <= 0 then cap = 7 end
+        if FINISHER[key] then
+            if simAura(S, ID_ANCIENTARTS) then
+                simConsume(S, ID_ANCIENTARTS)
+                return cap - cur
+            end
+            return -cur
         end
-        return 0
+        local gen = BUILDER[key]
+        if not gen then return 0 end
+        if gen == "perTarget" then gen = math.max(1, S.enemies or 1) end
+        if simAura(S, ID_PREMEDITATION) then
+            simConsume(S, ID_PREMEDITATION)
+            return cap - cur
+        end
+        if simAura(S, ID_SHADOWBLADES) then gen = gen * 2 end
+        return gen
     end,
 
     condPresets = {
@@ -333,6 +392,7 @@ local spec = {
         { key = "coupReady",    label = "Coup de Grace ready (Trickster)", clause = coupReady() },
         { key = "darkestNight", label = "Darkest Night up (Deathstalker)", clause = buffUp(ID_DARKNIGHT) },
         { key = "silentStorm",  label = "Silent Storm up",             clause = buffUp(ID_SILENTSTORM) },
+        { key = "supercharged", label = "Supercharged CP banked",      clause = scMin(1) },
     },
 
     auras = {
@@ -377,12 +437,16 @@ local spec = {
             { label = "Shadow Techniques",  spell = ID_SHADOWTECH },
             { label = "Slice and Dice",     spell = ID_SND },
             { label = "Silent Storm",       spell = ID_SILENTSTORM },
+            { label = "Premeditation",      spell = ID_PREMEDITATION },
             { label = "Darkest Night (DS)", spell = ID_DARKNIGHT },
             { label = "Deathstalker's Mark", spell = ID_DSMARK },
         },
         rangeProbes = {
             { label = "Combo Points", kind = "resource" },
             { label = "Energy low",   kind = "noPower", spell = ID_BACKSTAB },
+            -- Supercharger (470347): predicted 0-2, set to 2 by Shadow Dance, -1 per
+            -- Eviscerate / Secret Technique / Black Powder.
+            { label = "Supercharged CP", kind = "predCount", field = "superCharge" },
         },
     },
 

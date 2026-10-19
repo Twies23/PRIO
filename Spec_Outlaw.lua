@@ -238,7 +238,7 @@ local spec = {
 
     -- Offer the Outlaw-only "Opportunity >=/<=" condition (reads PRIO's tracked 0/3/6
     -- count, not the Cooldown Manager's max-charges number).
-    condTags = { outlaw = true },
+    condTags = { outlaw = true, supercharge = true, stealth = true },
 
     -- Energy is a fast-regen secondary, so a spender that's unusable ONLY for lack of
     -- Energy still shows (you'll press it when Energy ticks up) instead of collapsing to
@@ -342,16 +342,13 @@ local spec = {
     -- combo points; each DAMAGING finisher (Dispatch, Between the Eyes, Killing Spree) consumes
     -- one. The count is secret in combat, so PRIO predicts it from your own casts (reliable --
     -- no drift). Inert unless talented. Reset to 0 on combat end (Engine). Read via the
-    -- "Supercharged CP >=/<=/=" conditions and S.superCharge.
-    OnCast = function(P, key, now)
-        if not API.IsKnown(ID_SUPERCHARGER) then return end
-        P.superCharge = P.superCharge or 0
-        if key == "AdrenalineRush" then
-            P.superCharge = 2                                   -- AR supercharges 2 (rank 2/2)
-        elseif key == "Dispatch" or key == "BetweenTheEyes" or key == "KillingSpree" then
-            if P.superCharge > 0 then P.superCharge = P.superCharge - 1 end
-        end
-    end,
+    -- "Supercharged CP >=/<=/=" conditions and S.superCharge. The engine advances it both
+    -- live and per slot in the queue look-ahead (shared with Subtlety).
+    superchargeTrack = {
+        talent  = ID_SUPERCHARGER,
+        charge  = { AdrenalineRush = 2 },                       -- rank 2/2
+        consume = { Dispatch = true, BetweenTheEyes = true, KillingSpree = true },
+    },
 
     -- LOOK-AHEAD combo-point modelling: how each cast changes combo points, so the queue
     -- (the "next" icons) predicts building toward a finisher and spending it. Combo points

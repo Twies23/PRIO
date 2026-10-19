@@ -11,6 +11,10 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "1.2.0", {
+        "Subtlety: Supercharger is tracked -- Shadow Dance banks 2 supercharged combo points, each Eviscerate / Secret Technique / Black Powder spends one, and the count survives out of combat for a pre-pull Dance. Shown in the rotation debug; new Supercharged CP conditions. Outlaw shares the tracker and now counts it down in the queue too.",
+        "Subtlety: better queue predictions -- Shadow Blades doubles builders, Premeditation fills the Shadowstrike after Vanish, Ancient Arts refunds a finisher (two finishers in a row), Shuriken Storm gives 1 combo point per target, and Shadowstrike shows after a queued Dance or Vanish.",
+    } },
     { "1.1.1", {
         "Subtlety setup: Shadowstrike, Black Powder and Shuriken Storm are no longer listed under abilities to add -- the Cooldown Manager doesn't offer them, and PRIO doesn't need them tracked.",
     } },

@@ -95,13 +95,13 @@ Cond.types = {
     { value = "oppStacksMin", text = "Opportunity \226\137\165", needsValue = true, min = 0, max = 6, def = 6, tag = "outlaw" },
     { value = "oppStacksMax", text = "Opportunity \226\137\164", needsValue = true, min = 0, max = 6, def = 3, tag = "outlaw" },
     { value = "oppStacksEq",  text = "Opportunity =",  needsValue = true, min = 0, max = 6, def = 3, tag = "outlaw" },
-    -- Outlaw: Supercharged combo points (Supercharger talent) -- PRIO's predicted 0-2 count.
-    { value = "superChargeMin", text = "Supercharged CP \226\137\165", needsValue = true, min = 0, max = 2, def = 1, tag = "outlaw" },
-    { value = "superChargeMax", text = "Supercharged CP \226\137\164", needsValue = true, min = 0, max = 2, def = 1, tag = "outlaw" },
-    { value = "superChargeEq",  text = "Supercharged CP =",  needsValue = true, min = 0, max = 2, def = 1, tag = "outlaw" },
+    -- Supercharged combo points (Supercharger talent, Outlaw + Subtlety) -- predicted 0-2.
+    { value = "superChargeMin", text = "Supercharged CP \226\137\165", needsValue = true, min = 0, max = 2, def = 1, tag = "supercharge" },
+    { value = "superChargeMax", text = "Supercharged CP \226\137\164", needsValue = true, min = 0, max = 2, def = 1, tag = "supercharge" },
+    { value = "superChargeEq",  text = "Supercharged CP =",  needsValue = true, min = 0, max = 2, def = 1, tag = "supercharge" },
     -- Player is stealthed (Stealth / Vanish / Shadow Dance) -- reads IsStealthed() clean.
-    { value = "stealthed",    text = "Stealthed",     tag = "outlaw" },
-    { value = "notStealthed", text = "Not stealthed", tag = "outlaw" },
+    { value = "stealthed",    text = "Stealthed",     tag = "stealth" },
+    { value = "notStealthed", text = "Not stealthed", tag = "stealth" },
     -- Hunter pet state (readable in combat): no pet / pet dead / pet up.
     { value = "petMissing", text = "No pet",     tag = "pet" },
     { value = "petDead",    text = "Pet dead",   tag = "pet" },
@@ -263,6 +263,20 @@ end
 
 -- Did the last cast match a referenced spell? Compares by spec key (override-aware)
 -- when both resolve, else by raw spell ID.
+-- SUPERCHARGER (spec.superchargeTrack): a talent that supercharges N combo points when a
+-- trigger spell is cast; each DAMAGING finisher consumes one. The count isn't readable,
+-- so it's predicted from our own casts -- live on Engine.P and per slot in the look-ahead.
+--   superchargeTrack = { talent = id, charge = { Key = n, ... }, consume = { Key = true } }
+-- Returns the new count, or nil when the cast doesn't touch it / not talented.
+local function SuperchargeAfter(cur, key)
+    local st = spec and spec.superchargeTrack
+    if not (st and key and API.IsKnown(st.talent)) then return nil end
+    local n = st.charge and st.charge[key]
+    if n then return n end                                    -- re-supercharge (not additive)
+    if st.consume and st.consume[key] then return math.max(0, (cur or 0) - 1) end
+    return nil
+end
+
 local function LastCastMatch(ref, S)
     if not ref then return false end
     local refKey = idToKey[ref]
@@ -1020,6 +1034,8 @@ PRIO:On("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
             for counterID in pairs(spec.stackTrack) do Engine.P.stackTouched[counterID] = GetTime() end
         end
     end
+    local sc = SuperchargeAfter(Engine.P.superCharge, key)
+    if sc then Engine.P.superCharge = sc end
     if spec.OnCast then
         pcall(spec.OnCast, Engine.P, key, GetTime())
     end
@@ -1151,7 +1167,7 @@ PRIO:On("PLAYER_REGEN_ENABLED", function()
     -- Combat ended: clear volatile procs; Maelstrom and charges keep syncing from
     -- the real values now that they're readable again.
     local P = Engine.P
-    if P then P.fsExpire = 0; P.mote = false; P.skStacks = 0; P.ssT0 = nil; P.ssCP0 = nil; P.ssBumps = nil; P.ssLastCP = nil; P.oppStacks = 0; P.superCharge = 0; P.groundSouls = 0; P.seq = nil; P.tbStacks = spec and spec.tigereye and spec.tigereye.oocStart or nil; P.tbAccum = 0; if P.auraExpire then wipe(P.auraExpire) end; if P.auraWasActive then wipe(P.auraWasActive) end; if P.stacks then wipe(P.stacks) end; if P.predFlags then wipe(P.predFlags) end; P.lockoutUntil = 0 end
+    if P then P.fsExpire = 0; P.mote = false; P.skStacks = 0; P.ssT0 = nil; P.ssCP0 = nil; P.ssBumps = nil; P.ssLastCP = nil; P.oppStacks = 0; if not (spec and spec.superchargeTrack and spec.superchargeTrack.persist) then P.superCharge = 0 end; P.groundSouls = 0; P.seq = nil; P.tbStacks = spec and spec.tigereye and spec.tigereye.oocStart or nil; P.tbAccum = 0; if P.auraExpire then wipe(P.auraExpire) end; if P.auraWasActive then wipe(P.auraWasActive) end; if P.stacks then wipe(P.stacks) end; if P.predFlags then wipe(P.predFlags) end; P.lockoutUntil = 0 end
     Engine:ResetExecuteRange()
     Engine.openerActive = false
 end)
@@ -1537,7 +1553,7 @@ local function BuildState(self, mode, enemies)
         maelstromMax = P.maelstromMax or (spec and spec.maelstromMax) or 0,
         maelstromReadable = realMs ~= nil,
         freeSpend = P.freeSpend and true or false,     -- 4-set: next spender costs nothing
-        superCharge = P.superCharge or 0,              -- Outlaw Supercharger: predicted 0-2
+        superCharge = P.superCharge or 0,              -- Supercharger: predicted 0-2 (superchargeTrack)
         mote      = P.mote and true or false,
         skStacks  = P.skStacks or 0,
         fsActive  = fsActive,                          -- true/false/nil (real read)
@@ -1774,6 +1790,12 @@ local function Repeatable(sid)
     if spec and spec.fillers and spec.fillers[sid] then
         return true, nil                 -- spec-declared spammable filler
     end
+    -- No-cooldown spells that can legitimately repeat in the look-ahead (a finisher right
+    -- after a refund, back-to-back Shadowstrikes in a Dance) but are NOT safety-net fillers.
+    -- Their own conditions still decide whether the next slot takes them again.
+    if spec and spec.repeatable and spec.repeatable[sid] then
+        return true, nil
+    end
     return false                         -- single-use
 end
 
@@ -1838,6 +1860,8 @@ end
 local function ApplyEffects(sim, key)
     -- Predicted stacks advance for every cast, independent of spellEffects.
     if sim.stacks then Engine:AdvanceStacks(sim.stacks, key) end
+    local sc = SuperchargeAfter(sim.superCharge, key)
+    if sc then sim.superCharge = sc end
     local fx = spec and spec.spellEffects and key and spec.spellEffects[key]
     if not fx then return end
     if fx.consume then for _, a in ipairs(fx.consume) do sim.aura[a] = false end end
@@ -2019,6 +2043,7 @@ function Engine:Evaluate()
         energy = self:EnergyEstimate(),   -- % * max (tracks to cap) or checkpoint floor; spent as we pick
         lastCastKey = S.lastCastKey, lastCastID = S.lastCastID,
         stacks = {},   -- predicted buff-stack counters, advanced per simulated cast
+        superCharge = S.superCharge,   -- Supercharger count, advanced per simulated finisher
     }
     if Engine.P.stacks then for k, v in pairs(Engine.P.stacks) do sim.stacks[k] = v end end
     S._sim = sim.aura
@@ -2199,6 +2224,7 @@ function Engine:Evaluate()
         S.mote        = sim.mote and true or false
         S.skStacks    = sim.sk or 0
         S.maelstrom   = sim.resource or S.maelstrom
+        S.superCharge = sim.superCharge or 0
         S.lastCastKey = sim.lastCastKey
         S.lastCastID  = sim.lastCastID
         local pick

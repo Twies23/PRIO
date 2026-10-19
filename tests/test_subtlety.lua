@@ -30,6 +30,7 @@ local sub = H.subSpec
 -- stealthed (Stealth + Shadowstrike unusable). Tests poke one thing at a time.
 local function setSub(hero, cp)
     H.reset(); H.S.specID = 261
+    H.db.numQueue = 3                  -- primary + 3 (other suites change it)
     H.S.power[COMBO] = cp or 0; H.S.powerMax[COMBO] = 7
     H.S.enemies = 1
     for _, id in ipairs({ DANCE, BLADES, SND, ANCIENTARTS, DSMARK, DARKNIGHT }) do
@@ -269,4 +270,115 @@ test("sub trickster: Darkest Night / Mark rows are absent", function()
     setSub("trickster", 6); inDance()
     H.S.auras[DSMARK] = false
     eq(primary(), EVISCERATE, "Trickster has no Mark row")
+end)
+
+--------------------------------------------------------------------------------
+-- Supercharger (shared engine tracker with Outlaw)
+--------------------------------------------------------------------------------
+local SUPERCHARGER = 470347
+local PREMEDITATION = 343160
+local function cast(id) H.fire("UNIT_SPELLCAST_SUCCEEDED", "player", nil, id) end
+local function queueIds()
+    local r = H.Engine:Evaluate()
+    local out = { r.primary and r.primary.id }
+    for _, e in ipairs(r.queue or {}) do out[#out + 1] = e.id end
+    return out
+end
+
+test("sub supercharge: Dance banks 2, damaging finishers spend one each", function()
+    setSub("trickster", 6)
+    H.Engine.P.superCharge = 0
+    cast(DANCE);       eq(H.Engine.P.superCharge, 2, "Shadow Dance supercharges 2")
+    cast(EVISCERATE);  eq(H.Engine.P.superCharge, 1, "Eviscerate spends one")
+    cast(BLACKPOWDER); eq(H.Engine.P.superCharge, 0, "Black Powder spends one")
+    cast(SECRETTECH);  eq(H.Engine.P.superCharge, 0, "floors at 0")
+    cast(BACKSTAB);    eq(H.Engine.P.superCharge, 0, "builders don't touch it")
+end)
+
+test("sub supercharge: persists out of combat (pre-pull Dance)", function()
+    setSub("trickster", 0)
+    cast(DANCE)
+    H.fire("PLAYER_REGEN_ENABLED")
+    eq(H.Engine.P.superCharge, 2, "banked charges survive combat end")
+end)
+
+test("sub supercharge: untalented -> no counter", function()
+    setSub("trickster", 0)
+    H.Engine.P.superCharge = 0
+    H.S.known[SUPERCHARGER] = false
+    cast(DANCE)
+    eq(H.Engine.P.superCharge, 0)
+end)
+
+test("sub supercharge: the look-ahead spends it per queued finisher", function()
+    setSub("trickster", 7)
+    H.S.auras[ANCIENTARTS] = false
+    H.S.ready[SECRETTECH] = true
+    H.Engine.P.superCharge = 2
+    PRIO.db.customPriorities["ROGUE_SUBTLETY"] = { variants = { trickster = { st = {
+        { spell = "SecretTechnique", cond = { type = "superChargeMin", v = 2 } },
+        { spell = "Eviscerate",      cond = { type = "superChargeEq",  v = 2 } },
+        { spell = "Backstab" },
+    } } } }
+    local q = queueIds()
+    PRIO.db.customPriorities["ROGUE_SUBTLETY"] = nil
+    eq(q[1], SECRETTECH)
+    eq(q[2], BACKSTAB, "after a queued finisher only 1 supercharged CP is left")
+end)
+
+--------------------------------------------------------------------------------
+-- Queue prediction
+--------------------------------------------------------------------------------
+test("sub predict: Vanish -> Shadowstrike (Premeditation fills to max) -> Eviscerate", function()
+    setSub("trickster", 1)
+    H.S.auras[ANCIENTARTS] = false
+    H.S.ready[VANISH] = true
+    local q = queueIds()
+    eq(q[1], VANISH)
+    eq(q[2], SHADOWSTRIKE, "usable after the queued Vanish")
+    eq(q[3], EVISCERATE, "Premeditation made it full combo points")
+end)
+
+test("sub predict: Shadow Blades doubles builders", function()
+    setSub("trickster", 3)
+    H.S.auras[ANCIENTARTS] = false
+    H.S.auras[BLADES] = true
+    local q = queueIds()
+    eq(q[1], BACKSTAB); eq(q[2], BACKSTAB, "3 -> 5")
+    eq(q[3], EVISCERATE, "5 -> 7 with Blades, so the third slot finishes")
+end)
+
+test("sub predict: Ancient Arts refunds a finisher -> Eviscerate twice", function()
+    setSub("trickster", 6)
+    local q = queueIds()
+    eq(q[1], EVISCERATE)
+    eq(q[2], EVISCERATE, "Ancient Arts refunds to max")
+    eq(q[3], BACKSTAB, "refund consumed -> back to building")
+end)
+
+test("sub predict: Shuriken Storm gives 1 CP per target", function()
+    setSub("trickster", 2); H.S.enemies = 4
+    H.S.auras[ANCIENTARTS] = false
+    local q = queueIds()
+    eq(q[1], STORM)
+    eq(q[2], BLACKPOWDER, "2 + 4 targets = 6")
+end)
+
+test("sub predict: queued Dance unlocks repeated Shadowstrikes", function()
+    setSub("deathstalker", 1)
+    H.S.auras[ANCIENTARTS] = false
+    H.S.ready[DANCE] = true; H.S.ready[SECRETTECH] = true
+    local q = queueIds()
+    eq(q[1], DANCE)
+    eq(q[2], SHADOWSTRIKE, "usable after the queued Dance"); eq(q[3], SHADOWSTRIKE, "and again (no cooldown)")
+    eq(q[4], SHADOWSTRIKE, "1 -> 3 -> 5 -> 7")
+end)
+
+test("sub predict: AoE Slice and Dice Eviscerate is not repeated", function()
+    setSub("trickster", 7); H.S.enemies = 4
+    H.S.auras[ANCIENTARTS] = true
+    H.S.auras[SND] = false
+    local q = queueIds()
+    eq(q[1], EVISCERATE, "applies Slice and Dice")
+    eq(q[2], BLACKPOWDER, "refunded to 7, Slice and Dice now up -> Black Powder")
 end)
