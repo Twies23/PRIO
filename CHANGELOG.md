@@ -1,5 +1,14 @@
 # PRIO Changelog
 
+## 1.1.0
+**New spec: Subtlety Rogue, both hero trees (Trickster and Deathstalker).** Single-target and AoE lists follow the 12.1.5 Icy Veins guide. Lists are built around Shadow Blades and two Shadow Dances:
+- **Trickster** enters Shadow Dance at 6+ combo points with Secret Technique ready. **Deathstalker** enters at 2 or fewer. Both Dance again right away while Shadow Blades is up.
+- Shadow Dance is held when Shadow Blades is less than 10 seconds from ready, so both Dances land inside it.
+- **Ancient Arts:** if it isn't up when you're about to cast Secret Technique (Trickster) or your Darkest Night Eviscerate (Deathstalker), PRIO asks for one extra Shadowstrike first. Track Ancient Arts in the Cooldown Manager.
+- **Coup de Grace** needs no tracking. PRIO sees when Eviscerate turns into Coup de Grace, shows its icon, and in AoE prefers it over Black Powder.
+- Deathstalker re-applies the Mark with Shadowstrike and pulses Eviscerate during Darkest Night.
+- Hero-specific openers for ST and AoE.
+
 ## 1.0.0
 First 1.0 release: everything since 0.10.0, promoted to stable.
 

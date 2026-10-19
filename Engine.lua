@@ -200,6 +200,7 @@ function Cond.ClauseLabel(cl, selfSid)
     elseif t == "notUsable" then return name .. " unusable"
     elseif t == "noPower" then return "can't afford " .. name
     elseif t == "hasPower" then return "can afford " .. name
+    elseif t == "overrideActive" then return name .. " replaced" .. (cl.v and (" by " .. SpellShort(cl.v)) or "")
     elseif t == "moteUp" then return "MotE up"
     elseif t == "moteDown" then return "MotE down"
     elseif t == "skStacks" then return "SK \226\137\165 " .. (cl.v or 1)
@@ -593,6 +594,18 @@ local function EvalClause(cl, S, selfSid)
     -- Fail CLOSED on both: nil (secret/unknown) must not fire the clause.
     elseif t == "noPower" then return API.InsufficientPower(sid) == true
     elseif t == "hasPower" then return API.InsufficientPower(sid) == false
+    -- The game has re-skinned this button into another spell right now (Subtlety's
+    -- Eviscerate -> Coup de Grace after 4 Unseen Blade strikes). Spell ids are not
+    -- secret, but everything runs under pcall so an odd value fails CLOSED. cl.v pins
+    -- the expected override id; without it any override counts.
+    elseif t == "overrideActive" then
+        if not (C_Spell and C_Spell.GetOverrideSpell and sid) then return false end
+        local ok, hit = pcall(function()
+            local o = C_Spell.GetOverrideSpell(sid)
+            if not o or o == sid then return false end
+            return cl.v == nil or o == cl.v
+        end)
+        return ok and hit == true
     -- MotE is predicted, not readable. Gate on the talent so these are correct on
     -- builds that don't take it (no talent -> never "up", always "down").
     elseif t == "moteUp" then return Engine.hasMote and S.mote and true or false

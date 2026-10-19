@@ -43,6 +43,7 @@ dofile(TESTS_DIR .. "\\test_bm.lua")
 dofile(TESTS_DIR .. "\\test_mm.lua")
 dofile(TESTS_DIR .. "\\test_ret.lua")
 dofile(TESTS_DIR .. "\\test_assassination.lua")
+dofile(TESTS_DIR .. "\\test_subtlety.lua")
 dofile(TESTS_DIR .. "\\test_spec_contract.lua")
 dofile(TESTS_DIR .. "\\test_encounter.lua")
 

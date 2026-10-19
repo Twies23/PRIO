@@ -11,6 +11,10 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "1.1.0", {
+        "New spec: Subtlety Rogue (Trickster and Deathstalker), lists following the 12.1.5 guide. Trickster Dances at 6+ combo points, Deathstalker at 2 or fewer, and both Dance again right away while Shadow Blades is up. Dance is held when Shadow Blades is under 10 seconds from ready.",
+        "Subtlety: one extra Shadowstrike when Ancient Arts isn't up before Secret Technique (Trickster) or the Darkest Night Eviscerate (Deathstalker) -- track Ancient Arts in the Cooldown Manager. Coup de Grace needs no tracking: PRIO sees when Eviscerate turns into it and, in AoE, prefers it over Black Powder.",
+    } },
     { "1.0.0", {
         "First 1.0 release -- everything since 0.10.0, promoted to stable.",
         "New spec: Assassination Rogue (Deathstalker and Fatebound), lists following the 12.1 guide, with the Darkest Night loop and a readable low-Energy check.",

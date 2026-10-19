@@ -11,6 +11,7 @@ Built to work within 12.1's "secret value" API restrictions — health/power/aur
 | Hunter  | Beast Mastery  | 253     | **Built & tuned** — verified IDs, Pack Leader + Dark Ranger |
 | Shaman  | Elemental      | 262     | Primary / most-tested |
 | Rogue   | Outlaw         | 260     | Tuned (Trickster) |
+| Rogue   | Subtlety       | 261     | New — Trickster + Deathstalker, needs testing |
 | Warrior | Arms           | 71      | Tuned (Slayer) |
 | Shaman  | Enhancement    | 263     | New — needs testing |
 | Hunter  | Marksmanship   | 254     | Stub — best-guess IDs, needs testing |

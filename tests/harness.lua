@@ -66,7 +66,7 @@ function UnitChannelInfo() return nil end
 function InCombatLockdown() return true end
 Enum = { PowerType = { Chi = 12, Energy = 3 } }
 C_Spell = {
-    GetOverrideSpell = function(id) return nil end,
+    GetOverrideSpell = function(id) return S and S.overrides and S.overrides[id] or nil end,
     GetBaseSpell = function(id) return nil end,
 }
 C_SpellBook = {}
@@ -173,6 +173,7 @@ load("Spec_BeastMastery.lua")
 load("Spec_Marksmanship.lua")
 load("Spec_Retribution.lua")
 load("Spec_Assassination.lua")
+load("Spec_Subtlety.lua")
 
 PRIO.Engine:OnSpecChanged()
 H.spec = PRIO.specs[269]
@@ -184,6 +185,7 @@ H.bmSpec = PRIO.specs[253]
 H.mmSpec = PRIO.specs[254]
 H.retSpec = PRIO.specs[70]
 H.assaSpec = PRIO.specs[259]
+H.subSpec = PRIO.specs[261]
 H.Engine = PRIO.Engine
 H.Cond = PRIO.Cond
 H.API = API

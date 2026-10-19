@@ -1,0 +1,272 @@
+-- test_subtlety.lua ------------------------------------------------------------
+-- Subtlety Rogue (261): hero split, the Shadow Dance entry rules (Trickster at 6+ CP,
+-- Deathstalker at <=2), the Shadow Blades <10s hold, Ancient Arts forcing, Coup de
+-- Grace read off the Eviscerate override, and the Deathstalker Darkest Night rows.
+--------------------------------------------------------------------------------
+
+local EVISCERATE  = 196819
+local COUPDEGRACE = 441776
+local SECRETTECH  = 280719
+local DANCE       = 185313
+local BLADES      = 121471
+local GOREMAW     = 426591
+local BACKSTAB    = 53
+local SHADOWSTRIKE = 185438
+local STORM       = 197835
+local BLACKPOWDER = 319175
+local VANISH      = 1856
+local STEALTH     = 1784
+local SND         = 315496
+local ANCIENTARTS = 1268932
+local UNSEENBLADE = 441146
+local MARKDEATH   = 1293340
+local DSMARK      = 457052
+local DARKNIGHT   = 457058
+local COMBO       = 4
+
+local sub = H.subSpec
+
+-- Steady state out of Dance: cooldowns spent, Slice and Dice up, single target, not
+-- stealthed (Stealth + Shadowstrike unusable). Tests poke one thing at a time.
+local function setSub(hero, cp)
+    H.reset(); H.S.specID = 261
+    H.S.power[COMBO] = cp or 0; H.S.powerMax[COMBO] = 7
+    H.S.enemies = 1
+    for _, id in ipairs({ DANCE, BLADES, SND, ANCIENTARTS, DSMARK, DARKNIGHT }) do
+        H.S.tracked[id] = true
+    end
+    H.S.auras[DANCE] = false
+    H.S.auras[BLADES] = false
+    H.S.auras[SND] = true
+    H.S.auras[ANCIENTARTS] = true
+    H.S.auras[DSMARK] = true
+    H.S.auras[DARKNIGHT] = false
+    H.S.usable[STEALTH] = false
+    H.S.usable[SHADOWSTRIKE] = false
+    H.S.ready[GOREMAW] = false
+    H.S.ready[BLADES] = false
+    H.S.ready[VANISH] = false
+    H.S.ready[SECRETTECH] = false
+    H.S.ready[DANCE] = false
+    if hero == "deathstalker" then
+        H.S.knownStrict[MARKDEATH] = true
+    else
+        H.S.knownStrict[UNSEENBLADE] = true
+    end
+    H.rebind()
+end
+
+-- Put us inside a Shadow Dance (Shadowstrike usable).
+local function inDance()
+    H.S.auras[DANCE] = true
+    H.S.usable[SHADOWSTRIKE] = true
+end
+
+local function primary() local r = H.Engine:Evaluate(); return r.primary and r.primary.id end
+
+--------------------------------------------------------------------------------
+-- Hero split
+--------------------------------------------------------------------------------
+test("sub activeHero: Unseen Blade -> trickster", function()
+    H.reset(); H.S.knownStrict[UNSEENBLADE] = true
+    eq(sub.activeHero(), "trickster")
+end)
+
+test("sub activeHero: Mark for Death -> deathstalker", function()
+    H.reset(); H.S.knownStrict[MARKDEATH] = true
+    eq(sub.activeHero(), "deathstalker")
+end)
+
+test("sub activeHero: neither known -> trickster (default)", function()
+    H.reset()
+    eq(sub.activeHero(), "trickster")
+end)
+
+test("sub spec.priority resolves to the active hero's list", function()
+    H.reset(); H.S.knownStrict[MARKDEATH] = true
+    eq(sub.priority.st, sub.priorityByVariant.deathstalker.st)
+    H.reset(); H.S.knownStrict[UNSEENBLADE] = true
+    eq(sub.priority.aoe, sub.priorityByVariant.trickster.aoe)
+end)
+
+--------------------------------------------------------------------------------
+-- Basics
+--------------------------------------------------------------------------------
+test("sub: finishers registered (Eviscerate, Secret Technique, Black Powder)", function()
+    truthy(sub.finishers.Eviscerate)
+    truthy(sub.finishers.SecretTechnique)
+    truthy(sub.finishers.BlackPowder)
+end)
+
+test("sub: Eviscerate at 6 CP outside Dance", function()
+    setSub("trickster", 6)
+    eq(primary(), EVISCERATE)
+end)
+
+test("sub: Backstab below 6 CP outside Dance (Shadowstrike unusable)", function()
+    setSub("trickster", 3)
+    eq(primary(), BACKSTAB)
+end)
+
+test("sub: Goremaw's Bite tops the list when ready", function()
+    setSub("trickster", 6)
+    H.S.ready[GOREMAW] = true
+    eq(primary(), GOREMAW)
+end)
+
+--------------------------------------------------------------------------------
+-- Trickster Shadow Dance entry
+--------------------------------------------------------------------------------
+test("sub trickster: Dance at 6+ CP with Secret Technique ready", function()
+    setSub("trickster", 6)
+    H.S.ready[DANCE] = true; H.S.ready[SECRETTECH] = true
+    eq(primary(), DANCE)
+end)
+
+test("sub trickster: no Dance at low CP without Shadow Blades", function()
+    setSub("trickster", 2)
+    H.S.ready[DANCE] = true; H.S.ready[SECRETTECH] = true
+    eq(primary(), BACKSTAB)
+end)
+
+test("sub trickster: Shadow Blades up -> Dance at any CP", function()
+    setSub("trickster", 1)
+    H.S.ready[DANCE] = true
+    H.S.auras[BLADES] = true
+    eq(primary(), DANCE)
+end)
+
+test("sub trickster: Dance held while Shadow Blades is <10s from ready", function()
+    setSub("trickster", 6)
+    H.S.ready[DANCE] = true; H.S.ready[SECRETTECH] = true
+    H.Engine.P.cdExpire = H.Engine.P.cdExpire or {}
+    H.Engine.P.cdExpire[BLADES] = H.S.now + 5
+    eq(primary(), EVISCERATE, "with 5s left on Blades, save the Dance")
+    H.Engine.P.cdExpire[BLADES] = H.S.now + 40
+    eq(primary(), DANCE, "with 40s left on Blades, Dance now")
+end)
+
+test("sub: Shadow Blades inside Dance", function()
+    setSub("trickster", 3); inDance()
+    H.S.ready[BLADES] = true
+    eq(primary(), BLADES)
+end)
+
+test("sub: no Shadow Blades outside Dance", function()
+    setSub("trickster", 3)
+    H.S.ready[BLADES] = true
+    eq(primary(), BACKSTAB)
+end)
+
+--------------------------------------------------------------------------------
+-- Ancient Arts before Secret Technique (Trickster)
+--------------------------------------------------------------------------------
+test("sub trickster: Secret Technique in Dance at 6 CP with Ancient Arts up", function()
+    setSub("trickster", 6); inDance()
+    H.S.ready[SECRETTECH] = true
+    eq(primary(), SECRETTECH)
+end)
+
+test("sub trickster: Ancient Arts down -> one extra Shadowstrike first, then Secret Technique", function()
+    setSub("trickster", 7); inDance()
+    H.S.ready[SECRETTECH] = true
+    H.S.auras[ANCIENTARTS] = false
+    eq(primary(), SHADOWSTRIKE, "force Ancient Arts")
+    H.fire("UNIT_SPELLCAST_SUCCEEDED", "player", nil, SHADOWSTRIKE)
+    eq(primary(), SECRETTECH, "only ONE extra press -- don't burn the Dance")
+end)
+
+test("sub: Shadowstrike in Dance below 6 CP", function()
+    setSub("trickster", 2); inDance()
+    eq(primary(), SHADOWSTRIKE)
+end)
+
+--------------------------------------------------------------------------------
+-- Coup de Grace (Trickster AoE)
+--------------------------------------------------------------------------------
+test("sub overrideActive: reads Eviscerate -> Coup de Grace", function()
+    setSub("trickster", 6)
+    local cl = { type = "overrideActive", spell = EVISCERATE, v = COUPDEGRACE }
+    falsy(H.Cond.Eval(cl, { now = H.S.now }, EVISCERATE), "no override -> false")
+    H.S.overrides = { [EVISCERATE] = COUPDEGRACE }
+    truthy(H.Cond.Eval(cl, { now = H.S.now }, EVISCERATE), "override -> true")
+    H.S.overrides = { [EVISCERATE] = 12345 }
+    falsy(H.Cond.Eval(cl, { now = H.S.now }, EVISCERATE), "a different override -> false")
+end)
+
+test("sub trickster AoE: Coup de Grace beats Black Powder", function()
+    setSub("trickster", 6); H.S.enemies = 4
+    eq(primary(), BLACKPOWDER, "no CdG -> Black Powder")
+    H.S.overrides = { [EVISCERATE] = COUPDEGRACE }
+    eq(primary(), EVISCERATE, "CdG up -> Eviscerate (shown as Coup de Grace)")
+end)
+
+test("sub AoE: Eviscerate applies a missing Slice and Dice", function()
+    setSub("trickster", 6); H.S.enemies = 4
+    H.S.auras[SND] = false
+    eq(primary(), EVISCERATE)
+end)
+
+test("sub AoE: Shuriken Storm is the builder", function()
+    setSub("trickster", 2); H.S.enemies = 4
+    eq(primary(), STORM)
+end)
+
+--------------------------------------------------------------------------------
+-- Vanish
+--------------------------------------------------------------------------------
+test("sub ST: Vanish only at low CP outside Dance", function()
+    setSub("trickster", 2)
+    H.S.ready[VANISH] = true
+    eq(primary(), VANISH)
+    setSub("trickster", 4)
+    H.S.ready[VANISH] = true
+    eq(primary(), BACKSTAB, "4 CP would be wasted by Premeditation")
+    setSub("trickster", 1); inDance()
+    H.S.ready[VANISH] = true
+    eq(primary(), SHADOWSTRIKE, "never inside Dance")
+end)
+
+--------------------------------------------------------------------------------
+-- Deathstalker
+--------------------------------------------------------------------------------
+test("sub DS: Dance at <=2 CP with Secret Technique ready", function()
+    setSub("deathstalker", 1)
+    H.S.ready[DANCE] = true; H.S.ready[SECRETTECH] = true
+    eq(primary(), DANCE)
+end)
+
+test("sub DS: no Dance at 6 CP -- spend first", function()
+    setSub("deathstalker", 6)
+    H.S.ready[DANCE] = true; H.S.ready[SECRETTECH] = true
+    eq(primary(), EVISCERATE)
+end)
+
+test("sub DS: Darkest Night Eviscerate beats Secret Technique in Dance", function()
+    setSub("deathstalker", 6); inDance()
+    H.S.ready[SECRETTECH] = true
+    H.S.auras[DARKNIGHT] = true
+    eq(primary(), EVISCERATE)
+end)
+
+test("sub DS: Darkest Night without Ancient Arts -> one Shadowstrike first", function()
+    setSub("deathstalker", 7); inDance()
+    H.S.auras[DARKNIGHT] = true
+    H.S.auras[ANCIENTARTS] = false
+    eq(primary(), SHADOWSTRIKE)
+    H.fire("UNIT_SPELLCAST_SUCCEEDED", "player", nil, SHADOWSTRIKE)
+    eq(primary(), EVISCERATE)
+end)
+
+test("sub DS: Mark missing + no Darkest Night -> Shadowstrike re-applies it", function()
+    setSub("deathstalker", 6); inDance()
+    H.S.ready[SECRETTECH] = true
+    H.S.auras[DSMARK] = false
+    eq(primary(), SHADOWSTRIKE)
+end)
+
+test("sub trickster: Darkest Night / Mark rows are absent", function()
+    setSub("trickster", 6); inDance()
+    H.S.auras[DSMARK] = false
+    eq(primary(), EVISCERATE, "Trickster has no Mark row")
+end)
