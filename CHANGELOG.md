@@ -1,5 +1,8 @@
 # PRIO Changelog
 
+## 1.3.2
+Fix: in the Subtlety Trickster AoE list, the Coup de Grace condition on Eviscerate (line 10) showed as a blank "-" in the condition editor. It now uses the "Coup de Grace ready (Trickster)" condition, so it shows and can be edited. Reset Subtlety to default to pick this up.
+
 ## 1.3.1
 **Subtlety Trickster: new default AoE list.** It keeps the same cooldown block as single target, then spends with:
 - Coup de Grace when it's up.

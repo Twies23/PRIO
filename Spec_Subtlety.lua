@@ -171,7 +171,7 @@ local trickster_aoe = {
     { spell = "ShadowDance",     cond = AND(cpMin(6), buffUp(ID_SHADOWBLADES)) },
     { spell = "Vanish",          cond = AND(cpMax(2), buffDown(ID_SHADOWDANCE)) },
     { spell = "SecretTechnique", cond = AND(cpMin(6), buffUp(ID_SHADOWDANCE), scMin(1)) },
-    { spell = "Eviscerate",      cond = AND(cpMin(6), coupReady()) },
+    { spell = "Eviscerate",      cond = AND(cpMin(6), { type = "preset:coupReady" }) },   -- preset, so the editor shows it
     { spell = "BlackPowder",     cond = AND(cpMin(6), talentYes(ID_POTENTPOWDER)) },
     { spell = "BlackPowder",     cond = AND(cpMin(6), enemiesMin(3)) },
     { spell = "Eviscerate",      cond = AND(enemiesEq(2), cpMin(6), talentNo(ID_POTENTPOWDER)) },

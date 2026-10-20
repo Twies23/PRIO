@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "1.3.2", {
+        "Fix: Subtlety Trickster AoE line 10 (Eviscerate) -- its Coup de Grace condition showed as a blank '-' in the condition editor. It now uses the 'Coup de Grace ready (Trickster)' condition. Reset Subtlety to default to pick this up.",
+    } },
     { "1.3.1", {
         "Subtlety Trickster: new default AoE list -- same cooldowns as single target, then Coup de Grace, Black Powder at 6+ (always with Potent Powder, otherwise at 3+ targets), Eviscerate on exactly 2 targets without Potent Powder, and Shuriken Storm to build.",
     } },

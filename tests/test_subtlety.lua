@@ -403,3 +403,19 @@ test("sub macros: every macro has a name and a body", function()
         truthy(#m.body <= 255, m.name .. " fits the 255-char macro limit")
     end
 end)
+
+test("sub: every condition in the shipped lists is one the editor can show", function()
+    H.reset(); H.S.specID = 261; H.rebind()
+    local bad = {}
+    local function walk(c, where)
+        if type(c) ~= "table" then return end
+        if c.clauses then for _, x in ipairs(c.clauses) do walk(x, where) end return end
+        if c.type and not H.Cond.TypeMeta(c.type) then bad[#bad + 1] = where .. ": " .. c.type end
+    end
+    for hero, lists in pairs(sub.priorityByVariant) do
+        for mode, list in pairs(lists) do
+            for i, e in ipairs(list) do walk(e.cond, hero .. "/" .. mode .. " #" .. i) end
+        end
+    end
+    eq(#bad, 0, table.concat(bad, ", "))
+end)
