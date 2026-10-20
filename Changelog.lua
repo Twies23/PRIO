@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "1.3.1", {
+        "Subtlety Trickster: new default AoE list -- same cooldowns as single target, then Coup de Grace, Black Powder at 6+ (always with Potent Powder, otherwise at 3+ targets), Eviscerate on exactly 2 targets without Potent Powder, and Shuriken Storm to build.",
+    } },
     { "1.3.0", {
         "New: Keybind overrides (Options > Display > Keybinds). Add any ability from your lists and type the key PRIO should show -- for abilities on a stealth / stance bar, macros, or binds from other addons. Per spec, saved in profiles, and clear the text to go back to the bar bind.",
     } },

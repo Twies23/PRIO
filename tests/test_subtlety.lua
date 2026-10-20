@@ -113,11 +113,30 @@ end)
 --------------------------------------------------------------------------------
 -- Trickster: the user's tuned list (same list for ST and AoE)
 --------------------------------------------------------------------------------
-test("sub trickster: ST and AoE defaults are the same list, but separate tables", function()
+test("sub trickster: ST is 12 rows, AoE is 14 rows", function()
     local v = sub.priorityByVariant.trickster
-    eq(#v.st, 12); eq(#v.aoe, 12)
-    for i = 1, 12 do eq(v.st[i].spell, v.aoe[i].spell) end
-    truthy(v.st ~= v.aoe, "independent copies")
+    eq(#v.st, 12); eq(#v.aoe, 14)
+    eq(v.aoe[14].spell, "ShurikenStorm")
+end)
+
+test("sub trickster AoE: Black Powder at 3+ targets, Eviscerate on 2 without Potent Powder", function()
+    setSub("trickster", 6); H.S.enemies = 3
+    eq(primary(), BLACKPOWDER, "3 targets")
+    H.S.enemies = 2
+    eq(primary(), EVISCERATE, "2 targets, no Potent Powder")
+    H.S.talents[1265952] = true
+    eq(primary(), BLACKPOWDER, "Potent Powder -> Black Powder at any count")
+end)
+
+test("sub trickster AoE: Coup de Grace beats Black Powder", function()
+    setSub("trickster", 6); H.S.enemies = 4
+    H.S.overrides = { [EVISCERATE] = COUPDEGRACE }
+    eq(primary(), EVISCERATE)
+end)
+
+test("sub trickster AoE: Shuriken Storm builds", function()
+    setSub("trickster", 2); H.S.enemies = 4
+    eq(primary(), STORM)
 end)
 
 test("sub trickster: Shadowstrike from Stealth", function()
@@ -181,10 +200,6 @@ test("sub trickster: Shadowstrike in Dance, Backstab only outside", function()
     eq(primary(), SHADOWSTRIKE, "no Vanish inside Dance")
 end)
 
-test("sub trickster AoE: same list -- Backstab, not Shuriken Storm", function()
-    setSub("trickster", 2); H.S.enemies = 4
-    eq(primary(), BACKSTAB)
-end)
 
 test("sub trickster: queue lines up Blades -> Goremaw's -> Dance -> Secret Technique", function()
     setSub("trickster", 7)

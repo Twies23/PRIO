@@ -1,5 +1,13 @@
 # PRIO Changelog
 
+## 1.3.1
+**Subtlety Trickster: new default AoE list.** It keeps the same cooldown block as single target, then spends with:
+- Coup de Grace when it's up.
+- Black Powder at 6+ combo points: always with Potent Powder, otherwise at 3+ targets.
+- Eviscerate on exactly 2 targets without Potent Powder.
+
+Shuriken Storm is the builder. The single-target list is unchanged. If you've customised Subtlety, reset to default to pick this up.
+
 ## 1.3.0
 **New: Keybind overrides** (Options > Display > Keybinds). PRIO finds your keybinds by scanning your action bars, so it misses abilities that only live on a stealth or stance bar, are cast from a macro, or are bound through another addon. You can now add any ability from your priority lists and type the key PRIO should show for it.
 - Overrides are per spec, and each row shows what PRIO found on your bars.

@@ -70,6 +70,7 @@ local ID_SHADOWTECH   = 196912   -- TrackedBuff (linked 196911). shown in debug 
 local ID_SILENTSTORM  = 385722   -- TrackedBuff (linked 385727). next Shuriken Storm crits
 local ID_PREMEDITATION = 343160  -- TrackedBuff (linked 343173): next builder = full CP
 local ID_SUPERCHARGER = 470347   -- talent: Shadow Dance supercharges 2 combo points
+local ID_POTENTPOWDER = 1265952  -- talent: Black Powder +20% of Mastery at 5+ CP
 
 -- Trickster
 local ID_UNSEENBLADE  = 441146   -- keystone (hero detection)
@@ -95,6 +96,10 @@ local function cpMax(n)        return { type = "resourceMax", v = n } end
 local function notStealthed()  return { type = "notStealthed" } end
 -- Eviscerate is currently re-skinned into Coup de Grace (clean spell-id read).
 local function scMin(n)        return { type = "superChargeMin", v = n } end
+local function enemiesMin(n)   return { type = "enemiesMin", v = n } end
+local function enemiesEq(n)    return { type = "enemiesEq",  v = n } end
+local function talentYes(id)   return { type = "talentYes", spell = id } end
+local function talentNo(id)    return { type = "talentNo",  spell = id } end
 local function coupReady()     return { type = "overrideActive", spell = ID_EVISCERATE, v = ID_COUPDEGRACE } end
 
 --------------------------------------------------------------------------------
@@ -127,7 +132,7 @@ local function rowVanishST()  return { spell = "Vanish", cond = AND(buffDown(ID_
 local function rowVanishAoE() return { spell = "Vanish", cond = AND(buffDown(ID_SHADOWDANCE), notStealthed()) } end
 
 --------------------------------------------------------------------------------
--- TRICKSTER -- the user's own tuned list (1.2.2), used for BOTH ST and AoE.
+-- TRICKSTER -- the user's own tuned lists (ST 1.2.2, AoE 1.3.1).
 --
 -- Shadow Blades and Goremaw's Bite are lined up with Shadow Dance (only when Dance is
 -- ready). Dance at 6+ CP with Secret Technique ready or Shadow Blades up. Secret
@@ -151,8 +156,27 @@ local function trickster_list()
         { spell = "Backstab",        cond = buffDown(ID_SHADOWDANCE) },
     }
 end
-local trickster_st  = trickster_list()
-local trickster_aoe = trickster_list()   -- independent copy, so editing one never edits the other
+local trickster_st = trickster_list()
+
+-- AoE (user's list, 1.3.1): same cooldown block, then Coup de Grace, Black Powder (always
+-- with Potent Powder, else at 3+ targets), Eviscerate on exactly 2 targets without Potent
+-- Powder, and Shuriken Storm as the builder.
+local trickster_aoe = {
+    { spell = "Stealth",         cond = notStealthed() },
+    { spell = "Shadowstrike",    cond = buffUp(ID_STEALTH) },
+    { spell = "Eviscerate",      cond = AND(cpMin(6), buffDown(ID_SND)) },
+    { spell = "ShadowBlades",    cond = cdReady(ID_SHADOWDANCE) },
+    { spell = "GoremawsBite",    cond = cdReady(ID_SHADOWDANCE) },
+    { spell = "ShadowDance",     cond = AND(cpMin(6), cdReady(ID_SECRETTECH)) },
+    { spell = "ShadowDance",     cond = AND(cpMin(6), buffUp(ID_SHADOWBLADES)) },
+    { spell = "Vanish",          cond = AND(cpMax(2), buffDown(ID_SHADOWDANCE)) },
+    { spell = "SecretTechnique", cond = AND(cpMin(6), buffUp(ID_SHADOWDANCE), scMin(1)) },
+    { spell = "Eviscerate",      cond = AND(cpMin(6), coupReady()) },
+    { spell = "BlackPowder",     cond = AND(cpMin(6), talentYes(ID_POTENTPOWDER)) },
+    { spell = "BlackPowder",     cond = AND(cpMin(6), enemiesMin(3)) },
+    { spell = "Eviscerate",      cond = AND(enemiesEq(2), cpMin(6), talentNo(ID_POTENTPOWDER)) },
+    { spell = "ShurikenStorm" },
+}
 
 --------------------------------------------------------------------------------
 -- DEATHSTALKER
