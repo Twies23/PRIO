@@ -1,5 +1,10 @@
 # PRIO Changelog
 
+## 1.2.2
+**Subtlety Trickster default list updated** (single target and AoE). Eviscerate at 6+ combo points now starts a missing Slice and Dice before the cooldowns, and Vanish waits until Shadow Dance is over. If you've customised Subtlety, reset to default to pick this up.
+
+**Setup now has recommended macros.** Subtlety lists three, each with a Copy button: Powder+Coup, Blades+Trinkets and Shadow Tea. Copy opens the macro text selected, so press Ctrl+C and paste it into a new macro.
+
 ## 1.2.1
 **Subtlety Trickster: new default list, used for both single target and AoE.** Shadowstrike from Stealth. Shadow Blades and Goremaw's Bite go when Shadow Dance is ready. Shadow Dance at 6+ combo points with Secret Technique ready or Shadow Blades up. Vanish at 2 or fewer combo points. Secret Technique inside Dance with a supercharged combo point. Then Eviscerate at 6+, Shadowstrike in Dance, and Backstab outside it. Deathstalker is unchanged. If you've customised Subtlety, reset to default to pick this up.
 

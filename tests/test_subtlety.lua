@@ -115,8 +115,8 @@ end)
 --------------------------------------------------------------------------------
 test("sub trickster: ST and AoE defaults are the same list, but separate tables", function()
     local v = sub.priorityByVariant.trickster
-    eq(#v.st, 11); eq(#v.aoe, 11)
-    for i = 1, 11 do eq(v.st[i].spell, v.aoe[i].spell) end
+    eq(#v.st, 12); eq(#v.aoe, 12)
+    for i = 1, 12 do eq(v.st[i].spell, v.aoe[i].spell) end
     truthy(v.st ~= v.aoe, "independent copies")
 end)
 
@@ -178,7 +178,7 @@ test("sub trickster: Shadowstrike in Dance, Backstab only outside", function()
     setSub("trickster", 2); inDance()
     eq(primary(), SHADOWSTRIKE)
     H.S.ready[VANISH] = true
-    eq(primary(), VANISH, "Vanish (<=2 CP) still outranks Shadowstrike")
+    eq(primary(), SHADOWSTRIKE, "no Vanish inside Dance")
 end)
 
 test("sub trickster AoE: same list -- Backstab, not Shuriken Storm", function()
@@ -371,4 +371,20 @@ test("sub predict: AoE Slice and Dice Eviscerate is not repeated", function()
     local q = queueIds()
     eq(q[1], EVISCERATE, "applies Slice and Dice")
     eq(q[2], BLACKPOWDER, "refunded to 7, Slice and Dice now up -> Black Powder")
+end)
+
+test("sub trickster: Eviscerate starts a missing Slice and Dice before cooldowns", function()
+    setSub("trickster", 6)
+    H.S.auras[SND] = false
+    H.S.ready[DANCE] = true; H.S.ready[SECRETTECH] = true; H.S.ready[BLADES] = true
+    eq(primary(), EVISCERATE)
+end)
+
+test("sub macros: every macro has a name and a body", function()
+    truthy(sub.macros and #sub.macros >= 3)
+    for _, m in ipairs(sub.macros) do
+        truthy(m.name and m.name ~= "" and #m.name <= 16, "macro names are max 16 chars in game")
+        truthy(m.body and m.body:find("^#showtooltip"), m.name .. " body")
+        truthy(#m.body <= 255, m.name .. " fits the 255-char macro limit")
+    end
 end)

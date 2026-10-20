@@ -11,6 +11,10 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "1.2.2", {
+        "Subtlety Trickster default list: Eviscerate at 6+ combo points starts a missing Slice and Dice before the cooldowns, and Vanish waits until Shadow Dance is over.",
+        "Setup: recommended macros with a Copy button (Subtlety: Powder+Coup, Blades+Trinkets, Shadow Tea). Copy opens the text selected -- Ctrl+C, then paste into a new macro.",
+    } },
     { "1.2.1", {
         "Subtlety Trickster: new default list, the same for single target and AoE -- Shadowstrike from Stealth, Blades + Goremaw's when Dance is ready, Dance at 6+ combo points (Secret Technique ready or Blades up), Vanish at 2 or fewer, Secret Technique in Dance with a supercharged combo point, then Eviscerate / Shadowstrike in Dance / Backstab outside. Deathstalker unchanged.",
     } },

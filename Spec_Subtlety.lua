@@ -127,7 +127,7 @@ local function rowVanishST()  return { spell = "Vanish", cond = AND(buffDown(ID_
 local function rowVanishAoE() return { spell = "Vanish", cond = AND(buffDown(ID_SHADOWDANCE), notStealthed()) } end
 
 --------------------------------------------------------------------------------
--- TRICKSTER -- the user's own tuned list (1.2.1), used for BOTH ST and AoE.
+-- TRICKSTER -- the user's own tuned list (1.2.2), used for BOTH ST and AoE.
 --
 -- Shadow Blades and Goremaw's Bite are lined up with Shadow Dance (only when Dance is
 -- ready). Dance at 6+ CP with Secret Technique ready or Shadow Blades up. Secret
@@ -139,11 +139,12 @@ local function trickster_list()
     return {
         { spell = "Stealth",         cond = notStealthed() },
         { spell = "Shadowstrike",    cond = buffUp(ID_STEALTH) },
+        { spell = "Eviscerate",      cond = AND(buffDown(ID_SND), cpMin(6)) },   -- start Slice and Dice
         { spell = "ShadowBlades",    cond = cdReady(ID_SHADOWDANCE) },
         { spell = "GoremawsBite",    cond = cdReady(ID_SHADOWDANCE) },
         { spell = "ShadowDance",     cond = AND(cpMin(6), cdReady(ID_SECRETTECH)) },
         { spell = "ShadowDance",     cond = AND(cpMin(6), buffUp(ID_SHADOWBLADES)) },
-        { spell = "Vanish",          cond = cpMax(2) },
+        { spell = "Vanish",          cond = AND(cpMax(2), buffDown(ID_SHADOWDANCE)) },
         { spell = "SecretTechnique", cond = AND(cpMin(6), buffUp(ID_SHADOWDANCE), scMin(1)) },
         { spell = "Eviscerate",      cond = cpMin(6) },
         { spell = "Shadowstrike",    cond = buffUp(ID_SHADOWDANCE) },
@@ -486,6 +487,20 @@ local spec = {
         },
     },
     precombat = {},
+
+    -- Recommended macros, shown in /prio setup with a Copy button each. `icon` is the
+    -- spell whose texture labels the row. Keep names <= 16 chars and bodies <= 255.
+    macros = {
+        { name = "Powder+Coup", icon = ID_BLACKPOWDER,
+          note = "Coup de Grace when it's up, otherwise Black Powder.",
+          body = "#showtooltip Black Powder\n/cast Coup de Grace\n/cast Black Powder" },
+        { name = "Blades+Trinkets", icon = ID_SHADOWBLADES,
+          note = "Shadow Blades with both trinkets and your potion.",
+          body = "#showtooltip Shadow Blades\n/cast Shadow Blades\n/use 13\n/use 14\n/use Light's Potential" },
+        { name = "Shadow Tea", icon = ID_SHADOWDANCE,
+          note = "Shadow Dance (off the global cooldown) straight into Secret Technique.",
+          body = "#showtooltip Shadow Dance\n/use 13\n/cast Shadow Dance\n/cast Secret Technique" },
+    },
 
     pickable = {
         "Eviscerate", "SecretTechnique", "ShadowDance", "ShadowBlades", "GoremawsBite",

@@ -16,6 +16,7 @@ Setup.confirmed = {}          -- [spell] = true once a pandemic window is seen t
 local win, body, elapsed, introFS = nil, nil, 0, nil
 local rows, pool, builtKey = {}, {}, nil
 local cpool, heads = {}, {}   -- compact column rows; column-header fontstrings
+local mpool = {}              -- macro rows (icon + name + note + Copy button)
 
 --------------------------------------------------------------------------------
 -- Auto-derive the auras the rotation ACTUALLY gates on, so the checklist can never
@@ -232,6 +233,32 @@ local function acquireCompact()
     return f
 end
 
+-- Macro row: spell icon, macro name, one-line note, and a Copy button that opens the
+-- shared copy box with the body selected (addons can't write the clipboard -- Ctrl+C).
+local function acquireMacroRow()
+    for _, f in ipairs(mpool) do if not f._used then f._used = true; f:Show(); return f end end
+    local f = CreateFrame("Frame", nil, body)
+    f:SetSize(452, 34)
+    f.icon = f:CreateTexture(nil, "ARTWORK"); f.icon:SetSize(26, 26); f.icon:SetPoint("LEFT", 2, 0)
+    f.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+    f.name = UI.Font(f, 13, C.head); f.name:SetPoint("TOPLEFT", 36, -1)
+    f.note = UI.Font(f, 11, C.muted); f.note:SetPoint("TOPLEFT", 36, -18)
+    f.note:SetPoint("RIGHT", f, "RIGHT", -84, 0); f.note:SetJustifyH("LEFT"); f.note:SetWordWrap(false)
+    local b = CreateFrame("Button", nil, f)
+    b:SetSize(72, 24); b:SetPoint("RIGHT", -2, 0)
+    local bg = UI.Solid(b, "BACKGROUND", C.accent, 0.16); bg:SetAllPoints()
+    local t = UI.Font(b, 12.5, C.accent); t:SetPoint("CENTER"); t:SetText("Copy")
+    b:SetScript("OnEnter", function() bg:SetColorTexture(C.accent[1], C.accent[2], C.accent[3], 0.30) end)
+    b:SetScript("OnLeave", function() bg:SetColorTexture(C.accent[1], C.accent[2], C.accent[3], 0.16) end)
+    b:SetScript("OnClick", function()
+        local m = f._macro
+        if m then UI.CopyBox("Macro: " .. (m.name or "?"), "Ctrl+C to copy, then paste into a new macro (/macro)", m.body or "") end
+    end)
+    f.copy = b
+    f._used = true; mpool[#mpool + 1] = f
+    return f
+end
+
 local function acquireHeader()
     for _, h in ipairs(heads) do if not h._used then h._used = true; h:Show(); return h end end
     local h = UI.Font(body, 12, C.accent); h:SetJustifyH("LEFT"); h:SetWidth(230); h:SetWordWrap(true)
@@ -243,6 +270,7 @@ function Setup:Rebuild(spec)
     for _, f in ipairs(pool) do f._used = false; f:Hide() end
     for _, f in ipairs(cpool) do f._used = false; f:Hide() end
     for _, h in ipairs(heads) do h._used = false; h:Hide() end
+    for _, f in ipairs(mpool) do f._used = false; f._macro = nil; f:Hide() end
     wipe(rows)
 
     local general, abilities, auras = modelFor(spec)
@@ -263,9 +291,9 @@ function Setup:Rebuild(spec)
     -- Two columns: Abilities (left) | Auras (right).
     y = y + 8
     local LX, RX = 22, 262
-    local ha = acquireHeader(); ha:ClearAllPoints(); ha:SetPoint("TOPLEFT", LX, -y)
+    local ha = acquireHeader(); ha:SetWidth(230); ha:ClearAllPoints(); ha:SetPoint("TOPLEFT", LX, -y)
     ha:SetText("Ability cooldowns \226\128\148 validation\n(check they're in Essential / Utility)")
-    local hb = acquireHeader(); hb:ClearAllPoints(); hb:SetPoint("TOPLEFT", RX, -y)
+    local hb = acquireHeader(); hb:SetWidth(230); hb:ClearAllPoints(); hb:SetPoint("TOPLEFT", RX, -y)
     hb:SetText("Auras to add to your Cooldown Manager\n(Tracked Buffs) \226\128\148 required")
     y = y + 34
 
@@ -279,9 +307,27 @@ function Setup:Rebuild(spec)
     end
     for _, a in ipairs(abilities) do addCol(1, LX, a) end
     for _, a in ipairs(auras) do addCol(2, RX, a) end
+    y = math.max(colY[1], colY[2])
+
+    -- Recommended macros (spec.macros): full-width rows with a Copy button each.
+    if spec and spec.macros and #spec.macros > 0 then
+        y = y + 12
+        local hm = acquireHeader(); hm:SetWidth(452); hm:ClearAllPoints(); hm:SetPoint("TOPLEFT", LX, -y)
+        hm:SetText("Recommended macros \226\128\148 click Copy, then Ctrl+C")
+        y = y + 22
+        for _, m in ipairs(spec.macros) do
+            local r = acquireMacroRow()
+            r._macro = m
+            r:ClearAllPoints(); r:SetPoint("TOPLEFT", LX, -y)
+            r.icon:SetTexture(m.icon and API.SpellTexture(m.icon) or 134400)
+            r.name:SetText(m.name or "?")
+            r.note:SetText(m.note or "")
+            y = y + 38
+        end
+    end
 
     builtKey = spec and spec.key or "none"
-    if win then win:SetHeight(math.max(colY[1], colY[2]) + 58) end
+    if win then win:SetHeight(y + 58) end
 end
 
 function Setup:Build()
