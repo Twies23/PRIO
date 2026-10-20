@@ -1594,8 +1594,105 @@ end
 --------------------------------------------------------------------------------
 -- Sidebar navigation
 --------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+-- Keybinds: per-spec keybind overrides. db.keybindOverrides[specKey][spellID] = text.
+-- API.Keybind returns the override first, so the strip, the bind nudge and alerts all
+-- pick it up. An empty text keeps the row but falls back to the action-bar bind.
+--------------------------------------------------------------------------------
+local function KeybindStore(spec, create)
+    local db = PRIO.db
+    if create then
+        db.keybindOverrides = db.keybindOverrides or {}
+        db.keybindOverrides[spec.key] = db.keybindOverrides[spec.key] or {}
+    end
+    return db.keybindOverrides and db.keybindOverrides[spec.key]
+end
+
+local function KeybindBox(parent, text, onChange)
+    local box = UI.Card(parent, C.control, 0.12)
+    box:SetSize(84, 24)
+    local eb = CreateFrame("EditBox", nil, box)
+    eb:SetPoint("TOPLEFT", 6, 0); eb:SetPoint("BOTTOMRIGHT", -6, 0)
+    eb:SetFontObject(ChatFontNormal); eb:SetAutoFocus(false); eb:SetMaxLetters(8)
+    eb:SetJustifyH("CENTER")
+    eb:SetText(text or "")
+    eb:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+    eb:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
+    eb:SetScript("OnTextChanged", function(self, user) if user then onChange(self:GetText() or "") end end)
+    box.eb = eb
+    return box
+end
+
+function Pages.keybinds()
+    local spec = CurrentSpec()
+    if not spec then
+        Section("Keybinds")
+        SettingRow("No spec profile for your current specialization.", 26, function() end)
+        return
+    end
+    local store = KeybindStore(spec, false) or {}
+
+    Section("Overrides \226\128\148 " .. (spec.label or spec.key))
+    local intro = Track(CreateFrame("Frame", nil, content))
+    intro:SetSize(contentW, 34); intro:SetPoint("TOPLEFT", 0, -cursorY)
+    local ifs = UI.Font(intro, 12, C.muted); ifs:SetPoint("TOPLEFT", 0, 0); ifs:SetPoint("RIGHT", 0, 0)
+    ifs:SetJustifyH("LEFT"); ifs:SetWordWrap(true)
+    ifs:SetText("Add an ability and type the key to show for it. Overrides are per spec and win over whatever PRIO finds on your bars. Clear the text to go back to the bar bind.")
+    cursorY = cursorY + 40
+
+    -- Rows, sorted by ability name.
+    local ids = {}
+    for sid in pairs(store) do ids[#ids + 1] = sid end
+    table.sort(ids, function(a, b) return (API.SpellName(a) or "") < (API.SpellName(b) or "") end)
+    for _, sid in ipairs(ids) do
+        local r = Track(CreateFrame("Frame", nil, content))
+        r:SetSize(contentW, 30); r:SetPoint("TOPLEFT", 0, -cursorY)
+        local ic = r:CreateTexture(nil, "ARTWORK"); ic:SetSize(22, 22); ic:SetPoint("LEFT", 0, 0)
+        ic:SetTexture(API.SpellTexture(sid)); ic:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+        local nm = UI.Font(r, 13, C.text); nm:SetPoint("LEFT", ic, "RIGHT", 10, 0)
+        nm:SetText(API.SpellName(sid) or ("#" .. sid))
+        local del = IconButton(r, "\195\151", true, function()
+            local t = KeybindStore(spec, false)
+            if t then t[sid] = nil end
+            AfterChange(); Options:ShowPage("keybinds")
+        end)
+        del:SetPoint("RIGHT", 0, 0)
+        local box = KeybindBox(r, store[sid], function(txt)
+            KeybindStore(spec, true)[sid] = txt
+            AfterChange()
+        end)
+        box:SetPoint("RIGHT", del, "LEFT", -10, 0)
+        local bar = API.BarKeybind(sid)
+        local hint = UI.Font(r, 11.5, C.faint); hint:SetPoint("RIGHT", box, "LEFT", -10, 0)
+        hint:SetText((bar and bar ~= "") and ("on bars: " .. bar) or "not found on bars")
+        cursorY = cursorY + 34
+    end
+    if #ids == 0 then
+        local e = Track(CreateFrame("Frame", nil, content))
+        e:SetSize(contentW, 24); e:SetPoint("TOPLEFT", 0, -cursorY)
+        local efs = UI.Font(e, 12.5, C.faint); efs:SetPoint("LEFT", 0, 0)
+        efs:SetText("No overrides yet.")
+        cursorY = cursorY + 28
+    end
+
+    cursorY = cursorY + 6
+    SettingRow("", 28, function(r)
+        local add
+        add = textButton(r, 150, "+ Add ability", C.accent, function()
+            ShowSpellPicker(add, spec, function(sid)
+                if not sid then return end
+                local t = KeybindStore(spec, true)
+                if t[sid] == nil then t[sid] = "" end
+                Options:ShowPage("keybinds")
+            end)
+        end)
+        add:SetPoint("RIGHT", 0, 0)
+    end)
+end
+
 local NAV = {
-    { header = "DISPLAY",  items = { { label = "Icons & Layout", page = "display" } } },
+    { header = "DISPLAY",  items = { { label = "Icons & Layout", page = "display" },
+                                     { label = "Keybinds",       page = "keybinds", new = true } } },
     { header = "ROTATION", items = { { label = "Priorities",     page = "rotation" },
                                      { label = "Opener",         page = "opener" } } },
     -- Encounter planner (docs/encounter-planner.md): assign cooldowns to fight timings /
@@ -1607,6 +1704,7 @@ local NAV = {
 
 local PAGE_META = {
     display  = { title = "Display",    desc = "Size, layout, and what the strip draws on each icon." },
+    keybinds = { title = "Keybinds",   desc = "Set the key PRIO shows for an ability when it can't find it on your action bars (stealth / stance bars, macros, mouse binds)." },
     rotation = { title = "Priorities", desc = "Order abilities highest to lowest. PRIO shows the first one that's ready and passes its condition." },
     opener   = { title = "Opener",     desc = "The exact sequence PRIO shows at the pull, in order. Steps that aren't known or ready are skipped." },
     encounters = { title = "Encounters", desc = "Assign cooldowns to fight timings or boss abilities. PRIO holds them out of the normal rotation and recommends them on cue (needs BigWigs for live triggers)." },

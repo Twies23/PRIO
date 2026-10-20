@@ -202,6 +202,21 @@ local ok, lines = pcall(API.AuraFrameProbe, 703)
 check("probe runs", ok, true)
 PROBE = ok and table.concat(lines, "\n") or tostring(lines)
 
+-- 12. Keybind overrides (Options > Keybinds) win over the action-bar scan, per spec.
+local realSpec = API.GetSpecID
+API.GetSpecID = function() return 261 end
+PRIO.specs[261] = { key = "ROGUE_SUBTLETY" }
+PRIO.db.keybindOverrides = { ROGUE_SUBTLETY = { [185438] = "S1", [53] = "" } }
+check("override is returned", API.Keybind(185438), "S1")
+check("override readable on its own", API.KeybindOverride(185438), "S1")
+check("empty override falls back to the bar (none here)", API.Keybind(53), "")
+check("no override for another spell", API.KeybindOverride(196819), nil)
+API.GetSpecID = function() return 260 end
+PRIO.specs[260] = { key = "ROGUE_OUTLAW" }
+check("overrides are per spec", API.Keybind(185438), "")
+API.GetSpecID = realSpec
+PRIO.db.keybindOverrides = nil
+
 return (#fails == 0) and ("ALL " .. n .. " CHECKS PASSED") or (#fails .. " FAILED:\n  " .. table.concat(fails, "\n  "))
 """)
 print("=== PRIO Cooldown Manager reads (real API.lua): %s ===" % fails)

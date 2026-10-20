@@ -1,5 +1,11 @@
 # PRIO Changelog
 
+## 1.3.0
+**New: Keybind overrides** (Options > Display > Keybinds). PRIO finds your keybinds by scanning your action bars, so it misses abilities that only live on a stealth or stance bar, are cast from a macro, or are bound through another addon. You can now add any ability from your priority lists and type the key PRIO should show for it.
+- Overrides are per spec, and each row shows what PRIO found on your bars.
+- Clear the text to go back to the bar bind.
+- Overrides are saved in profiles, and count as "bound" for the keybind reminder.
+
 ## 1.2.2
 **Subtlety Trickster default list updated** (single target and AoE). Eviscerate at 6+ combo points now starts a missing Slice and Dice before the cooldowns, and Vanish waits until Shadow Dance is over. If you've customised Subtlety, reset to default to pick this up.
 

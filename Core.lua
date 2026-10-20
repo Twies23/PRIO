@@ -84,6 +84,9 @@ PRIO.defaults = {
     -- Custom openers: customOpeners[specKey] = { st = {"Key",...}, aoe = {...} }. Per-mode;
     -- a legacy flat array is read as the ST opener. Replaces spec.opener / spec.openerAoe.
     customOpeners = {},
+    -- Keybind overrides (Options > Keybinds): keybindOverrides[specKey][spellID] = "text".
+    -- Shown instead of the action-bar bind -- for stance/stealth bars, macros, mouse binds.
+    keybindOverrides = {},
     -- Opener gate: openerRequireAll[specKey] = true -> only open when ALL signature
     -- cooldowns are ready (default: any one is enough).
     openerRequireAll = {},
@@ -156,6 +159,7 @@ function PRIO:SaveProfile(name)
     p.customPriorities = CopyTable(self.db.customPriorities or {})
     p.customOpeners = CopyTable(self.db.customOpeners or {})
     p.openerRequireAll = CopyTable(self.db.openerRequireAll or {})
+    p.keybindOverrides = CopyTable(self.db.keybindOverrides or {})
     self.db.profiles[name] = p
     print("|cff" .. (self.UI and self.UI.accentHex or "0cd29f") .. "PRIO|r: saved profile \"" .. name .. "\".")
 end
@@ -167,6 +171,7 @@ function PRIO:ApplyProfile(name)
     if p.customPriorities then self.db.customPriorities = CopyTable(p.customPriorities) end
     if p.customOpeners then self.db.customOpeners = CopyTable(p.customOpeners) end
     if p.openerRequireAll then self.db.openerRequireAll = CopyTable(p.openerRequireAll) end
+    if p.keybindOverrides then self.db.keybindOverrides = CopyTable(p.keybindOverrides) end
     if self.UI then self.UI.ApplyAccent() end
     if self.RecolorMinimapButton then self.RecolorMinimapButton() end
     if self.Display and self.Display.Refresh then self.Display:Refresh() end

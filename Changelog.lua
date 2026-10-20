@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "1.3.0", {
+        "New: Keybind overrides (Options > Display > Keybinds). Add any ability from your lists and type the key PRIO should show -- for abilities on a stealth / stance bar, macros, or binds from other addons. Per spec, saved in profiles, and clear the text to go back to the bar bind.",
+    } },
     { "1.2.2", {
         "Subtlety Trickster default list: Eviscerate at 6+ combo points starts a missing Slice and Dice before the cooldowns, and Vanish waits until Shadow Dance is over.",
         "Setup: recommended macros with a Copy button (Subtlety: Powder+Coup, Blades+Trinkets, Shadow Tea). Copy opens the text selected -- Ctrl+C, then paste into a new macro.",

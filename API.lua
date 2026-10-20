@@ -1301,7 +1301,30 @@ local function Shorten(key)
     return key
 end
 
+-- The user's keybind override for this spell on the ACTIVE spec (Options > Keybinds), or
+-- nil. Overrides cover binds the action-bar scan can't see: abilities that only live on
+-- a stance / stealth bar (Shadowstrike), macros, mouse buttons from another addon.
+function API.KeybindOverride(spellID)
+    local db = PRIO.db
+    local ko = db and db.keybindOverrides
+    if not (ko and spellID) then return nil end
+    local specID = API.GetSpecID and API.GetSpecID()
+    local spec = specID and PRIO.specs and PRIO.specs[specID]
+    local t = spec and ko[spec.key]
+    local v = t and t[spellID]
+    if type(v) == "string" and v ~= "" then return v end
+    return nil
+end
+
+-- The keybind shown for a spell: the user's override if set, else the action-bar bind.
 function API.Keybind(spellID)
+    local ov = API.KeybindOverride(spellID)
+    if ov then return ov end
+    return API.BarKeybind(spellID)
+end
+
+-- The bind found by scanning the action bars (ignores overrides).
+function API.BarKeybind(spellID)
     if not (C_ActionBar and C_ActionBar.FindSpellActionButtons) then return "" end
     local ok, slots = pcall(C_ActionBar.FindSpellActionButtons, spellID)
     if not ok or type(slots) ~= "table" then return "" end
