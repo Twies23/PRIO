@@ -159,6 +159,13 @@ local function modelFor(spec)
                 if it.kind == "trackedAura" and it.spell and it.optional then handOpt[it.spell] = true end
             end
         end
+        -- Auras a spec lists in its own setup (e.g. a tier-set proc it reads directly)
+        -- appear even when no list condition references them.
+        if spec.setup then
+            for _, it in ipairs(spec.setup) do
+                if it.kind == "trackedAura" and it.spell then req.auras[it.spell] = true end
+            end
+        end
         local ids = {}
         for id in pairs(req.auras) do ids[#ids + 1] = id end
         table.sort(ids)
@@ -339,7 +346,7 @@ function Setup:Build()
     local intro = UI.Font(body, 12.5, C.muted)
     intro:SetPoint("TOPLEFT", 22, -68); intro:SetPoint("RIGHT", body, "RIGHT", -22, 0)
     intro:SetJustifyH("LEFT"); intro:SetWordWrap(true)
-    intro:SetText("Each dot turns green once it's set. Add the spells below to your Cooldown Manager (Edit Mode). |cffe0685aAuras are required|r -- PRIO reads them from buff tracking. |cffe0a03aAbilities are recommended|r for your cooldown display.")
+    intro:SetText("Each dot turns green once it's set. Add the spells below to your Cooldown Manager (Edit Mode). |cffe0685aAuras are required|r -- PRIO reads them from buff tracking. |cffe0a03aAbilities are recommended|r for your cooldown display. Default lists assume the current meta talent build for your spec.")
     introFS = intro
 
     -- Footer buttons.

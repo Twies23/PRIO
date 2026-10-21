@@ -354,6 +354,15 @@ function Pages.rotation()
     local mode = CurrentMode()
     local variant = CurrentVariant(spec)
 
+    do
+        local note = Track(CreateFrame("Frame", nil, content))
+        note:SetSize(contentW, 30); note:SetPoint("TOPLEFT", 0, -cursorY)
+        local nfs = UI.Font(note, 12, C.muted)
+        nfs:SetPoint("TOPLEFT", 0, 0); nfs:SetPoint("RIGHT", 0, 0)
+        nfs:SetJustifyH("LEFT"); nfs:SetWordWrap(true)
+        nfs:SetText("|cffe0a03aNote:|r the default lists assume you're playing the current meta talent build for your spec. On another build, adjust the list to fit your talents.")
+        cursorY = cursorY + 34
+    end
     Section("Spec & Mode")
     SettingRow("Specialization", 30, function(r)
         local box = UI.Card(r, C.control, 0.08)

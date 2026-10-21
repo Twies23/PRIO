@@ -11,6 +11,11 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "1.3.6", {
+        "Elemental: new default single target, cleave and AoE lists (no Tempest; Voltaic Blaze when Purging Flames is down; Lava Burst only with Purging Flames in cleave / AoE). Reset Elemental to default to pick them up.",
+        "Elemental: Overcharge! (4-set) is tracked -- with it in your Cooldown Manager, the free Earth Shock / Elemental Blast / Earthquake is never held for Maelstrom and flashes. New 'Overcharge! up' condition.",
+        "The Priorities page and the setup screen now note that default lists assume the current meta talent build.",
+    } },
     { "1.3.5", {
         "Subtlety: Shadow Dance charges are tracked (2 charges, 20s recharge), so the queue can show a second Dance when one is banked -- never Dance right behind Dance. Charges conditions work on Shadow Dance, and Cooldown >= / <= works on Vanish (fixed 2 minutes) as well as Shadow Blades.",
     } },

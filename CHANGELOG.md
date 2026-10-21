@@ -1,5 +1,15 @@
 # PRIO Changelog
 
+## 1.3.6
+**Elemental: new default lists** for single target, cleave and AoE. Tempest is gone from the defaults. If you've customised Elemental, reset to default to pick these up.
+- **Single target:** Stormkeeper, Ancestral Swiftness, Flame Shock upkeep, Ascendance, the Master of the Elements block, then Elemental Blast, Lava Burst and Lightning Bolt.
+- **Cleave:** Voltaic Blaze when talented and Purging Flames is down. Chain Lightning in the Master of the Elements window. Lava Burst only with Purging Flames (plus Lava Surge, or Voltaic Blaze ready).
+- **AoE:** the same shape as cleave, with Earthquake as the spender.
+
+**Elemental: Overcharge! (4-set) is tracked.** Track Overcharge! in your Cooldown Manager. Your next Earth Shock, Elemental Blast or Earthquake is then free: PRIO stops holding it for Maelstrom and flashes it. It also reads the proc's glow, so nothing changes if you don't track the buff. Overcharge! is in the setup checklist, and there's a new "Overcharge! up (free spender)" condition.
+
+**Notes added:** the Priorities page and the setup screen now say that default lists assume the current meta talent build for your spec.
+
 ## 1.3.5
 **Subtlety: Shadow Dance charges and Vanish are now tracked.**
 - **Shadow Dance** has 2 charges on a 20-second recharge. PRIO keeps count from your casts, so the queue can show a second Dance when one is banked. It never queues Dance right behind Dance, because the game won't let you Dance while Dance is up. Charges conditions now work on Shadow Dance.

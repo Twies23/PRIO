@@ -1558,6 +1558,9 @@ local function BuildState(self, mode, enemies)
             local sid = spec.spells[key]
             if sid and API.SpellGlowing(sid) == true then free = true; break end
         end
+        -- The proc's own buff, when tracked (spec.freeSpendAura, e.g. Overcharge!), counts too.
+        local fa = spec.freeSpendAura
+        if not free and fa and API.IsTracked(fa) and API.IsAuraActive(fa) == true then free = true end
         P.freeSpend = free
     end
 

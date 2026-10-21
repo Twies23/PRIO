@@ -19,6 +19,8 @@ local ID_FLAMESHOCK  = 470411   -- Flame Shock aura (TrackedBar)
 local ID_PURGING     = 1259471  -- Purging Flames buff (from Voltaic Blaze)
 local ID_LAVASURGE   = 77762    -- Lava Surge BUFF aura (77756 is the passive/proc, not the buff)
 local ID_VOLTAIC     = 470057   -- Voltaic Blaze (talent gate; shares an override with Flame Shock)
+local ID_OVERCHARGE  = 1300222  -- Overcharge! (12.1 4-set): next Earth Shock / Elemental Blast /
+                                -- Earthquake costs no Maelstrom. TrackedBuff in the Cooldown Manager.
 
 -- Condition helpers (keep the all-inclusive list readable).
 local function AND(...) return { op = "and", clauses = { ... } } end
@@ -30,6 +32,7 @@ local function cdReady(id)  return { type = "cdReady",     spell = id } end
 local function refreshable(id) return { type = "refreshable", spell = id } end
 local function talent(id)      return { type = "talentYes", spell = id } end
 local function talentNo(id)    return { type = "talentNo",  spell = id } end
+local function usable(id)      return { type = "usable",    spell = id } end
 local moteUp   = { type = "moteUp" }
 local moteDown = { type = "moteDown" }
 
@@ -50,6 +53,8 @@ local spec = {
           hint = "Add Flame Shock to your Cooldown Manager tracked bars so PRIO can read its state." },
         { kind = "trackedAura", label = "Lava Surge tracked", spell = 77762,
           hint = "Track Lava Surge so instant Lava Burst procs are detected." },
+        { kind = "trackedAura", label = "Overcharge! tracked", spell = ID_OVERCHARGE, optional = true,
+          hint = "4-set only: track Overcharge! (Tracked Buffs). Your next Earth Shock / Elemental Blast / Earthquake is free -- PRIO stops holding it for Maelstrom and flashes it." },
         { kind = "pandemic", label = "Flame Shock pandemic alert", spell = 470411,
           hint = "Optional: enable the Pandemic Time alert on Flame Shock (Edit Mode -> Cooldown Manager) for no-clip refresh timing. Turns green once detected in combat." },
     },
@@ -94,6 +99,12 @@ local spec = {
         PurgingFlames  = 1259471,
         AscendanceBuff = 1219480,
         Stormkeeper    = 191634,
+        Overcharge     = ID_OVERCHARGE,
+    },
+
+    -- Named editor conditions.
+    condPresets = {
+        { key = "overcharge", label = "Overcharge! up (free spender)", clause = buffUp(ID_OVERCHARGE) },
     },
 
     -- Which spells appear in the "Add ability" picker (spec.spells order is
@@ -122,6 +133,10 @@ local spec = {
         LavaBurst      = { type = "buffActive", spell = ID_LAVASURGE },  -- Lava Surge -> instant
         LightningBolt  = { type = "skStacks", v = 1 },                   -- Stormkeeper stack -> instant
         ChainLightning = { type = "skStacks", v = 1 },
+        -- Overcharge! (4-set) -> the next spender is free.
+        ElementalBlast = { type = "buffActive", spell = ID_OVERCHARGE },
+        EarthShock     = { type = "buffActive", spell = ID_OVERCHARGE },
+        Earthquake     = { type = "buffActive", spell = ID_OVERCHARGE },
     },
 
     -- Spells that may repeat freely in the queue (no cooldown, spammable). Only
@@ -170,6 +185,9 @@ local spec = {
     -- so the free spender isn't withheld by the Maelstrom gate and isn't mispredicted as
     -- having drained Maelstrom when you cast it. Inert without the 4-set (nothing glows).
     freeSpendGlow = { EarthShock = true, ElementalBlast = true, Earthquake = true },
+    -- The same proc as a tracked buff (Overcharge! 1300222). Read alongside the glow, so the
+    -- free spender is caught even when a UI addon restyles or hides the glow.
+    freeSpendAura = ID_OVERCHARGE,
     maelstromMax = 150,
     -- On-cast Maelstrom generation. A number is a flat gain; a function receives the enemy
     -- count and returns the gain (Chain Lightning generates 2 per target it hits). Flame
@@ -229,6 +247,7 @@ local spec = {
         { label = "Flame Shock pandemic",   kind = "pandemic", spell = ID_FLAMESHOCK },
         { label = "Lava Surge",             kind = "buff", spell = ID_LAVASURGE },
         { label = "Purging Flames",         kind = "buff", spell = ID_PURGING },
+        { label = "Overcharge! (4-set)",    kind = "buff", spell = ID_OVERCHARGE },
     },
     economy = {
         gen   = { "Lightning Bolt", "Chain Lightning", "Lava Burst", "Tempest" },
@@ -244,74 +263,49 @@ local spec = {
     -- by casting Voltaic Blaze when the DoT is missing; Lava Burst consumes Purging
     -- Flames in AoE. All conditions read live off the Cooldown Viewer.
     priority = {
-        -- Single target (1-2). All-inclusive: MotE-build lines (moteUp/moteDown) are
-        -- talent-gated, buff lines go inert without the buff, untalented abilities
-        -- are filtered by IsKnown. Covers both the Master-of-the-Elements and the
-        -- Voltaic Blaze builds from one list.
+        -- The user's tuned lists (1.3.6), shipped as the defaults. Built for the meta
+        -- Farseer build; untalented abilities are filtered by IsKnown and MotE lines are
+        -- talent-gated, so off-meta builds still run, just less precisely.
         st = {
             { spell = "Stormkeeper" },
             { spell = "AncestralSwiftness" },
-            { spell = "Ascendance", cond = OR(cdReady(ID_STORMKEEPER), buffUp(ID_STORMKEEPER)) },
-            -- Flame Shock upkeep. The Flame Shock button smart-swaps to Voltaic Blaze
-            -- when that's talented, so no separate ST Voltaic Blaze line is needed.
-            { spell = "FlameShock",  ignoreCD = true, cond = OR(buffDown(ID_FLAMESHOCK), refreshable(ID_FLAMESHOCK)) },
-            -- MotE window: spend with Elemental Blast, build with Lava Burst, consume
-            -- with a Stormkeeper Lightning Bolt (all inert on non-MotE builds).
+            { spell = "FlameShock",     ignoreCD = true, cond = OR(buffDown(ID_FLAMESHOCK), refreshable(ID_FLAMESHOCK)) },
+            { spell = "Ascendance" },
             { spell = "ElementalBlast", cond = moteUp },
             { spell = "LavaBurst",      cond = moteDown },
             { spell = "LightningBolt",  cond = moteUp },
-            -- General
             { spell = "ElementalBlast" },
-            { spell = "LavaBurst", cond = buffUp(ID_LAVASURGE) },   -- instant proc
-            { spell = "LavaBurst" },                                -- charge dump
-            { spell = "Tempest" },                                  -- proc (if talented)
-            { spell = "LightningBolt" },                            -- filler
+            { spell = "LavaBurst",      cond = buffUp(ID_LAVASURGE) },
+            { spell = "LavaBurst" },
+            { spell = "LightningBolt" },
         },
 
-        -- Cleave (3): the AoE rotation with Elemental Blast as the spender (SimC uses
-        -- Earthquake only at 4+). Chain Lightning replaces Lightning Bolt as filler.
         cleave = {
             { spell = "Stormkeeper" },
             { spell = "AncestralSwiftness" },
-            -- Non-Voltaic builds keep Flame Shock up manually; Voltaic builds use Voltaic
-            -- Blaze on cooldown instead (which applies Flame Shock).
-            { spell = "FlameShock",  ignoreCD = true, cond = AND(buffDown(ID_FLAMESHOCK), talentNo(ID_VOLTAIC)) },
-            { spell = "FlameShock",  ignoreCD = true, cond = AND(refreshable(ID_FLAMESHOCK), talentNo(ID_VOLTAIC)) },
-            { spell = "VoltaicBlaze", cond = talent(ID_VOLTAIC) },  -- 3+: on cooldown, only if talented
-            { spell = "Ascendance",  cond = OR(cdReady(ID_STORMKEEPER), buffUp(ID_STORMKEEPER)) },
-            { spell = "LavaBurst",   cond = AND(buffUp(ID_PURGING), buffUp(ID_LAVASURGE)) },
-            { spell = "Tempest",     cond = moteUp },
-            { spell = "ElementalBlast" },                           -- spender at 3 targets
-            { spell = "LavaBurst",   cond = buffUp(ID_PURGING) },
-            { spell = "Tempest" },
-            { spell = "ChainLightning" },                          -- filler (Stormkeeper-empowered via flash)
+            { spell = "FlameShock",     ignoreCD = true, cond = AND(refreshable(ID_FLAMESHOCK), talentNo(ID_VOLTAIC), usable(ID_FLAMESHOCK)) },
+            { spell = "VoltaicBlaze",   cond = AND(usable(ID_VOLTAIC), talent(ID_VOLTAIC), buffDown(ID_PURGING)) },
+            { spell = "Ascendance" },
+            { spell = "ElementalBlast", cond = moteUp },
+            { spell = "ChainLightning", cond = moteUp },
+            { spell = "ElementalBlast" },
+            { spell = "LavaBurst",      cond = AND(buffUp(ID_PURGING), buffUp(ID_LAVASURGE)) },
+            { spell = "LavaBurst",      cond = AND(buffUp(ID_PURGING), cdReady(ID_VOLTAIC)) },
+            { spell = "ChainLightning" },
         },
 
-        -- AoE (4+): all-inclusive, mirroring SimC's actions.aoe. Talent branches are
-        -- handled automatically -- untalented abilities are filtered by IsKnown, buff
-        -- lines go inert when the buff never appears, and moteUp/moteDown are gated on
-        -- the Master of the Elements talent. The same spell may appear on several rows
-        -- (like SimC) and fires once. Secret-only checks (Maelstrom deficit, stack
-        -- thresholds, cooldown/DoT remaining, per-target selection) are dropped.
         aoe = {
             { spell = "Stormkeeper" },
             { spell = "AncestralSwiftness" },
-            -- Non-Voltaic builds keep Flame Shock up manually; Voltaic builds use Voltaic
-            -- Blaze on cooldown instead (which applies Flame Shock).
-            { spell = "FlameShock",  ignoreCD = true, cond = AND(buffDown(ID_FLAMESHOCK), talentNo(ID_VOLTAIC)) },
-            { spell = "FlameShock",  ignoreCD = true, cond = AND(refreshable(ID_FLAMESHOCK), talentNo(ID_VOLTAIC)) },
-            { spell = "VoltaicBlaze", cond = talent(ID_VOLTAIC) },  -- 3+: on cooldown, only if talented
-            { spell = "Ascendance",  cond = OR(cdReady(ID_STORMKEEPER), buffUp(ID_STORMKEEPER)) },
-            -- Instant Lava Burst cleave off a proc
-            { spell = "LavaBurst",   cond = AND(buffUp(ID_PURGING), buffUp(ID_LAVASURGE)) },
-            -- Spend the MotE window with Tempest
-            { spell = "Tempest",     cond = moteUp },
-            -- Spender (Earthquake at 4+; Elemental Blast isn't used in AoE)
+            { spell = "FlameShock",     ignoreCD = true, cond = AND(refreshable(ID_FLAMESHOCK), talentNo(ID_VOLTAIC)) },
+            { spell = "VoltaicBlaze",   cond = AND(talent(ID_VOLTAIC), usable(ID_VOLTAIC), buffDown(ID_PURGING)) },
+            { spell = "Ascendance" },
+            { spell = "Earthquake",     cond = moteUp },
+            { spell = "ChainLightning", cond = moteUp },
+            { spell = "LavaBurst",      cond = AND(buffUp(ID_PURGING), buffUp(ID_LAVASURGE)) },
             { spell = "Earthquake" },
-            -- Consume Purging Flames
-            { spell = "LavaBurst",   cond = buffUp(ID_PURGING) },
-            { spell = "Tempest" },
-            { spell = "ChainLightning" },                          -- filler (Stormkeeper-empowered via flash)
+            { spell = "LavaBurst",      cond = AND(buffUp(ID_PURGING), cdReady(ID_VOLTAIC)) },
+            { spell = "ChainLightning" },
         },
     },
 }
