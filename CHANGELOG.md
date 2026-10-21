@@ -1,5 +1,16 @@
 # PRIO Changelog
 
+## 1.3.3
+**Experimental: Condition Test panel** (`/prio condtest`). It checks which conditions actually give an answer in combat, to help find ones worth removing from the editor.
+- Press **Record**, then fight a dummy or a pull for a minute or two. Recording keeps going if you close the window.
+- It tests every condition in your current lists, every named condition, and every condition type the editor offers (each tried against your spec's abilities and buffs).
+- Each one gets a verdict from in-combat samples only:
+  - **works** -- seen both true and false.
+  - **always true / always false** -- never changed while recording.
+  - **unreadable** -- the game never gave an answer.
+  - **error** -- the check failed.
+- **Export** gives a text report to paste back.
+
 ## 1.3.2
 Fix: in the Subtlety Trickster AoE list, the Coup de Grace condition on Eviscerate (line 10) showed as a blank "-" in the condition editor. It now uses the "Coup de Grace ready (Trickster)" condition, so it shows and can be edited. Reset Subtlety to default to pick this up.
 

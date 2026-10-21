@@ -380,6 +380,9 @@ SlashCmdList.PRIO = function(msg)
         if PRIO.Debug then PRIO.Debug:Toggle() end
     elseif msg == "rotdebug" or msg == "rotation" then
         if PRIO.RotationDebug then PRIO.RotationDebug:Toggle() end
+    elseif msg == "condtest" then
+        -- EXPERIMENTAL: which conditions actually read in combat (CondTest.lua).
+        if PRIO.CondTest then PRIO.CondTest:Toggle() end
     elseif msg:match("^iconcount") then
         -- What a spell's Cooldown Manager icon exposes about the number drawn on it
         -- (default: Execute 163201 -> Sudden Death stacks). Run with 1 and with 2 stacks,

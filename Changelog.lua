@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "1.3.3", {
+        "Experimental: Condition Test panel (/prio condtest). Press Record, then fight for a minute or two -- it checks every condition in your lists, every named condition and every editor condition type, and marks each works / always true / always false / unreadable / error from in-combat samples. Export gives a text report.",
+    } },
     { "1.3.2", {
         "Fix: Subtlety Trickster AoE line 10 (Eviscerate) -- its Coup de Grace condition showed as a blank '-' in the condition editor. It now uses the 'Coup de Grace ready (Trickster)' condition. Reset Subtlety to default to pick this up.",
     } },
