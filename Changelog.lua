@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "1.3.5", {
+        "Subtlety: Shadow Dance charges are tracked (2 charges, 20s recharge), so the queue can show a second Dance when one is banked -- never Dance right behind Dance. Charges conditions work on Shadow Dance, and Cooldown >= / <= works on Vanish (fixed 2 minutes) as well as Shadow Blades.",
+    } },
     { "1.3.4", {
         "Condition editor: Buff time left, Buff stacks, Charges, Next charge and Cooldown left only offer what your spec actually tracks -- for anything else they never fire in combat. With none, the row says 'none are tracked for this spec'. Existing lists work exactly as before.",
     } },

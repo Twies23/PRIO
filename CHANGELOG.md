@@ -1,5 +1,10 @@
 # PRIO Changelog
 
+## 1.3.5
+**Subtlety: Shadow Dance charges and Vanish are now tracked.**
+- **Shadow Dance** has 2 charges on a 20-second recharge. PRIO keeps count from your casts, so the queue can show a second Dance when one is banked. It never queues Dance right behind Dance, because the game won't let you Dance while Dance is up. Charges conditions now work on Shadow Dance.
+- **Vanish** is a fixed 2-minute cooldown, so Cooldown >= / <= now works for it, alongside Shadow Blades.
+
 ## 1.3.4
 **Condition editor: no more conditions that can never fire.** The Condition Test showed that these five conditions only give a real answer in combat for things PRIO deliberately tracks for your spec:
 - Buff time left

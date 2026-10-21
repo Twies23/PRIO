@@ -419,3 +419,37 @@ test("sub: every condition in the shipped lists is one the editor can show", fun
     end
     eq(#bad, 0, table.concat(bad, ", "))
 end)
+
+test("sub: 2 Shadow Dance charges -- the queue never stacks Dance -> Dance", function()
+    setSub("trickster", 7)
+    H.S.ready[DANCE] = true; H.S.ready[SECRETTECH] = true
+    H.S.chargeState[DANCE] = { max = 2, cur = 2, belowMax = false }
+    H.rebind(); H.Engine:UpdateCharges(H.S.now)
+    H.Engine.P.superCharge = 0
+    local r = H.Engine:Evaluate()
+    local q = { r.primary and r.primary.id }
+    for _, e in ipairs(r.queue or {}) do q[#q + 1] = e.id end
+    eq(q[1], DANCE)
+    eq(q[2], SECRETTECH, "Dance is unusable while dancing, even with a charge banked")
+end)
+
+test("sub: Shadow Dance charges are predicted (2 max, 20s recharge)", function()
+    setSub("trickster", 0)
+    H.S.ready[DANCE] = true                 -- a charge is available all along
+    H.S.chargeState[DANCE] = { max = 2, cur = 2, belowMax = false }
+    H.rebind(); H.Engine:UpdateCharges(H.S.now)
+    eq(H.Engine:PredictedCharges(DANCE), 2)
+    H.S.chargeState[DANCE] = { max = 2, cur = nil, belowMax = true }   -- combat: count secret
+    H.fire("UNIT_SPELLCAST_SUCCEEDED", "player", nil, DANCE)
+    eq(H.Engine:PredictedCharges(DANCE), 1, "a cast spends one")
+    H.S.now = H.S.now + 21; H.Engine:UpdateCharges(H.S.now)
+    eq(H.Engine:PredictedCharges(DANCE), 2, "back after 20s")
+end)
+
+test("sub: Vanish is a tracked 2-minute cooldown", function()
+    setSub("trickster", 0)
+    H.fire("UNIT_SPELLCAST_SUCCEEDED", "player", nil, VANISH)
+    H.S.ready[VANISH] = false
+    local r = H.Engine:CooldownRemaining(VANISH)
+    truthy(r and r > 115 and r <= 120, "~120s left right after the cast, got " .. tostring(r))
+end)

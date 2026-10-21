@@ -126,14 +126,16 @@ test("tracked: ordinary types are not tracked-only", function()
     eq(H.Cond.TrackedSpells(H.subSpec, "resourceMin"), nil)
 end)
 
-test("tracked: Subtlety has nothing for time left / stacks / charges, Shadow Blades for cooldown", function()
+test("tracked: Subtlety -- no time left / stacks; Shadow Dance charges; Shadow Blades cooldown", function()
     local s = H.subSpec
     eq(#H.Cond.TrackedSpells(s, "auraRemainMin"), 0)
     eq(#H.Cond.TrackedSpells(s, "stacksMin"), 0)
-    eq(#H.Cond.TrackedSpells(s, "chargesMin"), 0)
-    eq(#H.Cond.TrackedSpells(s, "chargeTimeMax"), 0)
+    local ch = H.Cond.TrackedSpells(s, "chargesMin")
+    eq(#ch, 1); truthy(has(ch, 185313), "Shadow Dance (chargeTrack)")
+    truthy(has(H.Cond.TrackedSpells(s, "chargeTimeMax"), 185313))
     local cds = H.Cond.TrackedSpells(s, "cdRemainMin")
-    eq(#cds, 1); truthy(has(cds, 121471), "Shadow Blades (cooldownTrack)")
+    eq(#cds, 2); truthy(has(cds, 121471), "Shadow Blades (cooldownTrack)")
+    truthy(has(cds, 1856), "Vanish (cooldownTrack)")
 end)
 
 test("tracked: modelled targets count (Windwalker duration timers + Tigereye stacks)", function()
@@ -150,10 +152,13 @@ end)
 test("condtest: tracked-only types are probed only on tracked spells", function()
     setup()
     for _, p in ipairs(CT:Probes()) do
-        if p.group == "type" and p.type == "cdRemainMin" then eq(p.sid, 121471) end
+        if p.group == "type" and p.type == "cdRemainMin" then
+            truthy(p.sid == 121471 or p.sid == 1856, "cooldown only on Shadow Blades / Vanish")
+        end
         if p.group == "type" then
-            falsy(p.type == "auraRemainMin" or p.type == "stacksMin" or p.type == "chargesMin",
+            falsy(p.type == "auraRemainMin" or p.type == "stacksMin",
                 "no probes for untracked kinds: " .. p.type)
+            if p.type == "chargesMin" then eq(p.sid, 185313, "charges only on Shadow Dance") end
         end
     end
     local txt = CT:ExportText()

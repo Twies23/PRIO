@@ -2271,6 +2271,12 @@ function Engine:Evaluate()
             if ua then for k in pairs(ua) do if simCastKeys[k] then enabled = true; break end end end
             if not enabled then return nil end
         end
+        -- The reverse of usableAfter: spec.unusableWhile[key] = auraID -- the game makes this
+        -- ability unusable while that aura is up (Shadow Dance can't be cast during Shadow
+        -- Dance). The live usable gate above already knows; this tells the LOOK-AHEAD, so a
+        -- banked second charge doesn't queue right behind the first.
+        local uw = spec.unusableWhile and spec.unusableWhile[idToKey[sid]]
+        if uw and S._sim and S._sim[uw] then return nil end
         if not PRIO.Cond.Eval(e.cond, S, sid) then return nil end
         return { sid = sid, i = i, rep = rep, maxC = maxC }
     end

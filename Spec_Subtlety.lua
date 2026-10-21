@@ -332,11 +332,24 @@ local spec = {
         Eviscerate = { type = "buffActive", spell = ID_DARKNIGHT },
     },
 
-    -- Shadow Blades' 90s cooldown is fixed (non-haste) -> dead-reckon it for the
-    -- "not with <10s left on Blades" Dance rule.
+    -- Fixed (non-haste) cooldowns, dead-reckoned from the cast so "Cooldown >= / <=" reads
+    -- in combat: Shadow Blades 90s, Vanish 120s.
     cooldownTrack = {
         ShadowBlades = { base = 90 },
+        Vanish       = { base = 120 },          -- always 2 min (not hasted, nothing reduces it)
     },
+
+    -- Shadow Dance: 2 charges on a flat 20s recharge (not hasted, nothing reduces it --
+    -- same shape as Windwalker's Zenith). Current charges are secret in combat, so they're
+    -- PREDICTED: synced out of combat, -1 per cast, +1 every 20s, re-anchored on the
+    -- readable charge-count edge. Lets the queue show a second Dance when one is banked.
+    chargeTrack = {
+        ShadowDance = { max = 2, recharge = 20 },
+    },
+    -- The game won't let you Shadow Dance while Shadow Dance is up. The live usable flag
+    -- already covers the primary; this keeps the queue from stacking Dance -> Dance when a
+    -- second charge is banked.
+    unusableWhile = { ShadowDance = ID_SHADOWDANCE },
 
     -- The Cooldown Viewer read lags a tick behind; assume our own Dance / Blades are up
     -- right after the cast so Shadow Blades and Secret Technique queue behind Dance.
