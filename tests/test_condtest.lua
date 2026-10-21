@@ -115,3 +115,47 @@ test("condtest: reset clears tallies", function()
     CT:Reset()
     for _, p in ipairs(CT:Probes()) do eq(p.stats.c.n, 0) end
 end)
+
+--------------------------------------------------------------------------------
+-- Tracked-only condition types (time left / stacks / charges / cooldown left)
+--------------------------------------------------------------------------------
+local function has(list, id) for _, x in ipairs(list or {}) do if x == id then return true end end return false end
+
+test("tracked: ordinary types are not tracked-only", function()
+    eq(H.Cond.TrackedSpells(H.subSpec, "buffActive"), nil)
+    eq(H.Cond.TrackedSpells(H.subSpec, "resourceMin"), nil)
+end)
+
+test("tracked: Subtlety has nothing for time left / stacks / charges, Shadow Blades for cooldown", function()
+    local s = H.subSpec
+    eq(#H.Cond.TrackedSpells(s, "auraRemainMin"), 0)
+    eq(#H.Cond.TrackedSpells(s, "stacksMin"), 0)
+    eq(#H.Cond.TrackedSpells(s, "chargesMin"), 0)
+    eq(#H.Cond.TrackedSpells(s, "chargeTimeMax"), 0)
+    local cds = H.Cond.TrackedSpells(s, "cdRemainMin")
+    eq(#cds, 1); truthy(has(cds, 121471), "Shadow Blades (cooldownTrack)")
+end)
+
+test("tracked: modelled targets count (Windwalker duration timers + Tigereye stacks)", function()
+    local ww = H.spec
+    truthy(#H.Cond.TrackedSpells(ww, "auraRemainMax") >= 1, "auraDurations")
+    truthy(has(H.Cond.TrackedSpells(ww, "stacksMin"), ww.tigereye.spell), "Tigereye")
+    truthy(#H.Cond.TrackedSpells(ww, "chargesMax") >= 1, "chargeTrack")
+end)
+
+test("tracked: a target used deliberately in shipped lists counts (Assassination Scent of Blood)", function()
+    truthy(has(H.Cond.TrackedSpells(H.assaSpec, "stacksMax"), 381799))
+end)
+
+test("condtest: tracked-only types are probed only on tracked spells", function()
+    setup()
+    for _, p in ipairs(CT:Probes()) do
+        if p.group == "type" and p.type == "cdRemainMin" then eq(p.sid, 121471) end
+        if p.group == "type" then
+            falsy(p.type == "auraRemainMin" or p.type == "stacksMin" or p.type == "chargesMin",
+                "no probes for untracked kinds: " .. p.type)
+        end
+    end
+    local txt = CT:ExportText()
+    truthy(txt:find("none tracked for this spec", 1, true))
+end)

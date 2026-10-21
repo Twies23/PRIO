@@ -1,5 +1,19 @@
 # PRIO Changelog
 
+## 1.3.4
+**Condition editor: no more conditions that can never fire.** The Condition Test showed that these five conditions only give a real answer in combat for things PRIO deliberately tracks for your spec:
+- Buff time left
+- Buff stacks
+- Charges
+- Next charge
+- Cooldown left
+
+For anything else they never changed. The editor now only offers those tracked targets. When a spec tracks none, the row says "none are tracked for this spec", and a Charges row on an untracked ability says "not tracked for this ability".
+
+For example, on Subtlety only Shadow Blades can be used with Cooldown ≥ / ≤. Existing lists still work the same way.
+
+The Condition Test (`/prio condtest`) follows the same rule and lists the "none tracked" types separately.
+
 ## 1.3.3
 **Experimental: Condition Test panel** (`/prio condtest`). It checks which conditions actually give an answer in combat, to help find ones worth removing from the editor.
 - Press **Record**, then fight a dummy or a pull for a minute or two. Recording keeps going if you close the window.

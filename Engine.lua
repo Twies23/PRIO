@@ -145,6 +145,80 @@ function Cond.TypesForSpec(specArg)
     end
     return out
 end
+-- TRACKED-ONLY condition types. Buff time left, buff stacks, charges, next-charge time and
+-- cooldown left are SECRET in 12.1 combat for an arbitrary spell -- they only read for
+-- spells a spec DELIBERATELY models (a cast-seeded timer, a predicted counter, a charge or
+-- cooldown tracker) or deliberately uses in its shipped lists. The Condition Test (1.3.3)
+-- confirmed it: everything else read "always false" / "always true" in combat. The editor
+-- therefore only offers these targets; with none it says so.
+local TRACKED_ONLY = {
+    auraRemainMin = "duration", auraRemainMax = "duration",
+    stacksMin = "stacks", stacksMax = "stacks", stacksEq = "stacks",
+    chargesMin = "charges", chargesMax = "charges", chargesEq = "charges",
+    chargeTimeMin = "charges", chargeTimeMax = "charges",
+    cdRemainMin = "cooldown", cdRemainMax = "cooldown",
+}
+function Cond.TrackedKind(t) return TRACKED_ONLY[t] end
+
+local trackedCache = setmetatable({}, { __mode = "k" })
+-- Ordered list + set of spell ids that `kind` ("duration"/"stacks"/"charges"/"cooldown")
+-- works for on spec `s`.
+local function TrackedFor(s, kind)
+    if not s then return {}, {} end
+    trackedCache[s] = trackedCache[s] or {}
+    local hit = trackedCache[s][kind]
+    if hit then return hit.list, hit.set end
+    local list, set = {}, {}
+    local function add(id)
+        if type(id) == "number" and id ~= 0 and not set[id] then set[id] = true; list[#list + 1] = id end
+    end
+    local function addKey(key) add(s.spells and s.spells[key]) end
+    -- 1. What the spec models.
+    if kind == "duration" then
+        for _, entry in pairs(s.auraDurations or {}) do
+            local grants = entry.spell and { entry } or entry
+            for _, g in ipairs(grants) do add(g.spell) end
+        end
+        for aid in pairs(s.auraGainTimers or {}) do add(aid) end
+    elseif kind == "stacks" then
+        if s.tigereye then add(s.tigereye.spell) end
+    elseif kind == "charges" then
+        for key in pairs(s.chargeTrack or {}) do addKey(key) end
+    elseif kind == "cooldown" then
+        for key in pairs(s.cooldownTrack or {}) do addKey(key) end
+    end
+    -- 2. What the spec deliberately uses with that condition kind in its shipped lists,
+    --    presets and alerts (a charges clause with no spell reads its row's own spell).
+    local function walk(c, rowSid)
+        if type(c) ~= "table" then return end
+        if c.clauses then for _, x in ipairs(c.clauses) do walk(x, rowSid) end return end
+        if c.type and TRACKED_ONLY[c.type] == kind then add(c.spell or rowSid) end
+    end
+    local function walkList(L)
+        for _, e in ipairs(L or {}) do
+            local rowSid = (type(e.spell) == "number") and e.spell or (s.spells and s.spells[e.spell])
+            walk(e.cond, rowSid)
+        end
+    end
+    if s.priorityByVariant then
+        for _, lists in pairs(s.priorityByVariant) do for _, L in pairs(lists) do walkList(L) end end
+    elseif type(s.priority) == "table" then
+        for _, L in pairs(s.priority) do walkList(L) end
+    end
+    for _, p in ipairs(s.condPresets or {}) do walk(p.clause) end
+    for _, a in ipairs(s.alerts or {}) do walk(a.when) end
+    trackedCache[s][kind] = { list = list, set = set }
+    return list, set
+end
+
+-- Spell ids a tracked-only condition type works for on spec `s` (ordered), plus a set.
+-- nil, nil for a type that isn't tracked-only (it works on anything).
+function Cond.TrackedSpells(s, t)
+    local kind = TRACKED_ONLY[t]
+    if not kind then return nil, nil end
+    return TrackedFor(s, kind)
+end
+
 function Cond.TypeMeta(t)
     for _, m in ipairs(Cond.types) do if m.value == t then return m end end
     -- Presets need no spell/value picker (the underlying clause carries them).

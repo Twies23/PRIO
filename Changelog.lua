@@ -11,6 +11,9 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "1.3.4", {
+        "Condition editor: Buff time left, Buff stacks, Charges, Next charge and Cooldown left only offer what your spec actually tracks -- for anything else they never fire in combat. With none, the row says 'none are tracked for this spec'. Existing lists work exactly as before.",
+    } },
     { "1.3.3", {
         "Experimental: Condition Test panel (/prio condtest). Press Record, then fight for a minute or two -- it checks every condition in your lists, every named condition and every editor condition type, and marks each works / always true / always false / unreadable / error from in-combat samples. Export gives a text report.",
     } },

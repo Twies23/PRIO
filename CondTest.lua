@@ -138,11 +138,28 @@ function CondTest:Build(spec)
         addProbe("preset", { type = "preset:" .. p.key }, nil, p.label or p.key)
     end
 
-    -- 3. Every editor type with representative arguments.
+    -- 3. Every editor type with representative arguments. Tracked-only types (time left,
+    --    stacks, charges, cooldown left) are tried only on the spells the spec tracks --
+    --    the same set the editor offers; with none they're listed as "not offered".
     local abilities, auras = listAbilities(spec), specAuras(spec)
+    self.notOffered = {}
     for _, m in ipairs(Cond.TypesForSpec(spec) or {}) do
         local t = m.value
-        if type(t) == "string" and not t:find("^preset:") and not m.needsTalent then
+        local tracked = Cond.TrackedSpells and Cond.TrackedSpells(spec, t)
+        if type(t) == "string" and not t:find("^preset:") and not m.needsTalent and tracked then
+            local v = m.needsValue and m.def or nil
+            if #tracked == 0 then
+                self.notOffered[#self.notOffered + 1] = t
+            end
+            for _, sid in ipairs(tracked) do
+                if m.needsSpell then
+                    addProbe("type", { type = t, spell = sid, v = v }, sid)
+                else
+                    addProbe("type", { type = t, v = v }, sid,
+                        (PRIO.API.SpellName(sid) or ("#" .. sid)) .. ": " .. (m.text or t) .. " " .. tostring(v))
+                end
+            end
+        elseif type(t) == "string" and not t:find("^preset:") and not m.needsTalent then
             local v = m.needsValue and m.def or nil
             if m.needsSpell then
                 local pool = (m.target == "ability") and abilities or auras
@@ -290,6 +307,11 @@ function CondTest:ExportText()
             L[#L + 1] = "      combat: " .. counts(p.stats.c) .. "   ooc: " .. counts(p.stats.o)
             if p.stats.lastErr then L[#L + 1] = "      error: " .. p.stats.lastErr end
         end
+    end
+    if self.notOffered and #self.notOffered > 0 then
+        local names = {}
+        for _, t in ipairs(self.notOffered) do names[#names + 1] = typeText(t) .. " (" .. t .. ")" end
+        L[#L + 1] = " [none tracked for this spec] " .. table.concat(names, ", ")
     end
     section("CONDITIONS IN YOUR LISTS", "list")
     section("PRESETS", "preset")

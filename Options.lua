@@ -730,11 +730,37 @@ function Options:OpenCondEditorCore(spec, holder, field, selfSid, onChange)
             typeDD:SetPoint("LEFT", 16, 0)
 
             local meta = Cond.TypeMeta(cl.type)
+            -- Tracked-only types (time left / stacks / charges / cooldown left) only read for
+            -- spells the spec deliberately tracks. With none to offer, say so instead of a
+            -- picker whose every choice would silently never fire.
+            local trackedList, trackedSet = Cond.TrackedSpells(spec, cl.type)
+            local untrackedMsg
+            if trackedList then
+                if #trackedList == 0 then
+                    untrackedMsg = "none are tracked for this spec"
+                elseif not (meta and meta.needsSpell) and not (sid and trackedSet[sid]) then
+                    untrackedMsg = "not tracked for this ability"
+                end
+            end
             -- A condition may need a spell/talent picker AND a value stepper (e.g. Buff
             -- stacks >= N). Render each control that applies, chaining left to right.
             local anchor = typeDD
+            if untrackedMsg then
+                local nt = UI.Font(rowf, 11.5, C.faint)
+                nt:SetPoint("LEFT", typeDD, "RIGHT", 8, 0)
+                nt:SetText(untrackedMsg)
+                meta = nil                       -- no picker / stepper for it
+            end
             if meta and (meta.needsSpell or meta.needsTalent) then
                 local opts = meta.needsTalent and talentOpts or optsFor(meta.target)
+                if trackedList then
+                    -- Only the tracked targets (+ Self when this row's own spell is one).
+                    opts = {}
+                    if sid and trackedSet[sid] then opts[1] = SELF end
+                    for _, ts in ipairs(trackedList) do
+                        opts[#opts + 1] = { value = ts, text = API.SpellName(ts) or ("#" .. ts), icon = API.SpellTexture(ts) }
+                    end
+                end
                 local ddW = meta.needsValue and 108 or 150
                 local dd = UI.Dropdown(rowf, ddW, opts,
                     function() return cl.spell or 0 end,
