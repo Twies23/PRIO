@@ -666,6 +666,46 @@ function RotationDebug:Update()
                 local mx = pt and API.PowerMax(pt)
                 if v == nil then return "|cffe0685aSECRET / na|r" end
                 return ("|cff0cd29f%s|r|cff5a6a76 / %s|r"):format(tostring(v), tostring(mx or "?"))
+            elseif r.kind == "runes" then
+                -- DK runes ready as the ENGINE sees them (spell probes, refined by the raw
+                -- count while it's trusted), then the raw read and which path answered it.
+                -- (Capture both returns: `A and f()` would drop the source.)
+                local E = PRIO.Engine
+                local n, src
+                if E and E.RuneCount then n, src = E:RuneCount() end
+                local power, cds
+                if API.RuneReads then power, cds = API.RuneReads() end
+                local lied = (E and E.P and E.P.runeLied) or {}
+                local function one(label, v, key)
+                    if v == nil then return label .. " secret" end
+                    return ("%s %d%s"):format(label, v, lied[key] and "|cffe0685a(lied)|r|cff5a6a76" or "")
+                end
+                local raws = one("cd", cds, "cooldowns") .. "  " .. one("pw", power, "power")
+                if n == nil then return "|cffe0685aunknown|r|cff5a6a76  " .. raws .. "|r" end
+                local shown = (src == "probes" and n >= 2) and (n .. "+") or tostring(n)
+                return ("|cff0cd29f%s|r|cff5a6a76 (%s)  %s|r"):format(shown, tostring(src), raws)
+            elseif r.kind == "resourcePercent" then
+                -- The clean PERCENT read (UnitPowerPercent) of the spec resource, and what the
+                -- engine is running on: "percent" = real read, "anchored" = estimate clamped by
+                -- the afford flag, "estimate" = cast-based guess only.
+                local pt = r.power or (spec and spec.resource)
+                local pct = pt and API.PowerPercent and API.PowerPercent(pt)
+                local P = PRIO.Engine and PRIO.Engine.P
+                local v, src = P and P.maelstrom, (P and P.resourceSource) or "estimate"
+                local pctTxt = pct == nil and "|cffe0685asecret|r" or ("|cff0cd29f%d%%|r"):format(pct)
+                local col = (src == "percent" or src == "raw") and "|cff0cd29f" or "|cffe0a03a"
+                return ("%s  |cff5a6a76->|r %s%s|r |cff5a6a76(%s)|r"):format(pctTxt, col, tostring(v and math.floor(v) or "?"), src)
+            elseif r.kind == "runeRecharge" then
+                -- Seconds until each recharging rune is back (GetRuneCooldown start+duration).
+                -- "secret" = the timings don't read -> the queue uses its per-GCD estimate.
+                local list = API.RuneRecharge and API.RuneRecharge()
+                if list == nil then return "|cffe0685asecret (queue estimates)|r" end
+                if #list == 0 then return "|cff0cd29fall ready|r" end
+                local parts = {}
+                for _, s in ipairs(list) do parts[#parts + 1] = ("%.1f"):format(s) end
+                local lied = PRIO.Engine and PRIO.Engine.P and PRIO.Engine.P.runeLied
+                local note = (lied and lied.cooldowns) and "  |cffe0685a(per-rune read lying - unused)|r" or ""
+                return "|cff0cd29f" .. table.concat(parts, "  ") .. "s|r" .. note
             elseif r.kind == "predFlag" then
                 -- Inferred boolean (e.g. Outlaw rtbStage2): true / false / unknown.
                 local pf = PRIO.Engine and PRIO.Engine.P and PRIO.Engine.P.predFlags

@@ -40,6 +40,11 @@ PRIO.Cond = Cond
 Cond.types = {
     { value = "buffActive",  text = "Has buff",       needsSpell = true, target = "buff" },
     { value = "buffMissing", text = "Missing buff",   needsSpell = true, target = "buff" },
+    -- CONFIRMED missing: true only on a CLEAN "absent" read. "Missing buff" also passes when
+    -- the read is unreadable/untracked (right for "a buff I don't have"), which is wrong when
+    -- the line means "a threshold buff dropped" (Ossuary = 5+ Bone Shield, Bone Shield gone):
+    -- a blank read would spam. Unreadable -> never fires.
+    { value = "buffMissingConfirmed", text = "Missing buff (confirmed)", needsSpell = true, target = "buff" },
     { value = "debuffActive",  text = "Enemy has debuff",     needsSpell = true, target = "buff" },
     { value = "debuffMissing", text = "Enemy missing debuff", needsSpell = true, target = "buff" },
     { value = "cdReady",     text = "Off cooldown",   needsSpell = true, target = "ability" },
@@ -73,6 +78,9 @@ Cond.types = {
     { value = "resourceMin", text = "Resource \226\137\165", needsValue = true, min = 0, max = 12, def = 2 },
     { value = "resourceMax", text = "Resource \226\137\164", needsValue = true, min = 0, max = 12, def = 2 },
     { value = "resourceEq",  text = "Resource =", needsValue = true, min = 0, max = 12, def = 2 },
+    -- Resource >= N, but ONLY on a real read (raw or clean percent) -- never on a prediction.
+    -- Fails CLOSED when the value can't be read, so an estimate can't fire a spend gate.
+    { value = "resourceReadMin", text = "Resource \226\137\165 (read only)", needsValue = true, min = 0, max = 150, def = 75 },
     { value = "usable",      text = "Usable",       needsSpell = true, target = "ability" },
     { value = "notUsable",   text = "Not usable",   needsSpell = true, target = "ability" },
     -- A READABLE low-resource proxy for specs whose resource is a secret filling bar
@@ -101,6 +109,10 @@ Cond.types = {
     { value = "superChargeEq",  text = "Supercharged CP =",  needsValue = true, min = 0, max = 2, def = 1, tag = "supercharge" },
     -- Player is stealthed (Stealth / Vanish / Shadow Dance) -- reads IsStealthed() clean.
     { value = "stealthed",    text = "Stealthed",     tag = "stealth" },
+    -- Death Knight runes ready (0-6), read like combo points (API.Runes). Fail CLOSED when
+    -- unreadable. In the look-ahead it's the simulated count (spent per pick, regen credited).
+    { value = "runesMin", text = "Runes \226\137\165", needsValue = true, min = 0, max = 6, def = 2, tag = "runes" },
+    { value = "runesMax", text = "Runes \226\137\164", needsValue = true, min = 0, max = 6, def = 1, tag = "runes" },
     { value = "notStealthed", text = "Not stealthed", tag = "stealth" },
     -- Hunter pet state (readable in combat): no pet / pet dead / pet up.
     { value = "petMissing", text = "No pet",     tag = "pet" },
@@ -238,6 +250,9 @@ function Cond.ClauseLabel(cl, selfSid)
     local name = SpellShort(cl.spell or selfSid)
     if t == "buffActive" then return name .. " buff"
     elseif t == "buffMissing" then return "no " .. name .. " buff"
+    elseif t == "buffMissingConfirmed" then return "no " .. name .. " buff (confirmed)"
+    elseif t == "runesMin" then return "Runes \226\137\165 " .. (cl.v or 0)
+    elseif t == "runesMax" then return "Runes \226\137\164 " .. (cl.v or 0)
     elseif t == "debuffActive" then return "enemy " .. name .. " debuff"
     elseif t == "debuffMissing" then return "enemy no " .. name .. " debuff"
     elseif t == "cdReady" then return name .. " ready"
@@ -266,6 +281,7 @@ function Cond.ClauseLabel(cl, selfSid)
     elseif t == "resourceMin" then return (spec and spec.resourceLabel or "resource") .. " \226\137\165 " .. (cl.v or 0)
     elseif t == "resourceMax" then return (spec and spec.resourceLabel or "resource") .. " \226\137\164 " .. (cl.v or 0)
     elseif t == "resourceEq" then return (spec and spec.resourceLabel or "resource") .. " = " .. (cl.v or 0)
+    elseif t == "resourceReadMin" then return (spec and spec.resourceLabel or "resource") .. " \226\137\165 " .. (cl.v or 0) .. " (read)"
     elseif t == "energyNearCap" then return "Energy near cap"
     elseif t == "energyNotNearCap" then return "Energy not near cap"
     elseif t == "energyPctMin" then return "Energy \226\137\165 " .. (cl.v or 0) .. "%"
@@ -580,6 +596,16 @@ local function EvalClause(cl, S, selfSid)
         -- (no 4pc / talent) reads as missing, which is correct.
         if not API.IsTracked(sid) then return true end
         local a = API.IsAuraActive(sid); return a == false or a == nil
+    elseif t == "buffMissingConfirmed" then
+        if S._sim and S._sim[sid] ~= nil then return not S._sim[sid] end
+        if Assumed(sid, S) then return false end
+        -- Only a CLEAN "absent" fires; unreadable (nil) never does. Deliberately NOT gated on
+        -- the Cooldown Manager frame existing: bars set to hide while inactive release their
+        -- frame exactly when the buff is gone, and IsAuraActive then answers from the game's
+        -- own aura lookup. Requiring the frame blinded Marrowrend to a missing Bone Shield.
+        return API.IsAuraActive(sid) == false
+    elseif t == "runesMin" then return S.runes ~= nil and S.runes >= (cl.v or 0)
+    elseif t == "runesMax" then return S.runes ~= nil and S.runes <= (cl.v or 0)
     elseif t == "cdReady" then return API.IsReady(sid) and true or false
     elseif t == "cdNotReady" then return not API.IsReady(sid)
     elseif t == "talentYes" then return API.IsTalentSelected(cl.spell)
@@ -672,6 +698,7 @@ local function EvalClause(cl, S, selfSid)
     elseif t == "resourceMin" then return (S.maelstrom or 0) >= (cl.v or 0)
     elseif t == "resourceMax" then return (S.maelstrom or 0) <= (cl.v or 0)
     elseif t == "resourceEq"  then return (S.maelstrom or 0) == (cl.v or 0)
+    elseif t == "resourceReadMin" then return S.maelstromReadable == true and (S.maelstrom or 0) >= (cl.v or 0)
     -- Energy percent (secret-safe via UnitPowerPercent). Unknown -> threshold not met.
     elseif t == "energyNearCap" then return EnergyNearCap() == true
     elseif t == "energyNotNearCap" then return EnergyNearCap() == false
@@ -1424,8 +1451,7 @@ end
 --------------------------------------------------------------------------------
 local MODE_LABEL = {
     st = "Single Target", cleave = "Cleave", aoe = "AoE",
-    st_execute = "ST (Execute)", aoe_execute = "AoE (Execute)", cleave_execute = "Cleave (Execute)",
-}
+    st_execute = "ST (Execute)", aoe_execute = "AoE (Execute)", cleave_execute = "Cleave (Execute)",}
 
 -- Per-spec AoE threshold: a user override (db.aoeThreshold[specKey]) wins, else the
 -- spec default, else the global. Lets a spec drop the cleave tier and expose "AoE at N".
@@ -1491,9 +1517,37 @@ local function BuildState(self, mode, enemies)
     -- Maelstrom: sync from the real value when readable (out of combat); otherwise
     -- carry the prediction. S.maelstrom is therefore ALWAYS a number.
     local realMs = spec.resource and API.Power(spec.resource) or nil
-    if realMs ~= nil then P.maelstrom = realMs end
     local realMax = spec.resource and API.PowerMax(spec.resource) or nil
     if realMax ~= nil then P.maelstromMax = realMax end
+    -- PERCENT READ (spec.resourcePercentRead, e.g. Blood's Runic Power): the raw value is
+    -- secret in combat, but UnitPowerPercent is the game's sanctioned clean percentage. When
+    -- it reads, percent x max IS the value -- a real read, not a prediction.
+    P.resourceSource = (realMs ~= nil) and "raw" or nil
+    if realMs == nil and spec.resourcePercentRead and spec.resource and API.PowerPercent then
+        local pct = API.PowerPercent(spec.resource)
+        local mx = P.maelstromMax or spec.maelstromMax
+        if pct ~= nil and mx and mx > 0 then
+            realMs = math.floor(pct * mx / 100 + 0.5)
+            P.resourceSource = "percent"
+        end
+    end
+    if realMs ~= nil then P.maelstrom = realMs end
+    -- AFFORDABILITY ANCHORS (spec.resourceAnchors): with no read, clamp the prediction to the
+    -- game's CLEAN insufficient-power flag on spenders of known cost -- "can't afford" means
+    -- below the cost, "can afford" means at least the cost. Bounds the drift either way.
+    if realMs == nil and spec.resourceAnchors then
+        for _, a in ipairs(spec.resourceAnchors) do
+            local cost = type(a.cost) == "function" and a.cost() or a.cost
+            local ip = API.InsufficientPower(a.spell)
+            if cost and ip == true then
+                P.maelstrom = math.min(P.maelstrom or 0, cost - 1)
+                P.resourceSource = "anchored"
+            elseif cost and ip == false then
+                P.maelstrom = math.max(P.maelstrom or 0, cost)
+                P.resourceSource = "anchored"
+            end
+        end
+    end
 
     -- PASSIVE Maelstrom accrual (spec.maelstromPassive, e.g. Flame Shock DoT ticks):
     -- continuous generation the on-cast model misses. Only while the real value is SECRET
@@ -1629,6 +1683,11 @@ local function BuildState(self, mode, enemies)
         maelstrom = P.maelstrom or 0,                  -- predicted (synced when readable)
         maelstromMax = P.maelstromMax or (spec and spec.maelstromMax) or 0,
         maelstromReadable = realMs ~= nil,
+        runes     = spec.runeModel and (self:RuneCount()) or nil,   -- DK: runes ready (nil = unknown)
+        -- DK: seconds until each recharging rune is back (same API as the per-rune read, so
+        -- only while that read is trusted). nil -> look-ahead uses the per-GCD estimate.
+        runeRecharge = (spec.runeModel and API.RuneRecharge
+                        and not (P.runeLied and P.runeLied.cooldowns)) and API.RuneRecharge() or nil,
         freeSpend = P.freeSpend and true or false,     -- 4-set: next spender costs nothing
         superCharge = P.superCharge or 0,              -- Supercharger: predicted 0-2 (superchargeTrack)
         mote      = P.mote and true or false,
@@ -1981,6 +2040,119 @@ local function ApplyEnergy(sim, key)
     sim.energy = math.max(0, math.min(max, sim.energy - cost + EnergyPerSlot(m)))
 end
 
+-- Death Knight runes ready, from spec.runeModel. GOAL: read them directly, like combo points
+-- / Chi. Two direct reads exist (API.RuneReads): the per-rune GetRuneCooldown ready flags
+-- ("cooldowns") and UnitPower(Runes) ("power"). One of them read 6/6 with every rune down in
+-- 12.1, so each is checked against the spells: a rune spender reports "on cooldown" (GCD
+-- excluded, clean in combat) when you can't pay it, so the probes {1-rune, 2-rune spender}
+-- PROVE 0 or 1 exactly and "2+" otherwise. A direct read that DISAGREES with a proven 0/1
+-- for longer than RUNE_LIE_GRACE is marked lying (P.runeLied[path] = when) and dropped. The
+-- grace absorbs the frame or two where a rune lands and the spell cooldown catches up a beat
+-- later (seen in-game: the honest per-rune read got flagged on one such blip). A flagged read
+-- is trusted again after RUNE_LIE_FORGIVE seconds of agreeing. UnitPower(Runes) reads a flat
+-- 6 in 12.1, so it disagrees continuously and stays dropped. First honest read wins
+-- (cooldowns, then power); with none, the probe value stands.
+-- Returns count, source ("cooldowns" | "power" | "probes") or nil.
+local RUNE_LIE_GRACE, RUNE_LIE_FORGIVE = 0.5, 3
+function Engine:RuneCount()
+    local m = spec and spec.runeModel
+    if not m then return nil end
+    self.P = self.P or {}
+    local P = self.P
+    P.runeLied = P.runeLied or {}            -- path -> time it was flagged
+    P.runeMismatch = P.runeMismatch or {}    -- path -> time the current disagreement began
+    P.runeAgree = P.runeAgree or {}          -- path -> time the current agreement began
+    local now = GetTime()
+    local power, cds
+    if API.RuneReads then power, cds = API.RuneReads()
+    elseif API.Runes then local n, src = API.Runes(); if src == "power" then power = n else cds = n end end
+    local reads = { { "cooldowns", cds }, { "power", power } }
+
+    local floor, top
+    if m.probes and m.probes[1] then
+        floor, top = 0, 0
+        for _, p in ipairs(m.probes) do
+            local c = p.cost or 1
+            if c > top then top = c end
+            -- Read through the ACTIVE override (ReadSid): during Vampiric Strike / Gift of the
+            -- San'layn the Heart Strike button IS Vampiric Strike, and base Heart Strike can
+            -- read "on cooldown" with a rune in hand -- which wrongly branded the honest
+            -- per-rune read a liar in-game. Same for Marrowrend -> Exterminate.
+            if c > floor and API.IsReady(ReadSid(p.spell)) == true then floor = c end
+        end
+        for _, r in ipairs(reads) do
+            local name, n = r[1], r[2]
+            if n ~= nil then
+                -- Contradiction: the probes PROVE an exact 0/1 and the read differs, or they
+                -- prove 2+ and the read claims fewer.
+                local bad = (floor < top and n ~= floor) or (floor >= top and n < top)
+                if bad then
+                    P.runeAgree[name] = nil
+                    P.runeMismatch[name] = P.runeMismatch[name] or now
+                    if now - P.runeMismatch[name] > RUNE_LIE_GRACE then P.runeLied[name] = now end
+                else
+                    P.runeMismatch[name] = nil
+                    P.runeAgree[name] = P.runeAgree[name] or now
+                    if P.runeLied[name] and now - P.runeAgree[name] >= RUNE_LIE_FORGIVE then
+                        P.runeLied[name] = nil                -- agreed long enough: trust again
+                    end
+                end
+            end
+        end
+    end
+    for _, r in ipairs(reads) do
+        local name, n = r[1], r[2]
+        -- Skip a read that's lying OR disagreeing right now (inside the grace): for that
+        -- moment the probes' proven value is the safer answer; the read isn't flagged yet.
+        if n ~= nil and not P.runeLied[name] and not P.runeMismatch[name] then
+            -- Honest so far. Below the probe ceiling it must match exactly (checked above);
+            -- at/above it, it can't claim less than the probes prove.
+            if not top or n >= math.min(floor, top) then return n, name end
+        end
+    end
+    if top then return (floor < top) and floor or top, "probes" end
+    return nil
+end
+
+-- Death Knight runes in the look-ahead (spec.runeModel): spend the pick's rune cost, then
+-- credit the regen of one queue slot (fractional -- the gate floors it). Nil-safe: inert
+-- when runes are unreadable or the spec has no model.
+local function RuneCost(key)
+    local m = spec and spec.runeModel
+    local c = m and m.costs and key and m.costs[key]
+    if type(c) == "function" then local ok, v = pcall(c); c = ok and v or nil end
+    return tonumber(c) or 0
+end
+
+-- One GCD of sim time (hasted, floored at 0.75s), for the rune recharge timeline.
+local function SimGCD(m)
+    local h = (API.Haste and API.Haste()) or 0
+    return math.max(0.75, (m.gcd or 1.5) / (1 + h / 100))
+end
+
+local function ApplyRunes(sim, key)
+    if sim.runes == nil then return end
+    local m = spec and spec.runeModel
+    if not m then return end
+    local back
+    if sim.runeRecharge then
+        -- EXACT: advance one GCD and add the recharging runes that land inside it (read from
+        -- GetRuneCooldown). Runes spent inside the look-ahead take ~10s to return -- beyond
+        -- its horizon -- so they're simply not credited.
+        local t0 = sim.runeElapsed or 0
+        local t1 = t0 + SimGCD(m)
+        back = 0
+        for _, r in ipairs(sim.runeRecharge) do
+            if r > t0 and r <= t1 then back = back + 1 end
+        end
+        sim.runeElapsed = t1
+    else
+        -- ESTIMATE: flat per-GCD regen (haste-neutral: it speeds regen AND the GCD).
+        back = m.perSlot or 0
+    end
+    sim.runes = math.max(0, math.min(m.max or 6, sim.runes - RuneCost(key) + back))
+end
+
 local function ApplyResourceDelta(sim, key, sid, S)
     if not (spec and spec.ResourceDelta and sim.resource ~= nil) then return end
     S.maelstrom = sim.resource
@@ -2118,6 +2290,8 @@ function Engine:Evaluate()
     local sim = {
         aura = {}, mote = S.mote, sk = S.skStacks, resource = S.maelstrom,
         energy = self:EnergyEstimate(),   -- % * max (tracks to cap) or checkpoint floor; spent as we pick
+        runes = S.runes,                  -- DK runes ready (nil = unreadable -> no rune gate)
+        runeRecharge = S.runeRecharge, runeElapsed = 0,   -- DK: real recharge timeline (nil = estimate)
         lastCastKey = S.lastCastKey, lastCastID = S.lastCastID,
         stacks = {},   -- predicted buff-stack counters, advanced per simulated cast
         superCharge = S.superCharge,   -- Supercharger count, advanced per simulated finisher
@@ -2149,6 +2323,7 @@ function Engine:Evaluate()
             if not isChannel then
                 ApplyResourceDelta(sim, castKey, castSid, S)
                 ApplyEnergy(sim, castKey)
+                ApplyRunes(sim, castKey)
             end
             sim.lastCastKey, sim.lastCastID = castKey, castSid
             local rep, maxC = Repeatable(castSid)
@@ -2254,6 +2429,13 @@ function Engine:Evaluate()
             local ecost = EnergyCostOf(em)
             if ecost and sim.energy < ecost then ready = false end
         end
+        -- Rune look-ahead gate (soft, QUEUED slots only): the primary is already exact via
+        -- the live usable flag (which also knows a Crimson Scourge DnD is free); later slots
+        -- check the simulated rune count so the strip doesn't stack spenders on one rune.
+        if ready and not relaxSoft and curSlot > 1 and sim.runes ~= nil then
+            local rc = RuneCost(idToKey[sid])
+            if rc > 0 and math.floor(sim.runes + 1e-6) < rc then ready = false end
+        end
         if not ready then return nil end                                  -- hard: cooldown/resource
         -- Usability is a hard gate normally, but during a channel it's false for
         -- everything -- so skip it then and predict the post-channel action.
@@ -2295,7 +2477,7 @@ function Engine:Evaluate()
         picks[1] = e
         local ik = idToKey[injectSid]
         if ik then
-            ApplyEffects(sim, ik); ApplyResourceDelta(sim, ik, injectSid, S); ApplyEnergy(sim, ik)
+            ApplyEffects(sim, ik); ApplyResourceDelta(sim, ik, injectSid, S); ApplyEnergy(sim, ik); ApplyRunes(sim, ik)
             sim.lastCastKey, sim.lastCastID = ik, injectSid
         end
         usedSpell[injectSid] = true
@@ -2308,6 +2490,7 @@ function Engine:Evaluate()
         S.skStacks    = sim.sk or 0
         S.maelstrom   = sim.resource or S.maelstrom
         S.superCharge = sim.superCharge or 0
+        S.runes       = sim.runes
         S.lastCastKey = sim.lastCastKey
         S.lastCastID  = sim.lastCastID
         local pick
@@ -2347,6 +2530,7 @@ function Engine:Evaluate()
         ApplyEffects(sim, fkey)                             -- advance the look-ahead
         ApplyResourceDelta(sim, fkey, pick.sid, S)
         ApplyEnergy(sim, fkey)                              -- spend the Energy floor
+        ApplyRunes(sim, fkey)                               -- spend runes, credit one slot of regen
         sim.lastCastKey, sim.lastCastID = fkey, pick.sid    -- "this slot cast" for the next
         if fkey then simCastKeys[fkey] = true end
         -- Cast-triggered cooldown resets: make each (talent-enabled) target ready for the

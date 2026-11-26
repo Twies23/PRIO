@@ -220,7 +220,11 @@ local function BuildExportText(spec, mode, variant)
     for i, e in ipairs(list) do
         local sid  = PRIO.Engine:EntrySpellID(e)
         local name = (sid and API.SpellName(sid)) or tostring(e.spell)
-        local known = sid and API.IsKnown(sid)
+        -- Same known-check as the engine: follow spec.knownAlias (an override like Blood's
+        -- Vampiric Strike 433895 reads not-known outside its proc; the engine checks Heart
+        -- Strike instead). Without this, live rows showed as "not known".
+        local knownSid = (sid and spec.knownAlias and spec.knownAlias[sid]) or sid
+        local known = knownSid and API.IsKnown(knownSid)
         local status = (not known) and "not known"
             or (S and PRIO.Cond.RowStatus(e.cond, S, sid) or "?")
         L[#L+1] = ("%2d. %s (#%s)%s%s\n      when: %s"):format(
@@ -1043,7 +1047,11 @@ function Pages.opener()
 
     for i, key in ipairs(op) do
         local sid = spec.spells[key]
-        local known = sid and API.IsKnown(sid)
+        -- Same known-check as the engine: follow spec.knownAlias (an override like Blood's
+        -- Vampiric Strike 433895 reads not-known outside its proc; the engine checks Heart
+        -- Strike instead). Without this, live rows showed as "not known".
+        local knownSid = (sid and spec.knownAlias and spec.knownAlias[sid]) or sid
+        local known = knownSid and API.IsKnown(knownSid)
         local row = Track(UI.Card(content, C.surface, 0.07))
         row:SetSize(contentW, 42); row:SetPoint("TOPLEFT", 0, -cursorY); cursorY = cursorY + 48
 

@@ -11,6 +11,13 @@ PRIO.Changelog = Changelog
 
 -- Newest first. { version, { line, line, ... } }
 local ENTRIES = {
+    { "1.4.0", {
+        "New spec: Blood Death Knight (San'layn and Deathbringer), PRIO's first tank. San'layn: one ST/AoE list -- Dancing Rune Weapon with Blood Boil on entry, Crimson Scourge Death and Decay, Vampiric Blood on cooldown (the Gift of the San'layn window), Death Strike whenever affordable, Bone Shield kept at 5+. Big defensives and 'Death Strike to stay alive' stay yours -- health can't be read in combat.",
+        "Blood setup: track Bone Shield, Ossuary, Dancing Rune Weapon, Death and Decay, Crimson Scourge and Vampiric Blood in your Cooldown Manager. Ossuary is how PRIO knows Bone Shield is below 5 -- the stack number can't be read.",
+        "Runes are read like combo points: runes ready plus when each recharging rune is back, so the queue doesn't line up spenders you can't pay for. New 'Runes >= / <=' conditions.",
+        "The 'defaults changed' prompt after an update now resets only the specs whose defaults changed -- it used to reset every spec's custom lists.",
+        "Condition editor: new 'Missing buff (confirmed)' (never fires on an unreadable read) and 'Resource >= (read only)'. The priority export no longer shows override abilities like Vampiric Strike as 'not known'.",
+    } },
     { "1.3.6", {
         "Elemental: new default single target, cleave and AoE lists (no Tempest; Voltaic Blaze when Purging Flames is down; Lava Burst only with Purging Flames in cleave / AoE). Reset Elemental to default to pick them up.",
         "Elemental: Overcharge! (4-set) is tracked -- with it in your Cooldown Manager, the free Earth Shock / Elemental Blast / Earthquake is never held for Maelstrom and flashes. New 'Overcharge! up' condition.",

@@ -477,6 +477,56 @@ function API.PowerMax(powerType)
     return SafeNum(mx)
 end
 
+-- Death Knight runes ready (0-6), like combo points: a discrete count. Two paths, first
+-- clean one wins: UnitPower(Runes), then counting GetRuneCooldown's per-rune ready flag.
+-- Returns count, source ("power" | "cooldowns") -- or nil when both are secret, so rune
+-- conditions fail CLOSED rather than act on a guess. /prio runes shows which path reads.
+-- The two direct reads, SEPARATELY (each nil when secret), so the engine can check each one
+-- against the spells and the debug window can show which is honest. In-game 12.1 one of them
+-- read 6/6 with every rune down -- reading them apart is how we find out which.
+function API.RuneReads()
+    local RUNES = (Enum and Enum.PowerType and Enum.PowerType.Runes) or 5
+    local power = SafeNum(SafeCall(UnitPower, "player", RUNES))
+    local cds
+    if GetRuneCooldown then
+        cds = 0
+        for i = 1, 6 do
+            local ok, _, _, isReady = pcall(GetRuneCooldown, i)
+            if not ok or isReady == nil or IsSecret(isReady) then cds = nil; break end
+            if isReady then cds = cds + 1 end
+        end
+    end
+    return power, cds
+end
+
+-- Seconds until each RECHARGING rune is back, ascending (ready runes are left out). Built
+-- from GetRuneCooldown's start + duration; runes queued behind the ones recharging now carry
+-- a future start, so start + duration - now is still the right wait. nil if any timing reads
+-- secret (then the look-ahead falls back to its per-GCD regen estimate). Empty = all ready.
+function API.RuneRecharge()
+    if not GetRuneCooldown then return nil end
+    local now = GetTime()
+    local out = {}
+    for i = 1, 6 do
+        local ok, start, dur, isReady = pcall(GetRuneCooldown, i)
+        if not ok or isReady == nil or IsSecret(isReady) then return nil end
+        if not isReady then
+            local s, d = SafeNum(start), SafeNum(dur)
+            if not (s and d) or d <= 0 then return nil end
+            out[#out + 1] = math.max(0, s + d - now)
+        end
+    end
+    table.sort(out)
+    return out
+end
+
+function API.Runes()
+    local power, cds = API.RuneReads()
+    if cds ~= nil then return cds, "cooldowns" end
+    if power ~= nil then return power, "power" end
+    return nil
+end
+
 -- Player haste as a percent (e.g. 14.3), readable (a character stat, not secret). Used
 -- to scale Energy regen -- Windwalker's Energy regenerates faster with haste.
 function API.Haste()

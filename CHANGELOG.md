@@ -1,5 +1,23 @@
 # PRIO Changelog
 
+## 1.4.0
+**New spec: Blood Death Knight, PRIO's first tank.** It covers both hero trees, San'layn and Deathbringer, and picks the right one from your talents.
+- **San'layn:** one list for single target and AoE. Dancing Rune Weapon opens with Blood Boil, and Death and Decay goes out on Crimson Scourge procs. Vampiric Blood is used on cooldown because it's your Gift of the San'layn damage window. Death Strike goes out whenever you can afford it, and Bone Shield is kept at 5+ stacks.
+- **Deathbringer:** follows the 12.1.5 guide, with Reaper's Mark before Dancing Rune Weapon. It hasn't been tested in-game yet.
+- **Tank scope:** big defensives (Icebound Fortitude, Anti-Magic Shell, Rune Tap) and "Death Strike to stay alive" are left to you, because health can't be read in combat.
+- **Track in your Cooldown Manager:** Bone Shield, Ossuary, Dancing Rune Weapon, Death and Decay, Crimson Scourge and Vampiric Blood. The setup screen lists them. Ossuary matters most: it's how PRIO knows Bone Shield is below 5, because the stack number itself can't be read.
+
+**Runes are read like combo points.** PRIO reads how many runes are ready and when each recharging rune comes back, and the queue spends them ahead, so it won't line up spenders you can't pay for. There are new "Runes >= / <=" conditions.
+
+**Runic Power can't be read in combat**, not even as a percentage, so nothing waits on an RP number. Death Strike uses the game's own "can you afford it" check instead.
+
+**The "defaults changed" prompt no longer resets other specs.** After an update it used to reset every spec's custom lists. It now names only the specs whose defaults changed and resets only those.
+
+**Condition editor**
+- New "Missing buff (confirmed)": fires only when the buff is definitely gone, never on an unreadable read.
+- New "Resource >= (read only)": fires only on a real resource read, never on PRIO's estimate.
+- The priority export no longer shows override abilities (like Vampiric Strike) as "not known".
+
 ## 1.3.6
 **Elemental: new default lists** for single target, cleave and AoE. Tempest is gone from the defaults. If you've customised Elemental, reset to default to pick these up.
 - **Single target:** Stormkeeper, Ancestral Swiftness, Flame Shock upkeep, Ascendance, the Master of the Elements block, then Elemental Blast, Lava Burst and Lightning Bolt.

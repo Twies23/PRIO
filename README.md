@@ -17,6 +17,7 @@ Built to work within 12.1's "secret value" API restrictions — health/power/aur
 | Hunter  | Marksmanship   | 254     | Stub — best-guess IDs, needs testing |
 | Monk    | Windwalker     | 269     | New — needs testing |
 | Demon Hunter | Devourer  | 1480    | New — verified IDs, open questions |
+| Death Knight | Blood     | 250     | New — first tank; San'layn + Deathbringer, needs in-game testing |
 
 Most specs ship **one all-inclusive priority list per mode** that covers every hero-talent and choice-node variation: abilities you haven't talented are filtered out automatically (`IsKnown`), and buff-gated lines go inert when that buff never appears — so the same list adapts to your build without per-talent configuration. Some specs go further with **per-hero-tree lists** (e.g. Beast Mastery's Pack Leader / Dark Ranger, Outlaw's Trickster / Fatebound) and expose only the modes that matter (Beast Mastery is ST / AoE, no separate Cleave tier).
 
@@ -38,7 +39,7 @@ It also puts a **pet check** at the top of each list (Call Pet if you have none,
 
 1. Download this repo as a ZIP (green **Code** button → **Download ZIP**), or clone it.
 2. Copy the `PRIO` folder into your AddOns directory:
-   - PTR: `World of Warcraft\_ptr_\Interface\AddOns\`
+   - Retail: `World of Warcraft\_retail_\Interface\AddOns\`
    - The folder **must** be named `PRIO` (matching `PRIO.toc`) and contain the `.lua` files directly — not nested in a `PRIO-main` subfolder if you downloaded the ZIP.
 3. Restart WoW or `/reload`. Enable **PRIO** in the AddOns list (untick "Load out of date" if needed).
 
@@ -63,5 +64,5 @@ Rotation feedback (wrong ability recommended, wrong order, missing cooldown) is 
 
 ## Notes
 
-- 12.1 / PTR only right now (`## Interface: 120100`).
+- Retail 12.1 (`## Interface: 120100`).
 - Not affiliated with Blizzard. Personal project.

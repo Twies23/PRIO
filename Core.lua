@@ -9,8 +9,9 @@ _G.PRIO = PRIO
 PRIO.name    = ADDON
 PRIO.version = C_AddOns and C_AddOns.GetAddOnMetadata(ADDON, "Version") or "0.1.0"
 
--- Bump this ONLY when a shipped default PRIORITY LIST changes. On login, users who
--- have customized lists and haven't seen this revision get prompted to reset.
+-- LEGACY global revision. The reset prompt is now PER SPEC: bump `defaultsRevision` on the
+-- spec table whose default list changed (see PRIO:ChangedDefaultSpecs). Bumping this one no
+-- longer prompts anyone -- it used to reset every spec's custom lists at once.
 PRIO.defaultsRevision = 74
 
 -- Settings a saved profile captures (everything except the display position).
@@ -188,18 +189,22 @@ end
 --------------------------------------------------------------------------------
 -- "Defaults changed" prompt: shown once when a release updates default priorities.
 --------------------------------------------------------------------------------
+-- SCOPED PER SPEC: the prompt names only the specs whose defaults changed (and that you've
+-- customized), and "Reset" clears only THOSE specs' custom lists. It used to wipe every
+-- spec's customPriorities -- one spec's update reset every other class you'd tuned.
 StaticPopupDialogs["PRIO_DEFAULTS_CHANGED"] = {
-    text = "|cff0cd29fPRIO|r's default rotation priorities were updated in this release.\n\n"
-        .. "Reset your customized priority lists to the new defaults?\n"
-        .. "|cffe0a03aThis discards your custom priority edits (settings are kept).|r",
-    button1 = "Reset to defaults",
+    text = "|cff0cd29fPRIO|r's default rotation priorities were updated for:\n|cffffffff%s|r\n\n"
+        .. "Reset those specs' customized lists to the new defaults?\n"
+        .. "|cffe0a03aOnly the specs listed are touched -- every other spec keeps its edits.|r",
+    button1 = "Reset these",
     button2 = "Keep mine",
-    OnAccept = function()
-        if PRIO.db then
-            wipe(PRIO.db.customPriorities)
-            if PRIO.Options and PRIO.Options.RefreshOpen then PRIO.Options:RefreshOpen() end
-            print("|cff" .. (PRIO.UI and PRIO.UI.accentHex or "0cd29f") .. "PRIO|r: priority lists reset to defaults.")
-        end
+    OnAccept = function(self, data)
+        local keys = data or (self and self.data)
+        if not (PRIO.db and PRIO.db.customPriorities and type(keys) == "table") then return end
+        for _, key in ipairs(keys) do PRIO.db.customPriorities[key] = nil end
+        if PRIO.Options and PRIO.Options.RefreshOpen then PRIO.Options:RefreshOpen() end
+        print("|cff" .. (PRIO.UI and PRIO.UI.accentHex or "0cd29f") .. "PRIO|r: reset to defaults: "
+            .. table.concat(keys, ", ") .. " (other specs untouched).")
     end,
     OnCancel = function() end,
     timeout = 0, whileDead = true, hideOnEscape = true, preferredIndex = 3,
@@ -239,12 +244,41 @@ StaticPopupDialogs["PRIO_NEW_PROFILE"] = {
     timeout = 0, whileDead = true, hideOnEscape = true, preferredIndex = 3,
 }
 
+-- Per-spec default revisions. A spec sets `defaultsRevision = N` and bumps it when its
+-- DEFAULT lists change in a way worth re-adopting. db.defaultsSeenBySpec[key] remembers the
+-- last revision seen; a spec seen for the first time is recorded silently (no prompt).
+-- Returns the spec keys (and display names) whose revision went up AND that have custom
+-- lists -- the only ones a reset may touch. Marks every spec seen either way.
+function PRIO:ChangedDefaultSpecs()
+    local keys, names = {}, {}
+    if not (self.db and self.specs) then return keys, names end
+    self.db.defaultsSeenBySpec = self.db.defaultsSeenBySpec or {}
+    local seen = self.db.defaultsSeenBySpec
+    local cp = self.db.customPriorities or {}
+    for _, spec in pairs(self.specs) do
+        local key, rev = spec.key, spec.defaultsRevision or 0
+        if key then
+            if seen[key] == nil then
+                seen[key] = rev                                   -- first sighting: no prompt
+            elseif rev > seen[key] then
+                seen[key] = rev
+                if cp[key] and next(cp[key]) ~= nil then
+                    keys[#keys + 1] = key
+                    names[#names + 1] = ((spec.label or key) .. (spec.className and (" " .. spec.className) or ""))
+                end
+            end
+        end
+    end
+    return keys, names
+end
+
 function PRIO:MaybePromptDefaults()
     if not self.db then return end
-    if (self.db.defaultsRevisionSeen or 0) >= self.defaultsRevision then return end
-    local hasCustom = self.db.customPriorities and next(self.db.customPriorities) ~= nil
-    self.db.defaultsRevisionSeen = self.defaultsRevision   -- mark seen either way
-    if hasCustom then StaticPopup_Show("PRIO_DEFAULTS_CHANGED") end
+    self.db.defaultsRevisionSeen = self.defaultsRevision   -- legacy global marker (no longer drives the prompt)
+    local keys, names = self:ChangedDefaultSpecs()
+    if #keys > 0 then
+        StaticPopup_Show("PRIO_DEFAULTS_CHANGED", table.concat(names, ", "), nil, keys)
+    end
 end
 
 --------------------------------------------------------------------------------
@@ -681,6 +715,95 @@ SlashCmdList.PRIO = function(msg)
         end
     elseif msg == "pandemic" then
         StaticPopup_Show("PRIO_PANDEMIC_TIP")
+    elseif msg == "runes" or msg == "runeswatch" then
+        -- Can Death Knight runes be read in combat the way combo points are? Three carriers:
+        --   (1) UnitPower(Runes)   -> ready-rune count as a power (the combo-point path),
+        --   (2) GetRuneCooldown(i) -> per-rune start/duration/ready (lets us time the NEXT rune),
+        --   (3) IsSpellUsable      -> insufficientPower on a rune spender (yes/no fallback).
+        -- Run OOC first (always readable), then IN COMBAT. "/prio runes watch" toggles a
+        -- live logger that prints both counts on every rune change.
+        local API = PRIO.API
+        local RUNES = (Enum and Enum.PowerType and Enum.PowerType.Runes) or 5
+        local function fmt(v)
+            if API.IsSecret(v) then return "|cffe0685aSECRET|r" end
+            if type(v) == "number" then return (("%.2f"):format(v):gsub("%.00$", "")) end
+            return tostring(v)
+        end
+        -- Ready count from the per-rune API, or nil if any field is secret/unavailable.
+        local function readyFromCooldowns()
+            if not GetRuneCooldown then return nil end
+            local n = 0
+            for i = 1, 6 do
+                local ok, _, _, ready = pcall(GetRuneCooldown, i)
+                if not ok or API.IsSecret(ready) then return nil end
+                if ready then n = n + 1 end
+            end
+            return n
+        end
+        if msg == "runeswatch" then
+            if not PRIO._runeLogger then
+                local f = CreateFrame("Frame")
+                f:SetScript("OnEvent", function(self, event, a1, a2)
+                    if not self.armed then return end
+                    if event == "UNIT_POWER_UPDATE" and (a1 ~= "player" or a2 ~= "RUNES") then return end
+                    local ok, p = pcall(UnitPower, "player", RUNES)
+                    local cd = readyFromCooldowns()
+                    print(("   |cff6fb3ff%s|r%s  UnitPower=%s  cooldowns=%s  %s"):format(event,
+                        event == "RUNE_POWER_UPDATE" and (" #" .. fmt(a1) .. " added=" .. fmt(a2)) or "",
+                        ok and fmt(p) or "threw", cd and tostring(cd) or "|cffe0685asecret/nil|r",
+                        InCombatLockdown() and "|cff0cd29f[combat]|r" or "|cffe0a03a[ooc]|r"))
+                end)
+                f:RegisterEvent("RUNE_POWER_UPDATE")
+                f:RegisterEvent("UNIT_POWER_UPDATE")
+                PRIO._runeLogger = f
+            end
+            local f = PRIO._runeLogger
+            f.armed = not f.armed
+            print("|cff0cd29fPRIO|r runes watch: " .. (f.armed
+                and "|cff0cd29fARMED|r -- spend runes on a dummy, in and out of combat"
+                or "off"))
+            return
+        end
+        print(("|cff0cd29fPRIO|r rune probe (%s):")
+            :format(InCombatLockdown() and "|cff0cd29fIN COMBAT|r" or "|cffe0a03aOOC - values always readable here|r"))
+        -- 1) Power path
+        local okc, cur = pcall(UnitPower, "player", RUNES)
+        local okm, mx  = pcall(UnitPowerMax, "player", RUNES)
+        print(("|cff6fb3ffUnitPower(Runes=%d):|r %s / %s   pct=%s"):format(RUNES,
+            okc and fmt(cur) or "threw", okm and fmt(mx) or "threw", fmt(API.PowerPercent(RUNES))))
+        -- 2) Per-rune cooldowns
+        if GetRuneCooldown then
+            print("|cff6fb3ffGetRuneCooldown(i):|r  start / duration / ready  (remaining)")
+            local now = GetTime()
+            for i = 1, 6 do
+                local ok, start, dur, ready = pcall(GetRuneCooldown, i)
+                if not ok then
+                    print(("   #%d |cffe0685athrew:|r %s"):format(i, tostring(start)))
+                else
+                    local rem = ""
+                    if not (API.IsSecret(start) or API.IsSecret(dur)) and type(start) == "number"
+                        and type(dur) == "number" and start > 0 then
+                        rem = ("  (%.1fs)"):format(math.max(0, start + dur - now))
+                    end
+                    print(("   #%d  %s / %s / %s%s"):format(i, fmt(start), fmt(dur), fmt(ready), rem))
+                end
+            end
+            local cd = readyFromCooldowns()
+            print("   ready (counted): " .. (cd and ("|cff0cd29f" .. cd .. "|r") or "|cffe0685asecret/nil|r"))
+        else
+            print("|cffe0685aGetRuneCooldown missing|r")
+        end
+        -- 3) Usability fallback on known rune spenders
+        print("|cff6fb3ffIsSpellUsable on rune spenders:|r")
+        local SPENDERS = { 49020, 49184, 206930, 50842, 85948, 55090, 207311 }  -- Obliterate, Howling Blast, Heart Strike, Blood Boil, Festering/Scourge Strike, Clawing Shadows
+        for _, sid in ipairs(SPENDERS) do
+            if API.IsKnown(sid) and C_Spell and C_Spell.IsSpellUsable then
+                local ok, u, np = pcall(C_Spell.IsSpellUsable, sid)
+                if type(u) == "table" then np = u.insufficientPower; u = u.isUsable end
+                print(("   %-18s usable=%s noPower=%s"):format(API.SpellName(sid) or tostring(sid),
+                    ok and fmt(u) or "threw", ok and fmt(np) or "threw"))
+            end
+        end
     elseif msg == "power" then
         -- Validate which class resources read clean vs. secret. Run IN COMBAT on the
         -- class you care about -- everything is readable out of combat.

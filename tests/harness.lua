@@ -104,6 +104,14 @@ function API.IsUsable(id) return truthy(S.usable, id, true) end
 function API.UsableClean(id) local v = S.usableClean[id]; if v == nil then return nil end; return v and true or false end
 function API.InsufficientPower(id) local v = S.insufficientPower[id]; if v == nil then return nil end; return v and true or false end
 function API.Stealthed() return S.stealthed and true or false end
+-- DK runes: S.runes = UnitPower(Runes) read, S.runesCd = per-rune GetRuneCooldown count (nil = secret).
+function API.RuneReads() return S.runes, S.runesCd end
+function API.RuneRecharge() return S.runeRecharge end   -- sorted seconds-until-back (nil = secret)
+function API.Runes()
+    if S.runesCd ~= nil then return S.runesCd, "cooldowns" end
+    if S.runes ~= nil then return S.runes, "power" end
+    return nil
+end
 function API.UsableOrNoPower(id)
     local v = S.usableNoPower and S.usableNoPower[id]
     if v ~= nil then return v and true or false end
@@ -174,6 +182,7 @@ load("Spec_Marksmanship.lua")
 load("Spec_Retribution.lua")
 load("Spec_Assassination.lua")
 load("Spec_Subtlety.lua")
+load("Spec_Blood.lua")
 
 PRIO.Engine:OnSpecChanged()
 H.spec = PRIO.specs[269]
@@ -186,6 +195,7 @@ H.mmSpec = PRIO.specs[254]
 H.retSpec = PRIO.specs[70]
 H.assaSpec = PRIO.specs[259]
 H.subSpec = PRIO.specs[261]
+H.bloodSpec = PRIO.specs[250]
 H.Engine = PRIO.Engine
 H.Cond = PRIO.Cond
 H.API = API
